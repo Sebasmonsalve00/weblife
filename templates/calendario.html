@@ -32,7 +32,7 @@
 
     <!-- Opción pequeña: cargar las fechas oficiales de examen (se abre al hacer clic) -->
     <details class="examenes-mini">
-      <summary class="boton boton-secundario boton-chico">+ Fechas de examen</summary>
+      <summary class="boton boton-secundario boton-chico">Fechas de examen <span class="flecha" aria-hidden="true">▾</span></summary>
       <form method="post" action="{{ url_for('cargar_examenes') }}" class="examenes-panel vidrio" id="form-examenes">
         <label for="ex-carrera">Carrera</label>
         <select id="ex-carrera" name="carrera" required>
