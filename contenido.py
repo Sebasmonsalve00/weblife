@@ -12,10 +12,10 @@ NOMBRE_SITIO = "weblife"
 # Cada enlace: (texto que se ve, nombre de la ruta en app.py)
 MENU = [
     ("Horario", "horario"),
-    ("Asistencia", "asistencia"),
     ("Tareas", "tareas"),
-    ("Calendario", "calendario_vista"),
     ("Pendientes", "pendientes"),
+    ("Calendario", "calendario_vista"),
+    ("Asistencia", "asistencia"),
 ]
 
 # Botón en píldora a la derecha del menú
