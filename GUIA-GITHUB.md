@@ -26,11 +26,11 @@ Yo subo el código y te aviso.
 
 ## Parte 2: conectar PythonAnywhere con GitHub (una sola vez)
 
-Cuando te avise que el código está en GitHub, abre una consola **Bash** en PythonAnywhere y pega estas líneas, una por una (cambia `TU-USUARIO-GITHUB`):
+Cuando te avise que el código está en GitHub, abre una consola **Bash** en PythonAnywhere y pega estas líneas, una por una :
 
 ```
 mv weblife weblife-viejo
-git clone https://github.com/TU-USUARIO-GITHUB/weblife.git
+git clone https://github.com/Sebasmonsalve00/weblife.git
 cp weblife-viejo/weblife.db weblife/
 ```
 
