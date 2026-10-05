@@ -299,6 +299,36 @@ def a_minutos(hora_texto):
     return int(horas) * 60 + int(minutos)
 
 
+def resumen_del_dia(clases_del_dia, nombre_dia, es_hoy):
+    """Arma un texto como: "Hoy (lunes) tienes clase de 08:00 a 13:00.
+    Horas huecas: 09:30–11:00 (1 h 30 min)." """
+    quien = f"Hoy ({nombre_dia.lower()})" if es_hoy else f"El {nombre_dia.lower()}"
+    if not clases_del_dia:
+        return f"{quien} no tienes clases."
+
+    # Juntamos las clases que se pisan o van seguidas en un solo bloque.
+    bloques = []
+    for clase in sorted(clases_del_dia, key=lambda c: a_minutos(c["hora_inicio"])):
+        inicio, fin = a_minutos(clase["hora_inicio"]), a_minutos(clase["hora_fin"])
+        if bloques and inicio <= bloques[-1][1]:
+            bloques[-1][1] = max(bloques[-1][1], fin)
+        else:
+            bloques.append([inicio, fin])
+
+    def hora(minutos):
+        return f"{minutos // 60:02d}:{minutos % 60:02d}"
+
+    texto = f"{quien} tienes clase de {hora(bloques[0][0])} a {hora(bloques[-1][1])}."
+    # Las horas huecas son los espacios entre un bloque y el siguiente.
+    huecos = [f"{hora(a[1])}–{hora(b[0])} ({texto_horas(b[0] - a[1])})"
+              for a, b in zip(bloques, bloques[1:])]
+    if huecos:
+        texto += " Horas huecas: " + ", ".join(huecos) + "."
+    else:
+        texto += " Sin horas huecas."
+    return texto
+
+
 @app.route("/universidad/horario", methods=["GET", "POST"])
 def horario():
     error = None
@@ -341,6 +371,10 @@ def horario():
                           "actividad": actividades.get(clase["id"]),
                           "pendientes": pendientes_materia})
 
+    # ---- Texto de arriba: de qué hora a qué hora tienes clase ese día y tus horas huecas ----
+    subtitulo_dia = resumen_del_dia(
+        [item["clase"] for item in panel], DIAS_SEMANA[dia_panel.weekday()], dia_panel == date.today())
+
     # Calculamos dónde va cada clase en la grilla:
     # "arriba" = cuántos píxeles desde las 8:00, "alto" = cuánto dura.
     limite_arriba = HORA_INICIO_DIA * 60
@@ -375,7 +409,7 @@ def horario():
     return render_template(
         "horario.html", dias=DIAS_SEMANA, dias_visibles=dias_visibles, por_dia=por_dia,
         clases=clases, horas=horas, alto_total=(HORA_FIN_DIA - HORA_INICIO_DIA) * PIXELES_POR_HORA,
-        pixeles_hora=PIXELES_POR_HORA, error=error,
+        pixeles_hora=PIXELES_POR_HORA, error=error, subtitulo_dia=subtitulo_dia,
         panel=panel, resumen=resumen, dia_panel=texto_panel, nombre_dia_panel=DIAS_SEMANA[dia_panel.weekday()],
         es_hoy=(dia_panel == date.today()),
         dia_anterior=(dia_panel - timedelta(days=1)).isoformat(),

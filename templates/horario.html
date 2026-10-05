@@ -2,7 +2,8 @@
 {% from "_componentes.html" import encabezado, boton_borrar %}
 {% block titulo %}{{ texto.paginas.horario.titulo }}{% endblock %}
 {% block contenido %}
-{{ encabezado(texto.paginas.horario) }}
+{# El subtítulo cambia según el día que eliges en el panel (flechas ← →) #}
+{{ encabezado({"etiqueta": texto.paginas.horario.etiqueta, "titulo": texto.paginas.horario.titulo, "subtitulo": subtitulo_dia}) }}
 
 <div class="grid-12">
 
