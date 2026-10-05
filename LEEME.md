@@ -1,9 +1,8 @@
 # weblife: mi página personal
 
-Una web hecha con **Python + Flask** y una base de datos **SQLite**, con dos secciones:
+Una web hecha con **Python + Flask** y una base de datos **SQLite**, para organizar la universidad:
 
-- 🎓 **Universidad**: horario semanal de clases, tareas, calendario mensual (tareas + eventos como exámenes) y lista de pendientes (atrasadas, esta semana, más adelante).
-- 🌱 **Vida**: alimentación (comidas y calorías), entrenamiento (tipo, minutos, notas) y pasos diarios con gráfico de la semana.
+- 🎓 **Universidad**: horario semanal de clases, asistencia (horas a las que fuiste por materia), tareas, calendario mensual (tareas + eventos como exámenes) y lista de pendientes (atrasadas, esta semana, más adelante).
 
 Todo se guarda en el archivo `weblife.db`, que se crea solo la primera vez.
 
@@ -45,24 +44,26 @@ Para tenerla en internet con contraseña (y abrirla desde el celular), sigue [GU
 weblife/
 ├── app.py              ← todo el código Python (rutas y base de datos)
 ├── requirements.txt    ← librerías necesarias (solo Flask)
+├── config_diseno.py    ← colores, fuente, radios y animaciones
+├── contenido.py        ← los textos (menú, títulos, footer)
 ├── templates/          ← las páginas HTML
 │   ├── base.html       ← el menú y el "esqueleto" que comparten todas
 │   ├── inicio.html     ← resumen del día
-│   ├── horario.html, tareas.html, pendientes.html, calendario.html
-│   └── alimentacion.html, entrenamiento.html, pasos.html
+│   └── horario.html, asistencia.html, tareas.html, pendientes.html, calendario.html
 └── static/
-    └── estilo.css      ← colores y diseño
+    ├── estilo.css      ← diseño
+    └── app.js          ← menú móvil, animaciones y validación
 ```
 
-**Cómo funciona una página**, por ejemplo `/vida/pasos`:
+**Cómo funciona una página**, por ejemplo `/universidad/asistencia`:
 
-1. En `app.py`, `@app.route("/vida/pasos")` le dice a Flask qué función responde a esa dirección.
+1. En `app.py`, `@app.route("/universidad/asistencia")` le dice a Flask qué función responde a esa dirección.
 2. La función lee la base de datos con `consultar(...)` (o guarda con `modificar(...)` si enviaste el formulario).
-3. Termina con `render_template("pasos.html", ...)`, que rellena el HTML con esos datos.
+3. Termina con `render_template("asistencia.html", ...)`, que rellena el HTML con esos datos.
 4. En el HTML, `{{ variable }}` muestra un valor y `{% for ... %}` repite algo por cada elemento.
 
 ## Ideas para seguir aprendiendo
 
-- Cambia `META_PASOS` en `app.py` o los colores al inicio de `static/estilo.css`.
-- Agrega un campo nuevo, por ejemplo "peso corporal" en la sección Vida (nueva tabla en `crear_tablas`, nueva ruta y nueva plantilla, copiando el patrón de `pasos`).
+- Cambia los colores o la fuente en `config_diseno.py`.
+- Agrega una sección nueva (nueva tabla en `crear_tablas`, nueva ruta y nueva plantilla, copiando el patrón de `asistencia`).
 - Agrega un botón para editar una tarea, no solo borrarla.

@@ -12,12 +12,10 @@ NOMBRE_SITIO = "weblife"
 # Cada enlace: (texto que se ve, nombre de la ruta en app.py)
 MENU = [
     ("Horario", "horario"),
+    ("Asistencia", "asistencia"),
     ("Tareas", "tareas"),
     ("Calendario", "calendario_vista"),
     ("Pendientes", "pendientes"),
-    ("Alimentación", "alimentacion"),
-    ("Entrenamiento", "entrenamiento"),
-    ("Pasos", "pasos"),
 ]
 
 # Botón en píldora a la derecha del menú
@@ -47,27 +45,17 @@ PAGINAS = {
         "titulo": "Calendario",
         "subtitulo": "Tus tareas y eventos del mes.",
     },
-    "alimentacion": {
-        "etiqueta": "Vida",
-        "titulo": "Alimentación",
-        "subtitulo": "Lo que comes cada día y sus calorías.",
-    },
-    "entrenamiento": {
-        "etiqueta": "Vida",
-        "titulo": "Entrenamiento",
-        "subtitulo": "Tus sesiones de ejercicio y cuánto duraron.",
-    },
-    "pasos": {
-        "etiqueta": "Vida",
-        "titulo": "Pasos diarios",
-        "subtitulo": "Tus pasos de la última semana frente a tu meta.",
+    "asistencia": {
+        "etiqueta": "Universidad",
+        "titulo": "Asistencia",
+        "subtitulo": "Las horas de clase a las que has ido en cada materia, según lo que marcas en el horario.",
     },
 }
 
 # ---- Portada (hero) de la página de inicio ----
 INICIO = {
     "saludo": "Hola, hoy es",
-    "subtitulo": "Tu universidad y tu vida diaria, organizadas en un solo lugar.",
+    "subtitulo": "Tus clases, tu asistencia y tus tareas, organizadas en un solo lugar.",
     "boton_principal": {"texto": "Ver pendientes", "ruta": "pendientes"},
     "boton_secundario": {"texto": "Ver horario", "ruta": "horario"},
     "titulo_resumen": "Tu día",
@@ -86,21 +74,17 @@ MENSAJES = {
     "clase": "Clase agregada al horario.",
     "tarea": "Tarea guardada.",
     "evento": "Evento agregado al calendario.",
-    "comida": "Comida registrada.",
-    "entrenamiento": "Entrenamiento registrado.",
-    "pasos": "Pasos guardados.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",
 }
 
 # ---- Footer: 4 columnas de enlaces ----
 FOOTER = [
-    {"titulo": "Universidad", "enlaces": [("Horario", "horario"), ("Tareas", "tareas"),
-                                          ("Calendario", "calendario_vista"), ("Pendientes", "pendientes")]},
-    {"titulo": "Vida", "enlaces": [("Alimentación", "alimentacion"), ("Entrenamiento", "entrenamiento"),
-                                   ("Pasos", "pasos")]},
+    {"titulo": "Clases", "enlaces": [("Horario", "horario"), ("Asistencia", "asistencia")]},
+    {"titulo": "Tareas", "enlaces": [("Tareas", "tareas"), ("Calendario", "calendario_vista"),
+                                     ("Pendientes", "pendientes")]},
     {"titulo": "Accesos rápidos", "enlaces": [("Inicio", "inicio"), ("Nueva tarea", "tareas"),
-                                              ("Registrar pasos", "pasos")]},
+                                              ("Marcar asistencia", "horario")]},
     {"titulo": "Hoy", "enlaces": [("Clases de hoy", "horario"), ("Lo pendiente", "pendientes"),
                                   ("Mes actual", "calendario_vista")]},
 ]

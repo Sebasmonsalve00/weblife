@@ -109,7 +109,7 @@ main > :last-child { margin-bottom: 64px; }
 
 /* ---------- Superficie difuminada (glassmorphism) ---------- */
 .vidrio, .tarjeta, .formulario, .tabla-contenedor, .nav, .menu-movil, .lista li,
-.grilla-contenedor, .panel-dia, .resumen-materias, .grafico, .resumen, .calendario-contenedor {
+.grilla-contenedor, .panel-dia, .resumen-materias, .calendario-contenedor {
   background: var(--superficie);
   -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturacion));
   backdrop-filter: blur(var(--blur)) saturate(var(--saturacion));
@@ -118,7 +118,7 @@ main > :last-child { margin-bottom: 64px; }
 /* Si el navegador no soporta el difuminado, usamos un blanco casi opaco */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .vidrio, .tarjeta, .formulario, .tabla-contenedor, .nav, .menu-movil, .lista li,
-  .grilla-contenedor, .panel-dia, .resumen-materias, .grafico, .resumen, .calendario-contenedor {
+  .grilla-contenedor, .panel-dia, .resumen-materias, .calendario-contenedor {
     background: var(--superficie-sin-blur);
   }
 }
@@ -470,20 +470,10 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .item.hecha { text-decoration: line-through; opacity: 0.6; }
 .item .boton-icono { width: 18px; height: 18px; font-size: 0.625rem; flex-shrink: 0; }
 
-/* ---------- Pasos y resúmenes ---------- */
-.resumen { border-radius: var(--radio-tarjeta); padding: 18px 24px; box-shadow: var(--sombra); margin: 0 0 24px; max-width: none; }
-.grafico {
-  display: flex; gap: 8px; align-items: flex-end;
-  height: 280px; padding: 24px; border-radius: var(--radio-tarjeta); box-shadow: var(--sombra);
-}
-.columna { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; min-width: 0; }
-.barra-vertical {
-  width: 100%; max-width: 56px; min-height: 4px;
-  background: var(--color-acento);
-  border-radius: var(--radio-chico) var(--radio-chico) 6px 6px;
-}
-.barra-vertical.cumplida { background: var(--color-texto); }
-.columna span { font-size: 0.8125rem; font-weight: 500; }
+/* ---------- Asistencia ---------- */
+.titulo-tarjeta { font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; }
+.grid-12 + .titulo-seccion, .tabla-contenedor + .titulo-seccion { margin-top: 64px; }
+.barra-tabla { display: inline-block; width: 96px; height: 8px; margin: 0 8px 0 0; vertical-align: middle; }
 
 /* ---------- Página de contraseña ---------- */
 .entrar { max-width: 440px; margin: 15vh auto 64px; text-align: center; }

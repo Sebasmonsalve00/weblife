@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% from "_componentes.html" import encabezado, enlace_flecha %}
+{% block titulo %}{{ texto.paginas.asistencia.titulo }}{% endblock %}
+{% block contenido %}
+{{ encabezado(texto.paginas.asistencia) }}
+
+{% if resumen.hay_datos %}
+  <!-- Total general -->
+  <div class="grid-12">
+    <article class="tarjeta reveal md-6 lg-4">
+      <h2 class="titulo-tarjeta">Horas asistidas</h2>
+      <p class="numero">{{ resumen.total_fui }}</p>
+      <p class="descripcion">En todas tus materias.</p>
+    </article>
+    <article class="tarjeta reveal md-6 lg-4">
+      <h2 class="titulo-tarjeta">Asistencia total</h2>
+      <p class="numero">{{ resumen.porcentaje }}%</p>
+      <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ resumen.porcentaje }}" aria-label="Asistencia total">
+        <div style="width: {{ resumen.porcentaje }}%"></div>
+      </div>
+    </article>
+  </div>
+
+  <!-- Una fila por materia -->
+  <h2 class="titulo-seccion reveal">Por materia</h2>
+  <div class="tabla-contenedor reveal">
+    <table class="tabla">
+      <thead><tr>
+        <th scope="col">Materia</th><th scope="col">Horas asistidas</th><th scope="col">Clases a las que fui</th>
+        <th scope="col">Horas faltadas</th><th scope="col">Asistencia</th>
+      </tr></thead>
+      <tbody>
+      {% for m in resumen.materias %}
+        <tr>
+          <td>{{ m.nombre }}</td>
+          <td><b>{{ m.horas_fui }}</b></td>
+          <td>{{ m.clases_fui }}</td>
+          <td>{{ m.horas_falte }}{% if m.clases_falte %} <small>({{ m.clases_falte }} {{ "clase" if m.clases_falte == 1 else "clases" }})</small>{% endif %}</td>
+          <td>
+            <div class="barra barra-tabla" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ m.porcentaje }}" aria-label="Asistencia en {{ m.nombre }}">
+              <div style="width: {{ m.porcentaje }}%"></div>
+            </div>
+            {{ m.porcentaje }}%
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Detalle de las últimas marcas -->
+  <h2 class="titulo-seccion reveal">Últimas clases marcadas</h2>
+  <div class="tabla-contenedor reveal">
+    <table class="tabla">
+      <thead><tr><th scope="col">Fecha</th><th scope="col">Materia</th><th scope="col">Hora</th><th scope="col">Estado</th></tr></thead>
+      <tbody>
+      {% for h in historial %}
+        <tr>
+          <td>{{ h.fecha }}</td><td>{{ h.nombre }}</td><td>{{ h.hora_inicio }}–{{ h.hora_fin }}</td>
+          <td>{{ "✓ Fui" if h.asistio else "✕ No fui" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="tarjeta reveal">
+    <p>Todavía no has marcado ninguna clase. En el horario, pulsa <b>Fui</b> o <b>No fui</b> en cada clase y aquí aparecerán tus horas.</p>
+    {{ enlace_flecha("Ir al horario", url_for('horario')) }}
+  </div>
+{% endif %}
+{% endblock %}

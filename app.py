@@ -1,8 +1,7 @@
 # ============================================================
 #  weblife - Mi página personal
 #  Secciones:
-#    - Universidad: horario, tareas, calendario y pendientes
-#    - Vida: alimentación, entrenamiento y pasos diarios
+#    - Universidad: horario, asistencia, tareas, calendario y pendientes
 #
 #  Para ejecutarla:  python app.py
 #  Luego abre en el navegador:  http://127.0.0.1:5000
@@ -51,9 +50,6 @@ DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", 
 MESES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio",
          "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
 
-# Meta diaria de pasos. ¡Cámbiala si quieres!
-META_PASOS = 10000
-
 
 # ------------------------------------------------------------
 #  Base de datos
@@ -93,27 +89,6 @@ def crear_tablas():
             titulo TEXT NOT NULL,
             fecha TEXT NOT NULL,
             hora TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS comidas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha TEXT NOT NULL,
-            tipo TEXT NOT NULL,            -- desayuno, almuerzo, cena, snack
-            descripcion TEXT NOT NULL,
-            calorias INTEGER
-        );
-
-        CREATE TABLE IF NOT EXISTS entrenamientos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha TEXT NOT NULL,
-            tipo TEXT NOT NULL,            -- pesas, correr, fútbol...
-            minutos INTEGER,
-            notas TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS pasos (
-            fecha TEXT PRIMARY KEY,        -- un solo registro por día
-            cantidad INTEGER NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS asistencias (
@@ -211,11 +186,7 @@ def inicio():
         "SELECT * FROM clases WHERE dia = ? ORDER BY hora_inicio", (hoy.weekday(),))
     pendientes = consultar(
         "SELECT * FROM tareas WHERE hecha = 0 ORDER BY fecha_entrega LIMIT 5")
-    fila_pasos = consultar("SELECT cantidad FROM pasos WHERE fecha = ?", (hoy_texto,))
-    pasos_hoy = fila_pasos[0]["cantidad"] if fila_pasos else 0
-    fila_cal = consultar(
-        "SELECT SUM(calorias) AS total FROM comidas WHERE fecha = ?", (hoy_texto,))
-    calorias_hoy = fila_cal[0]["total"] or 0
+    asistencia = resumen_asistencia()
 
     return render_template(
         "inicio.html",
@@ -223,9 +194,7 @@ def inicio():
         dia_nombre=DIAS_SEMANA[hoy.weekday()],
         clases_hoy=clases_hoy,
         pendientes=pendientes,
-        pasos_hoy=pasos_hoy,
-        meta_pasos=META_PASOS,
-        calorias_hoy=calorias_hoy,
+        asistencia=asistencia,
     )
 
 
@@ -474,95 +443,68 @@ def borrar_evento(id):
 
 
 # ------------------------------------------------------------
-#  VIDA: Alimentación
+#  UNIVERSIDAD: Asistencia (horas que fuiste a cada materia)
 # ------------------------------------------------------------
 
-@app.route("/vida/alimentacion", methods=["GET", "POST"])
-def alimentacion():
-    if request.method == "POST":
-        # Las calorías son opcionales: si el campo viene vacío guardamos None.
-        calorias = request.form["calorias"]
-        modificar(
-            "INSERT INTO comidas (fecha, tipo, descripcion, calorias) VALUES (?, ?, ?, ?)",
-            (request.form["fecha"], request.form["tipo"], request.form["descripcion"],
-             int(calorias) if calorias else None),
-        )
-        flash(contenido.MENSAJES["comida"])
-        return redirect(url_for("alimentacion"))
+def texto_horas(minutos):
+    """Convierte 90 en "1 h 30 min" y 120 en "2 h"."""
+    horas, resto = divmod(minutos, 60)
+    if horas and resto:
+        return f"{horas} h {resto} min"
+    if horas:
+        return f"{horas} h"
+    return f"{resto} min"
 
-    comidas = consultar("SELECT * FROM comidas ORDER BY fecha DESC, id DESC LIMIT 50")
-    # Total de calorías por día, para los últimos 7 días con registros.
-    totales = consultar("""
-        SELECT fecha, SUM(calorias) AS total, COUNT(*) AS cantidad
-        FROM comidas GROUP BY fecha ORDER BY fecha DESC LIMIT 7
+
+def resumen_asistencia():
+    """Suma, por materia, los minutos de las clases a las que fuiste y a las que no.
+    Usa las marcas "Fui" / "No fui" del panel del horario."""
+    marcas = consultar("""
+        SELECT clases.nombre, clases.hora_inicio, clases.hora_fin, asistencias.asistio
+        FROM asistencias JOIN clases ON clases.id = asistencias.clase_id
     """)
-    return render_template("alimentacion.html", comidas=comidas, totales=totales,
-                           hoy=date.today().isoformat())
+    materias = {}
+    for marca in marcas:
+        duracion = a_minutos(marca["hora_fin"]) - a_minutos(marca["hora_inicio"])
+        datos = materias.setdefault(marca["nombre"], {"fui": 0, "falte": 0, "clases_fui": 0, "clases_falte": 0})
+        if marca["asistio"]:
+            datos["fui"] += duracion
+            datos["clases_fui"] += 1
+        else:
+            datos["falte"] += duracion
+            datos["clases_falte"] += 1
+
+    filas = []
+    for nombre in sorted(materias):
+        datos = materias[nombre]
+        total = datos["fui"] + datos["falte"]
+        filas.append({
+            "nombre": nombre,
+            "horas_fui": texto_horas(datos["fui"]),
+            "horas_falte": texto_horas(datos["falte"]),
+            "clases_fui": datos["clases_fui"],
+            "clases_falte": datos["clases_falte"],
+            "porcentaje": round(datos["fui"] * 100 / total) if total else 0,
+        })
+    minutos_fui = sum(d["fui"] for d in materias.values())
+    minutos_total = minutos_fui + sum(d["falte"] for d in materias.values())
+    return {
+        "materias": filas,
+        "total_fui": texto_horas(minutos_fui),
+        "porcentaje": round(minutos_fui * 100 / minutos_total) if minutos_total else 0,
+        "hay_datos": minutos_total > 0,
+    }
 
 
-@app.route("/vida/alimentacion/borrar/<int:id>", methods=["POST"])
-def borrar_comida(id):
-    modificar("DELETE FROM comidas WHERE id = ?", (id,))
-    return redirect(url_for("alimentacion"))
-
-
-# ------------------------------------------------------------
-#  VIDA: Entrenamiento
-# ------------------------------------------------------------
-
-@app.route("/vida/entrenamiento", methods=["GET", "POST"])
-def entrenamiento():
-    if request.method == "POST":
-        minutos = request.form["minutos"]
-        modificar(
-            "INSERT INTO entrenamientos (fecha, tipo, minutos, notas) VALUES (?, ?, ?, ?)",
-            (request.form["fecha"], request.form["tipo"],
-             int(minutos) if minutos else None, request.form["notas"]),
-        )
-        flash(contenido.MENSAJES["entrenamiento"])
-        return redirect(url_for("entrenamiento"))
-
-    lista = consultar("SELECT * FROM entrenamientos ORDER BY fecha DESC, id DESC LIMIT 50")
-    hace_7_dias = (date.today() - timedelta(days=6)).isoformat()
-    semana = consultar(
-        "SELECT COUNT(*) AS sesiones, SUM(minutos) AS minutos FROM entrenamientos WHERE fecha >= ?",
-        (hace_7_dias,))[0]
-    return render_template("entrenamiento.html", entrenamientos=lista, semana=semana,
-                           hoy=date.today().isoformat())
-
-
-@app.route("/vida/entrenamiento/borrar/<int:id>", methods=["POST"])
-def borrar_entrenamiento(id):
-    modificar("DELETE FROM entrenamientos WHERE id = ?", (id,))
-    return redirect(url_for("entrenamiento"))
-
-
-# ------------------------------------------------------------
-#  VIDA: Pasos diarios
-# ------------------------------------------------------------
-
-@app.route("/vida/pasos", methods=["GET", "POST"])
-def pasos():
-    if request.method == "POST":
-        # "INSERT OR REPLACE": si ya había pasos ese día, se reemplazan.
-        modificar("INSERT OR REPLACE INTO pasos (fecha, cantidad) VALUES (?, ?)",
-                  (request.form["fecha"], int(request.form["cantidad"])))
-        flash(contenido.MENSAJES["pasos"])
-        return redirect(url_for("pasos"))
-
-    # Armamos los últimos 7 días, aunque alguno no tenga registro (queda en 0).
-    registros = {fila["fecha"]: fila["cantidad"] for fila in consultar("SELECT * FROM pasos")}
-    ultimos_7 = []
-    for atras in range(6, -1, -1):
-        dia = date.today() - timedelta(days=atras)
-        cantidad = registros.get(dia.isoformat(), 0)
-        porcentaje = min(100, round(cantidad * 100 / META_PASOS))
-        ultimos_7.append({"fecha": dia.isoformat(), "nombre": DIAS_SEMANA[dia.weekday()][:3],
-                          "cantidad": cantidad, "porcentaje": porcentaje})
-
-    promedio = round(sum(d["cantidad"] for d in ultimos_7) / 7)
-    return render_template("pasos.html", ultimos_7=ultimos_7, promedio=promedio,
-                           meta=META_PASOS, hoy=date.today().isoformat())
+@app.route("/universidad/asistencia")
+def asistencia():
+    # Últimas 30 marcas, para ver el detalle día a día.
+    historial = consultar("""
+        SELECT asistencias.fecha, asistencias.asistio, clases.nombre, clases.hora_inicio, clases.hora_fin
+        FROM asistencias JOIN clases ON clases.id = asistencias.clase_id
+        ORDER BY asistencias.fecha DESC, clases.hora_inicio DESC LIMIT 30
+    """)
+    return render_template("asistencia.html", resumen=resumen_asistencia(), historial=historial)
 
 
 # ------------------------------------------------------------

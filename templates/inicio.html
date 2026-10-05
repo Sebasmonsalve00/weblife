@@ -41,19 +41,14 @@
     </article>
 
     <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
-      <h3>Pasos de hoy</h3>
-      <p class="numero">{{ "{:,}".format(pasos_hoy).replace(",", ".") }}</p>
-      <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="{{ meta_pasos }}" aria-valuenow="{{ pasos_hoy }}" aria-label="Pasos de hoy">
-        <div style="width: {{ [100, pasos_hoy * 100 // meta_pasos] | min }}%"></div>
-      </div>
-      <p class="descripcion">Meta: {{ meta_pasos }}</p>
-      {{ enlace_flecha("Registrar pasos", url_for('pasos')) }}
-    </article>
-
-    <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
-      <h3>Calorías de hoy</h3>
-      <p class="numero">{{ calorias_hoy }}</p>
-      {{ enlace_flecha("Registrar comida", url_for('alimentacion')) }}
+      <h3>Asistencia</h3>
+      {% if asistencia.hay_datos %}
+        <p class="numero">{{ asistencia.total_fui }}</p>
+        <p class="descripcion">de clase asistidas ({{ asistencia.porcentaje }}%)</p>
+      {% else %}
+        <p class="descripcion">Marca en el horario si fuiste a tus clases.</p>
+      {% endif %}
+      {{ enlace_flecha("Ver asistencia", url_for('asistencia')) }}
     </article>
   </div>
 </section>
