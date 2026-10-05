@@ -279,7 +279,11 @@ def tareas():
         return redirect(url_for("tareas"))
 
     todas = consultar("SELECT * FROM tareas ORDER BY hecha, fecha_entrega")
-    return render_template("tareas.html", tareas=todas, hoy=date.today().isoformat())
+    # Las materias salen de las clases del horario (sin repetir y en orden alfabético).
+    materias = [fila["nombre"] for fila in
+                consultar("SELECT DISTINCT nombre FROM clases ORDER BY nombre")]
+    return render_template("tareas.html", tareas=todas, materias=materias,
+                           hoy=date.today().isoformat())
 
 
 @app.route("/universidad/tareas/cambiar/<int:id>", methods=["POST"])

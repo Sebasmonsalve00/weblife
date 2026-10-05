@@ -5,10 +5,19 @@
 
 <form method="post" class="formulario">
   <input name="titulo" placeholder="¿Qué tienes que hacer?" required>
-  <input name="materia" placeholder="Materia">
+  <!-- Las materias vienen del Horario semanal -->
+  <select name="materia">
+    <option value="">Sin materia</option>
+    {% for materia in materias %}
+      <option>{{ materia }}</option>
+    {% endfor %}
+  </select>
   <input type="date" name="fecha_entrega" value="{{ hoy }}" required>
   <button>Agregar tarea</button>
 </form>
+{% if not materias %}
+  <p class="vacio">Para elegir una materia, primero agrega tus clases en el <a href="{{ url_for('horario') }}">Horario</a>.</p>
+{% endif %}
 
 <ul class="lista">
   {% for tarea in tareas %}
