@@ -127,7 +127,7 @@ def crear_tablas():
 
     # Las cuentas creadas antes no tenían nombre y apellido: agregamos esas columnas.
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(usuarios)")]
-    for columna in ("nombre_real", "apellido"):
+    for columna in ("nombre_real", "apellido", "examenes_sel"):
         if columna not in columnas:
             conexion.execute(f"ALTER TABLE usuarios ADD COLUMN {columna} TEXT")
 
@@ -594,6 +594,14 @@ def avisos_calendario():
             urgentes.append({"titulo": tarea["titulo"], "fecha": tarea["fecha_entrega"], "hora": None,
                              "objetivo": objetivo.isoformat(timespec="minutes")})
 
+    # Exámenes del calendario elegido en "Fechas de examen".
+    for asignatura, fecha, hora, _ in examenes_elegidos()[0]:
+        objetivo = datetime.fromisoformat(f"{fecha}T{hora or '23:59'}")
+        if objetivo >= ahora:
+            examenes_proximos.append({"titulo": asignatura, "fecha": fecha, "hora": hora,
+                                      "objetivo": objetivo.isoformat(timespec="minutes")})
+    examenes_proximos.sort(key=lambda aviso: aviso["objetivo"])
+
     urgentes.sort(key=lambda aviso: aviso["objetivo"])
     return {"examenes": examenes_proximos[:5], "urgentes": urgentes}
 
@@ -631,6 +639,13 @@ def calendario_vista():
         cosas_por_dia.setdefault(dia, []).append(
             {"texto": texto, "tipo": "evento", "id": evento["id"]})
 
+    # Exámenes del calendario elegido (solo se ven mientras esté elegido).
+    lista_examenes, eleccion = examenes_elegidos()
+    for asignatura, fecha, hora, _ in sorted(lista_examenes, key=lambda e: (e[1], e[2] or "")):
+        if fecha.startswith(f"{anio}-{mes:02d}-"):
+            texto = f"{hora} {asignatura}" if hora else asignatura
+            cosas_por_dia.setdefault(int(fecha[8:10]), []).insert(0, {"texto": texto, "tipo": "examen"})
+
     # Mes anterior y siguiente para los botones ◀ ▶
     mes_anterior = (anio, mes - 1) if mes > 1 else (anio - 1, 12)
     mes_siguiente = (anio, mes + 1) if mes < 12 else (anio + 1, 1)
@@ -640,26 +655,45 @@ def calendario_vista():
         semanas=semanas, anio=anio, mes=mes, nombre_mes=MESES[mes],
         dias=DIAS_SEMANA, cosas_por_dia=cosas_por_dia,
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
-        calendarios=examenes.CALENDARIOS, avisos=avisos_calendario(),
+        calendarios=examenes.CALENDARIOS, avisos=avisos_calendario(), eleccion=eleccion,
     )
 
 
+def examenes_elegidos():
+    """Los exámenes de la carrera, curso y convocatoria que eligió el usuario (o [] si no eligió).
+    Devuelve (lista, (carrera, curso, convocatoria)). No se guardan como eventos:
+    se leen de examenes.py cada vez, así que solo se ven mientras la opción está elegida."""
+    fila = consultar("SELECT examenes_sel FROM usuarios WHERE id = ?", (yo(),))
+    texto = fila[0]["examenes_sel"] if fila else None
+    if not texto:
+        return [], None
+    eleccion = tuple(texto.split("|"))
+    if len(eleccion) != 3:
+        return [], None
+    return examenes.examenes(*eleccion), eleccion
+
+
 @app.route("/universidad/calendario/examenes", methods=["POST"])
-def cargar_examenes():
-    """Agrega al calendario todas las fechas de examen de la carrera, curso y convocatoria elegidos."""
-    lista = examenes.examenes(request.form["carrera"], request.form["curso"], request.form["convocatoria"])
-    agregados = 0
-    for asignatura, fecha, hora, _ in lista:
-        titulo = f"Examen: {asignatura}"
-        # Si ya estaba (por cargarlo dos veces), no lo repetimos.
-        if not consultar("SELECT id FROM eventos WHERE titulo = ? AND fecha = ? AND usuario_id = ?",
-                         (titulo, fecha, yo())):
-            modificar("INSERT INTO eventos (titulo, fecha, hora, usuario_id) VALUES (?, ?, ?, ?)",
-                      (titulo, fecha, hora, yo()))
-            agregados += 1
+def elegir_examenes():
+    """Guarda qué calendario de exámenes quieres ver, o lo quita si pulsas "Quitar"."""
+    if request.form.get("accion") == "quitar":
+        modificar("UPDATE usuarios SET examenes_sel = NULL WHERE id = ?", (yo(),))
+        return redirect(url_for("calendario_vista"))
+
+    eleccion = (request.form["carrera"], request.form["curso"], request.form["convocatoria"])
+    lista = examenes.examenes(*eleccion)
     if not lista:
         return redirect(url_for("calendario_vista"))
-    flash(contenido.MENSAJES["examenes"].format(agregados))
+    modificar("UPDATE usuarios SET examenes_sel = ? WHERE id = ?", ("|".join(eleccion), yo()))
+
+    # Antes los exámenes se copiaban como eventos: borramos esas copias para que no salgan dobles.
+    for calendario in examenes.CALENDARIOS.values():
+        for curso in calendario.values():
+            for convocatoria in curso.values():
+                for asignatura, fecha, _, _ in convocatoria:
+                    modificar("DELETE FROM eventos WHERE titulo = ? AND fecha = ? AND usuario_id = ?",
+                              (f"Examen: {asignatura}", fecha, yo()))
+
     # Mostramos el mes del primer examen.
     primero = min(fecha for _, fecha, _, _ in lista)
     return redirect(url_for("calendario_vista", anio=int(primero[:4]), mes=int(primero[5:7])))

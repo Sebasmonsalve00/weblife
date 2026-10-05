@@ -505,6 +505,9 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .item { border-radius: 8px; padding: 2px 6px; margin-top: 4px; overflow-wrap: anywhere; display: flex; justify-content: space-between; gap: 4px; align-items: flex-start; }
 .item.tarea { background: var(--acento-degradado); }
 .item.evento { border: 1px solid var(--borde-boton); }
+.item.examen { background: var(--color-texto); color: var(--color-fondo); font-weight: 600; }
+.punto.examen { background: var(--color-texto); }
+.examenes-actual { font-size: 13px; margin: 0 0 6px; color: var(--texto-secundario); }
 .item.hecha { text-decoration: line-through; opacity: 0.6; }
 .item .boton-icono { width: 18px; height: 18px; font-size: 0.625rem; flex-shrink: 0; }
 

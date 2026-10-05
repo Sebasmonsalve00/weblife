@@ -33,7 +33,8 @@
     <!-- Opción pequeña: cargar las fechas oficiales de examen (se abre al hacer clic) -->
     <details class="examenes-mini">
       <summary class="boton boton-secundario boton-chico">Fechas de examen <span class="flecha" aria-hidden="true">▾</span></summary>
-      <form method="post" action="{{ url_for('cargar_examenes') }}" class="examenes-panel vidrio" id="form-examenes">
+      <form method="post" action="{{ url_for('elegir_examenes') }}" class="examenes-panel vidrio" id="form-examenes">
+        {% if eleccion %}<p class="examenes-actual">Viendo: {{ eleccion[0] }} · {{ eleccion[1] }} · {{ eleccion[2] }}</p>{% endif %}
         <label for="ex-carrera">Carrera</label>
         <select id="ex-carrera" name="carrera" required>
           {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
@@ -42,11 +43,12 @@
         <select id="ex-curso" name="curso" required></select>
         <label for="ex-convocatoria">Convocatoria</label>
         <select id="ex-convocatoria" name="convocatoria" required></select>
-        <button class="boton boton-primario boton-chico">Agregar</button>
+        <button class="boton boton-primario boton-chico" name="accion" value="ver">Ver exámenes</button>
+        {% if eleccion %}<button class="boton boton-secundario boton-chico" name="accion" value="quitar" formnovalidate>Quitar</button>{% endif %}
       </form>
     </details>
   </div>
-  <p class="leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span></p>
+  <p class="leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span>{% if eleccion %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
 
   <div class="calendario-contenedor">
     <table class="calendario">
@@ -143,7 +145,11 @@
   function cambiarCarrera() { llenar(curso, Object.keys(datos[carrera.value] || {})); cambiarCurso(); }
   carrera.addEventListener("change", cambiarCarrera);
   curso.addEventListener("change", cambiarCurso);
+  // Si ya elegiste un calendario, lo dejamos marcado.
+  var elegido = {{ (eleccion or []) | list | tojson }};
+  if (elegido.length === 3 && datos[elegido[0]]) carrera.value = elegido[0];
   cambiarCarrera();
+  if (elegido.length === 3) { curso.value = elegido[1]; cambiarCurso(); convocatoria.value = elegido[2]; }
 })();
 </script>
 {% endblock %}
