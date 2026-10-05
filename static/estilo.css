@@ -52,14 +52,6 @@ button.check { background: none; color: var(--verde); padding: 0 6px; font-size:
 .etiqueta { background: #eef1ff; color: var(--principal); padding: 2px 8px; border-radius: 99px; font-size: .85rem; }
 .alerta { color: var(--rojo); }
 
-/* ===== Horario semanal ===== */
-.semana { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
-.dia { background: var(--tarjeta); border-radius: 10px; padding: 8px; min-height: 120px; }
-.dia h3 { margin: 0 0 8px; font-size: 1rem; }
-.clase { background: #eef1ff; border-left: 4px solid var(--principal); border-radius: 6px;
-         padding: 6px; margin-bottom: 6px; font-size: .9rem; position: relative; }
-.clase form { position: absolute; top: 2px; right: 2px; }
-
 /* ===== Calendario ===== */
 .calendario { width: 100%; border-collapse: collapse; table-layout: fixed; background: var(--tarjeta); }
 .calendario th, .calendario td { border: 1px solid #e3e5ec; vertical-align: top; padding: 4px; }
@@ -91,3 +83,22 @@ button.check { background: none; color: var(--verde); padding: 0 6px; font-size:
 .entrar form { display: flex; flex-direction: column; gap: 8px; }
 nav .salir { margin-left: auto; }
 nav .salir button { background: none; color: var(--suave); border: 1px solid #d6d9e3; }
+
+/* ===== Horario por horas (8:00 a 20:00) ===== */
+.formulario label { display: flex; flex-direction: column; font-size: .8rem; color: var(--suave); gap: 2px; }
+.formulario label input:not([type]) { min-width: 140px; }
+.formulario input.corto { min-width: 80px !important; width: 90px; }
+.formulario button { align-self: flex-end; }
+.grilla-contenedor { overflow-x: auto; background: var(--tarjeta); border-radius: 12px; padding: 12px; margin-bottom: 16px; }
+.grilla { display: grid; gap: 0 6px; min-width: 600px; }
+.grilla-dia { text-align: center; font-weight: 600; padding-bottom: 8px; }
+.grilla-horas { position: relative; }
+.grilla-horas span { position: absolute; right: 6px; transform: translateY(-50%); font-size: .75rem; color: var(--suave); }
+.grilla-horas span:first-child { transform: none; }
+.grilla-horas span:last-child { transform: translateY(-100%); }
+.grilla-columna { position: relative; border-left: 1px solid #eef0f4;
+  background-image: linear-gradient(to bottom, #e3e5ec 1px, transparent 1px); border-bottom: 1px solid #e3e5ec; }
+.bloque { position: absolute; left: 3px; right: 3px; overflow: hidden; background: #eef1ff;
+  border-left: 4px solid var(--principal); border-radius: 6px; padding: 3px 6px; font-size: .78rem;
+  display: flex; flex-direction: column; line-height: 1.25; }
+.bloque span { color: #555; }

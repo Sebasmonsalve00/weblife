@@ -3,34 +3,69 @@
 {% block contenido %}
 <h1>🗓️ Horario semanal</h1>
 
+<!-- Formulario para agregar una clase -->
 <form method="post" class="formulario">
-  <input name="nombre" placeholder="Materia (ej: Cálculo)" required>
-  <select name="dia">
-    {% for nombre in dias %}
-      <option value="{{ loop.index0 }}">{{ nombre }}</option>
-    {% endfor %}
-  </select>
-  <input type="time" name="hora_inicio" required>
-  <input type="time" name="hora_fin" required>
-  <input name="sala" placeholder="Sala (opcional)">
+  <label>Materia <input name="nombre" placeholder="ej: Cálculo" required></label>
+  <label>Día
+    <select name="dia">
+      {% for nombre in dias %}
+        <option value="{{ loop.index0 }}">{{ nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Desde <input type="time" name="hora_inicio" min="08:00" max="20:00" value="08:00" required></label>
+  <label>Hasta <input type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required></label>
+  <label>Aula <input name="sala" placeholder="ej: 2.14" class="corto"></label>
   <button>Agregar clase</button>
 </form>
+{% if error %}<p class="alerta">{{ error }}</p>{% endif %}
 
-<div class="semana">
-  {% for numero in range(7) %}
-    <div class="dia">
-      <h3>{{ dias[numero] }}</h3>
-      {% for clase in por_dia[numero] %}
-        <div class="clase">
-          <b>{{ clase.hora_inicio }}–{{ clase.hora_fin }}</b><br>
-          {{ clase.nombre }}<br>
-          <small>{{ clase.sala }}</small>
-          <form method="post" action="{{ url_for('borrar_clase', id=clase.id) }}" class="en-linea">
-            <button class="borrar" title="Borrar">✕</button>
-          </form>
-        </div>
+<!-- Grilla: una columna por día, una fila por hora de 8:00 a 20:00 -->
+<div class="grilla-contenedor">
+  <div class="grilla" style="grid-template-columns: 56px repeat({{ dias_visibles|length }}, minmax(110px, 1fr));">
+    <div></div>
+    {% for d in dias_visibles %}<div class="grilla-dia">{{ dias[d] }}</div>{% endfor %}
+
+    <!-- Columna con las horas -->
+    <div class="grilla-horas" style="height: {{ alto_total }}px">
+      {% for hora in horas %}
+        <span style="top: {{ loop.index0 * pixeles_hora }}px">{{ hora }}</span>
       {% endfor %}
     </div>
-  {% endfor %}
+
+    <!-- Una columna por día, con las clases ubicadas según su hora -->
+    {% for d in dias_visibles %}
+      <div class="grilla-columna" style="height: {{ alto_total }}px; background-size: 100% {{ pixeles_hora }}px">
+        {% for item in por_dia[d] %}
+          <div class="bloque" style="top: {{ item.arriba }}px; height: {{ item.alto }}px">
+            <b>{{ item.clase.nombre }}</b>
+            <span>{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}</span>
+            {% if item.clase.sala %}<span>Aula {{ item.clase.sala }}</span>{% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
 </div>
+
+<!-- Lista de clases, en orden por día y hora -->
+<h2>Mis clases</h2>
+<table class="tabla">
+  <tr><th>Día</th><th>Hora</th><th>Materia</th><th>Aula</th><th></th></tr>
+  {% for clase in clases %}
+    <tr>
+      <td>{{ dias[clase.dia] }}</td>
+      <td>{{ clase.hora_inicio }}–{{ clase.hora_fin }}</td>
+      <td>{{ clase.nombre }}</td>
+      <td>{{ clase.sala or "—" }}</td>
+      <td>
+        <form method="post" action="{{ url_for('borrar_clase', id=clase.id) }}" class="en-linea">
+          <button class="borrar" title="Borrar">✕</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="vacio">Todavía no agregas clases.</td></tr>
+  {% endfor %}
+</table>
 {% endblock %}

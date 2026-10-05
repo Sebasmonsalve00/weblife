@@ -201,24 +201,62 @@ def inicio():
 #  UNIVERSIDAD: Horario semanal de clases
 # ------------------------------------------------------------
 
+# El horario se dibuja de 8:00 a 20:00. Cada hora mide 60 píxeles de alto.
+HORA_INICIO_DIA = 8
+HORA_FIN_DIA = 20
+PIXELES_POR_HORA = 60
+
+
+def a_minutos(hora_texto):
+    """Convierte "09:30" en minutos desde medianoche: 9 * 60 + 30 = 570."""
+    horas, minutos = hora_texto.split(":")
+    return int(horas) * 60 + int(minutos)
+
+
 @app.route("/universidad/horario", methods=["GET", "POST"])
 def horario():
+    error = None
     # Si se envió el formulario (POST), guardamos la clase nueva.
     if request.method == "POST":
-        modificar(
-            "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala) VALUES (?, ?, ?, ?, ?)",
-            (request.form["nombre"], int(request.form["dia"]),
-             request.form["hora_inicio"], request.form["hora_fin"], request.form["sala"]),
-        )
-        return redirect(url_for("horario"))
+        inicio = request.form["hora_inicio"]
+        fin = request.form["hora_fin"]
+        if a_minutos(fin) <= a_minutos(inicio):
+            error = "La hora de término tiene que ser después de la hora de inicio."
+        else:
+            modificar(
+                "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala) VALUES (?, ?, ?, ?, ?)",
+                (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"]),
+            )
+            return redirect(url_for("horario"))
 
-    # Agrupamos las clases por día: {0: [clases del lunes], 1: [...], ...}
-    clases = consultar("SELECT * FROM clases ORDER BY hora_inicio")
+    # Todas las clases ordenadas por día y luego por hora.
+    clases = consultar("SELECT * FROM clases ORDER BY dia, hora_inicio")
+
+    # Calculamos dónde va cada clase en la grilla:
+    # "arriba" = cuántos píxeles desde las 8:00, "alto" = cuánto dura.
+    limite_arriba = HORA_INICIO_DIA * 60
+    limite_abajo = HORA_FIN_DIA * 60
     por_dia = {numero: [] for numero in range(7)}
     for clase in clases:
-        por_dia[clase["dia"]].append(clase)
+        inicio = max(a_minutos(clase["hora_inicio"]), limite_arriba)
+        fin = min(a_minutos(clase["hora_fin"]), limite_abajo)
+        if fin <= inicio:
+            continue  # la clase queda fuera de 8:00-20:00, no se dibuja
+        por_dia[clase["dia"]].append({
+            "clase": clase,
+            "arriba": (inicio - limite_arriba) * PIXELES_POR_HORA // 60,
+            "alto": (fin - inicio) * PIXELES_POR_HORA // 60,
+        })
 
-    return render_template("horario.html", dias=DIAS_SEMANA, por_dia=por_dia)
+    # De lunes a viernes siempre; sábado y domingo solo si tienen clases.
+    dias_visibles = [d for d in range(7) if d < 5 or por_dia[d]]
+    horas = [f"{h:02d}:00" for h in range(HORA_INICIO_DIA, HORA_FIN_DIA + 1)]
+
+    return render_template(
+        "horario.html", dias=DIAS_SEMANA, dias_visibles=dias_visibles, por_dia=por_dia,
+        clases=clases, horas=horas, alto_total=(HORA_FIN_DIA - HORA_INICIO_DIA) * PIXELES_POR_HORA,
+        pixeles_hora=PIXELES_POR_HORA, error=error,
+    )
 
 
 @app.route("/universidad/horario/borrar/<int:id>", methods=["POST"])
