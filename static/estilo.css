@@ -507,6 +507,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .item.evento { border: 1px solid var(--borde-boton); }
 .item.examen { background: var(--color-texto); color: var(--color-fondo); font-weight: 600; }
 .punto.examen { background: var(--color-texto); }
+.nota-mini { font-size: 12px; line-height: 1.4; color: var(--texto-secundario); margin: 4px 0 0; }
 .examenes-actual { font-size: 13px; margin: 0 0 6px; color: var(--texto-secundario); }
 .item.hecha { text-decoration: line-through; opacity: 0.6; }
 .item .boton-icono { width: 18px; height: 18px; font-size: 0.625rem; flex-shrink: 0; }

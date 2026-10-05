@@ -45,6 +45,7 @@
         <select id="ex-convocatoria" name="convocatoria" required></select>
         <button class="boton boton-primario boton-chico" name="accion" value="ver">Ver exámenes</button>
         {% if eleccion %}<button class="boton boton-secundario boton-chico" name="accion" value="quitar" formnovalidate>Quitar</button>{% endif %}
+        <p class="nota-mini">{{ texto.nota_examenes }}</p>
       </form>
     </details>
   </div>

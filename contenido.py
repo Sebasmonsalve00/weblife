@@ -121,6 +121,9 @@ FOOTER = [
                                   ("Mes actual", "calendario_vista")]},
 ]
 COPYRIGHT = "weblife · Hecha con Python y Flask"
+# Nota pequeña que sale bajo "Fechas de examen" y en el footer
+NOTA_EXAMENES = ("Si hace falta una o más materias, revisar con su horario oficial "
+                 "de la universidad para añadirlas manualmente.")
 
 
 def todo():
@@ -138,4 +141,5 @@ def todo():
         "mensajes": MENSAJES,
         "footer": FOOTER,
         "copyright": COPYRIGHT,
+        "nota_examenes": NOTA_EXAMENES,
     }
