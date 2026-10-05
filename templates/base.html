@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}weblife{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+</head>
+<body>
+  <!-- Menú que aparece en todas las páginas (menos en la de contraseña) -->
+  {% block menu %}
+  <nav>
+    <a href="{{ url_for('inicio') }}" class="logo">weblife</a>
+    <div class="grupo">
+      <span>🎓 Universidad</span>
+      <a href="{{ url_for('horario') }}">Horario</a>
+      <a href="{{ url_for('tareas') }}">Tareas</a>
+      <a href="{{ url_for('calendario_vista') }}">Calendario</a>
+      <a href="{{ url_for('pendientes') }}">Pendientes</a>
+    </div>
+    <div class="grupo">
+      <span>🌱 Vida</span>
+      <a href="{{ url_for('alimentacion') }}">Alimentación</a>
+      <a href="{{ url_for('entrenamiento') }}">Entrenamiento</a>
+      <a href="{{ url_for('pasos') }}">Pasos</a>
+    </div>
+    {% if session.dentro %}
+      <form method="post" action="{{ url_for('salir') }}" class="en-linea salir">
+        <button>Salir</button>
+      </form>
+    {% endif %}
+  </nav>
+  {% endblock %}
+
+  <main>
+    {# Cada página rellena este bloque con su propio contenido #}
+    {% block contenido %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block titulo %}Alimentación{% endblock %}
+{% block contenido %}
+<h1>🥗 Alimentación</h1>
+
+<form method="post" class="formulario">
+  <input type="date" name="fecha" value="{{ hoy }}" required>
+  <select name="tipo">
+    <option>Desayuno</option><option>Almuerzo</option>
+    <option>Cena</option><option>Snack</option>
+  </select>
+  <input name="descripcion" placeholder="¿Qué comiste?" required>
+  <input type="number" name="calorias" placeholder="Calorías (opcional)" min="0">
+  <button>Registrar</button>
+</form>
+
+<h2>Totales por día</h2>
+<table class="tabla">
+  <tr><th>Fecha</th><th>Comidas</th><th>Calorías</th></tr>
+  {% for fila in totales %}
+    <tr><td>{{ fila.fecha }}</td><td>{{ fila.cantidad }}</td><td>{{ fila.total or "—" }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Registro</h2>
+<table class="tabla">
+  <tr><th>Fecha</th><th>Comida</th><th>Qué</th><th>Calorías</th><th></th></tr>
+  {% for comida in comidas %}
+    <tr>
+      <td>{{ comida.fecha }}</td><td>{{ comida.tipo }}</td>
+      <td>{{ comida.descripcion }}</td><td>{{ comida.calorias or "—" }}</td>
+      <td>
+        <form method="post" action="{{ url_for('borrar_comida', id=comida.id) }}" class="en-linea">
+          <button class="borrar" title="Borrar">✕</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

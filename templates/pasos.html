@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titulo %}Pasos{% endblock %}
+{% block contenido %}
+<h1>👟 Pasos diarios</h1>
+
+<form method="post" class="formulario">
+  <input type="date" name="fecha" value="{{ hoy }}" required>
+  <input type="number" name="cantidad" placeholder="Pasos" min="0" required>
+  <button>Guardar</button>
+</form>
+<p><small>Si guardas otra vez el mismo día, se reemplaza el número anterior.</small></p>
+
+<p class="resumen">Promedio de la semana: <b>{{ promedio }}</b> pasos · Meta: {{ meta }}</p>
+
+<!-- Gráfico de barras hecho solo con HTML y CSS -->
+<div class="grafico">
+  {% for dia in ultimos_7 %}
+    <div class="columna" title="{{ dia.fecha }}: {{ dia.cantidad }} pasos">
+      <small>{{ dia.cantidad }}</small>
+      <div class="barra-vertical {{ 'cumplida' if dia.porcentaje >= 100 }}" style="height: {{ dia.porcentaje }}%"></div>
+      <span>{{ dia.nombre }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

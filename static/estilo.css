@@ -1,0 +1,93 @@
+/* ===== Colores (cámbialos para personalizar tu web) ===== */
+:root {
+  --fondo: #f5f6fa;
+  --tarjeta: #ffffff;
+  --texto: #222;
+  --suave: #888;
+  --principal: #4f6df5;
+  --verde: #2fb67c;
+  --rojo: #e5484d;
+  --naranja: #f5a524;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--fondo); color: var(--texto); }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+a { color: var(--principal); text-decoration: none; }
+h1 a { padding: 0 8px; }
+small, .vacio { color: var(--suave); }
+
+/* ===== Menú ===== */
+nav { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center;
+      background: var(--tarjeta); padding: 12px 16px; border-bottom: 1px solid #e3e5ec; }
+nav .logo { font-weight: 700; font-size: 1.3rem; margin-right: 16px; }
+nav .grupo { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+nav .grupo span { font-weight: 600; }
+nav .grupo a { color: var(--texto); padding: 4px 8px; border-radius: 6px; }
+nav .grupo a:hover { background: var(--fondo); }
+
+/* ===== Tarjetas del inicio ===== */
+.tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.tarjeta { background: var(--tarjeta); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px #0001; }
+.tarjeta h2 { margin-top: 0; font-size: 1.1rem; }
+.numero { font-size: 2rem; font-weight: 700; margin: 8px 0; }
+.barra { background: var(--fondo); border-radius: 8px; height: 10px; overflow: hidden; }
+.barra div { background: var(--verde); height: 100%; }
+
+/* ===== Formularios ===== */
+.formulario { display: flex; flex-wrap: wrap; gap: 8px; background: var(--tarjeta);
+              padding: 12px; border-radius: 12px; margin-bottom: 16px; }
+input, select, button { font: inherit; padding: 8px 10px; border: 1px solid #d6d9e3; border-radius: 8px; }
+.formulario input:not([type]) { flex: 1; min-width: 160px; }
+button { background: var(--principal); color: white; border: none; cursor: pointer; }
+.en-linea { display: inline; }
+button.borrar { background: none; color: var(--suave); padding: 0 6px; }
+button.borrar:hover { color: var(--rojo); }
+button.check { background: none; color: var(--verde); padding: 0 6px; font-size: 1.1rem; }
+
+/* ===== Listas de tareas ===== */
+.lista { list-style: none; padding: 0; }
+.lista li { background: var(--tarjeta); padding: 10px; border-radius: 8px; margin-bottom: 6px; }
+.lista li.hecha { opacity: .5; text-decoration: line-through; }
+.etiqueta { background: #eef1ff; color: var(--principal); padding: 2px 8px; border-radius: 99px; font-size: .85rem; }
+.alerta { color: var(--rojo); }
+
+/* ===== Horario semanal ===== */
+.semana { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.dia { background: var(--tarjeta); border-radius: 10px; padding: 8px; min-height: 120px; }
+.dia h3 { margin: 0 0 8px; font-size: 1rem; }
+.clase { background: #eef1ff; border-left: 4px solid var(--principal); border-radius: 6px;
+         padding: 6px; margin-bottom: 6px; font-size: .9rem; position: relative; }
+.clase form { position: absolute; top: 2px; right: 2px; }
+
+/* ===== Calendario ===== */
+.calendario { width: 100%; border-collapse: collapse; table-layout: fixed; background: var(--tarjeta); }
+.calendario th, .calendario td { border: 1px solid #e3e5ec; vertical-align: top; padding: 4px; }
+.calendario td { height: 90px; font-size: .8rem; overflow: hidden; }
+.calendario td.fuera { background: var(--fondo); }
+.calendario td.hoy { background: #fffbe8; }
+.calendario .num { font-weight: 700; }
+.item { border-radius: 4px; padding: 1px 4px; margin-top: 2px; overflow-wrap: anywhere; }
+.item.tarea { background: #ffe9d1; }
+.item.evento { background: #e0e7ff; }
+.item.hecha { text-decoration: line-through; opacity: .6; }
+.punto { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; }
+.punto.tarea { background: #ffe9d1; } .punto.evento { background: #e0e7ff; }
+
+/* ===== Tablas ===== */
+.tabla { width: 100%; border-collapse: collapse; background: var(--tarjeta); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+.tabla th, .tabla td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef0f4; }
+.resumen { background: var(--tarjeta); padding: 12px; border-radius: 12px; }
+
+/* ===== Gráfico de pasos ===== */
+.grafico { display: flex; gap: 8px; align-items: flex-end; height: 240px; background: var(--tarjeta);
+           padding: 16px; border-radius: 12px; }
+.columna { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.barra-vertical { width: 100%; max-width: 50px; background: var(--naranja); border-radius: 6px 6px 0 0; min-height: 2px; }
+.barra-vertical.cumplida { background: var(--verde); }
+
+/* ===== Página de contraseña y botón Salir ===== */
+.entrar { max-width: 360px; margin: 80px auto; text-align: center; }
+.entrar form { display: flex; flex-direction: column; gap: 8px; }
+nav .salir { margin-left: auto; }
+nav .salir button { background: none; color: var(--suave); border: 1px solid #d6d9e3; }

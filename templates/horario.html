@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}Horario{% endblock %}
+{% block contenido %}
+<h1>🗓️ Horario semanal</h1>
+
+<form method="post" class="formulario">
+  <input name="nombre" placeholder="Materia (ej: Cálculo)" required>
+  <select name="dia">
+    {% for nombre in dias %}
+      <option value="{{ loop.index0 }}">{{ nombre }}</option>
+    {% endfor %}
+  </select>
+  <input type="time" name="hora_inicio" required>
+  <input type="time" name="hora_fin" required>
+  <input name="sala" placeholder="Sala (opcional)">
+  <button>Agregar clase</button>
+</form>
+
+<div class="semana">
+  {% for numero in range(7) %}
+    <div class="dia">
+      <h3>{{ dias[numero] }}</h3>
+      {% for clase in por_dia[numero] %}
+        <div class="clase">
+          <b>{{ clase.hora_inicio }}–{{ clase.hora_fin }}</b><br>
+          {{ clase.nombre }}<br>
+          <small>{{ clase.sala }}</small>
+          <form method="post" action="{{ url_for('borrar_clase', id=clase.id) }}" class="en-linea">
+            <button class="borrar" title="Borrar">✕</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}Entrenamiento{% endblock %}
+{% block contenido %}
+<h1>🏋️ Entrenamiento</h1>
+
+<p class="resumen">Últimos 7 días: <b>{{ semana.sesiones }}</b> sesiones,
+  <b>{{ semana.minutos or 0 }}</b> minutos en total.</p>
+
+<form method="post" class="formulario">
+  <input type="date" name="fecha" value="{{ hoy }}" required>
+  <input name="tipo" placeholder="Tipo (ej: Pesas, Correr)" required list="tipos">
+  <datalist id="tipos">
+    <option>Pesas</option><option>Correr</option><option>Bicicleta</option>
+    <option>Natación</option><option>Fútbol</option><option>Yoga</option>
+  </datalist>
+  <input type="number" name="minutos" placeholder="Minutos" min="0">
+  <input name="notas" placeholder="Notas (ej: sentadilla 4x10 60kg)">
+  <button>Registrar</button>
+</form>
+
+<table class="tabla">
+  <tr><th>Fecha</th><th>Tipo</th><th>Minutos</th><th>Notas</th><th></th></tr>
+  {% for e in entrenamientos %}
+    <tr>
+      <td>{{ e.fecha }}</td><td>{{ e.tipo }}</td><td>{{ e.minutos or "—" }}</td><td>{{ e.notas }}</td>
+      <td>
+        <form method="post" action="{{ url_for('borrar_entrenamiento', id=e.id) }}" class="en-linea">
+          <button class="borrar" title="Borrar">✕</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="vacio">Todavía no hay entrenamientos.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

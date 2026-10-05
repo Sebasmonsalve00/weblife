@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titulo %}Entrar{% endblock %}
+{% block menu %}{% endblock %}
+{% block contenido %}
+<div class="tarjeta entrar">
+  <h1>weblife 🔒</h1>
+  {% if error %}<p class="alerta">{{ error }}</p>{% endif %}
+  <form method="post">
+    <input type="password" name="clave" placeholder="Contraseña" required autofocus>
+    <button>Entrar</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block contenido %}
+<h1>Hola 👋 Hoy es {{ dia_nombre }} {{ hoy }}</h1>
+
+<div class="tarjetas">
+  <section class="tarjeta">
+    <h2>Clases de hoy</h2>
+    {% for clase in clases_hoy %}
+      <p><b>{{ clase.hora_inicio }}–{{ clase.hora_fin }}</b> {{ clase.nombre }} <small>{{ clase.sala }}</small></p>
+    {% else %}
+      <p class="vacio">No tienes clases hoy.</p>
+    {% endfor %}
+    <a href="{{ url_for('horario') }}">Ver horario →</a>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Próximas tareas</h2>
+    {% for tarea in pendientes %}
+      <p><b>{{ tarea.fecha_entrega }}</b> {{ tarea.titulo }} <small>{{ tarea.materia }}</small></p>
+    {% else %}
+      <p class="vacio">¡Nada pendiente! 🎉</p>
+    {% endfor %}
+    <a href="{{ url_for('pendientes') }}">Ver pendientes →</a>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Pasos de hoy</h2>
+    <p class="numero">{{ "{:,}".format(pasos_hoy).replace(",", ".") }}</p>
+    <div class="barra"><div style="width: {{ [100, pasos_hoy * 100 // meta_pasos] | min }}%"></div></div>
+    <small>Meta: {{ meta_pasos }}</small><br>
+    <a href="{{ url_for('pasos') }}">Registrar pasos →</a>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Calorías de hoy</h2>
+    <p class="numero">{{ calorias_hoy }}</p>
+    <a href="{{ url_for('alimentacion') }}">Registrar comida →</a>
+  </section>
+</div>
+{% endblock %}

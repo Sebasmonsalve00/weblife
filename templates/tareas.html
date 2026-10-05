@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block titulo %}Tareas{% endblock %}
+{% block contenido %}
+<h1>📚 Tareas</h1>
+
+<form method="post" class="formulario">
+  <input name="titulo" placeholder="¿Qué tienes que hacer?" required>
+  <input name="materia" placeholder="Materia">
+  <input type="date" name="fecha_entrega" value="{{ hoy }}" required>
+  <button>Agregar tarea</button>
+</form>
+
+<ul class="lista">
+  {% for tarea in tareas %}
+    {% include "_tarea.html" %}
+  {% else %}
+    <p class="vacio">Todavía no hay tareas.</p>
+  {% endfor %}
+</ul>
+{% endblock %}
