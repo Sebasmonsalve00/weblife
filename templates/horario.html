@@ -1,7 +1,67 @@
 {% extends "base.html" %}
-{% block titulo %}Horario{% endblock %}
+{% block titulo %}Horario</div>
+</div>
+{% endblock %}
 {% block contenido %}
 <h1>🗓️ Horario semanal</h1>
+
+<div class="horario-layout">
+
+<!-- ===== Panel lateral: clases del día, asistencia y tareas rápidas ===== -->
+<aside class="panel-dia">
+  <div class="panel-titulo">
+    <a href="{{ url_for('horario', fecha=dia_anterior) }}" title="Día anterior">◀</a>
+    <div>
+      <b>{{ "Hoy" if es_hoy else nombre_dia_panel }}</b><br>
+      <small>{{ nombre_dia_panel }} {{ dia_panel }}</small>
+    </div>
+    <a href="{{ url_for('horario', fecha=dia_siguiente) }}" title="Día siguiente">▶</a>
+  </div>
+  {% if not es_hoy %}<p class="centro"><a href="{{ url_for('horario') }}">Volver a hoy</a></p>{% endif %}
+
+  {% for item in panel %}
+    {% set clase = item.clase %}
+    <div class="panel-clase {{ 'fui' if item.asistio == 1 }} {{ 'no-fui' if item.asistio == 0 }}">
+      <b>{{ clase.nombre }}</b>
+      <small>{{ clase.hora_inicio }}–{{ clase.hora_fin }}{% if clase.sala %} · Aula {{ clase.sala }}{% endif %}</small>
+
+      <!-- ¿Fuiste a clase? -->
+      <div class="asistencia">
+        {% for valor, texto in [(1, "✔ Fui"), (0, "✕ No fui")] %}
+          <form method="post" action="{{ url_for('marcar_asistencia', id=clase.id) }}" class="en-linea">
+            <input type="hidden" name="fecha" value="{{ dia_panel }}">
+            <input type="hidden" name="asistio" value="{{ valor }}">
+            <button class="opcion {{ 'elegida' if item.asistio == valor }}">{{ texto }}</button>
+          </form>
+        {% endfor %}
+      </div>
+
+      <!-- ¿Dejaron tarea? Se abre al hacer clic -->
+      <details>
+        <summary>+ ¿Dejaron tarea?</summary>
+        <form method="post" action="{{ url_for('tarea_rapida', id=clase.id) }}" class="tarea-rapida">
+          <input type="hidden" name="fecha" value="{{ dia_panel }}">
+          <input name="titulo" placeholder="¿Qué hay que hacer?" required>
+          <label>Entrega <input type="date" name="fecha_entrega" value="{{ entrega_sugerida }}" required></label>
+          <button>Añadir a Tareas</button>
+        </form>
+      </details>
+
+      {% if item.pendientes %}
+        <ul class="mini-lista">
+          {% for tarea in item.pendientes[:3] %}
+            <li>📌 {{ tarea.titulo }} <small>entrega {{ tarea.fecha_entrega }}</small></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% else %}
+    <p class="vacio centro">No tienes clases este día.</p>
+  {% endfor %}
+</aside>
+
+<!-- ===== Parte principal: formulario, grilla y lista ===== -->
+<div class="horario-principal">
 
 <!-- Formulario para agregar una clase -->
 <form method="post" class="formulario">
@@ -68,4 +128,6 @@
     <tr><td colspan="5" class="vacio">Todavía no agregas clases.</td></tr>
   {% endfor %}
 </table>
+</div>
+</div>
 {% endblock %}

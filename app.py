@@ -111,7 +111,19 @@ def crear_tablas():
             fecha TEXT PRIMARY KEY,        -- un solo registro por día
             cantidad INTEGER NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS asistencias (
+            clase_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,           -- el día de esa clase
+            asistio INTEGER NOT NULL,      -- 1 = fui, 0 = no fui
+            PRIMARY KEY (clase_id, fecha)  -- una sola marca por clase y día
+        );
     """)
+
+    # Las tablas creadas antes no tenían "fecha_creacion" en tareas: la agregamos.
+    columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(tareas)")]
+    if "fecha_creacion" not in columnas:
+        conexion.execute("ALTER TABLE tareas ADD COLUMN fecha_creacion TEXT")
     conexion.commit()
     conexion.close()
 
@@ -232,6 +244,23 @@ def horario():
     # Todas las clases ordenadas por día y luego por hora.
     clases = consultar("SELECT * FROM clases ORDER BY dia, hora_inicio")
 
+    # ---- Panel lateral: las clases de un día (por defecto, hoy) ----
+    try:
+        dia_panel = date.fromisoformat(request.args.get("fecha", ""))
+    except ValueError:
+        dia_panel = date.today()
+    texto_panel = dia_panel.isoformat()
+    marcas = {fila["clase_id"]: fila["asistio"] for fila in
+              consultar("SELECT * FROM asistencias WHERE fecha = ?", (texto_panel,))}
+    panel = []
+    for clase in clases:
+        if clase["dia"] == dia_panel.weekday():
+            pendientes_materia = consultar(
+                "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 ORDER BY fecha_entrega",
+                (clase["nombre"],))
+            panel.append({"clase": clase, "asistio": marcas.get(clase["id"]),
+                          "pendientes": pendientes_materia})
+
     # Calculamos dónde va cada clase en la grilla:
     # "arriba" = cuántos píxeles desde las 8:00, "alto" = cuánto dura.
     limite_arriba = HORA_INICIO_DIA * 60
@@ -256,26 +285,60 @@ def horario():
         "horario.html", dias=DIAS_SEMANA, dias_visibles=dias_visibles, por_dia=por_dia,
         clases=clases, horas=horas, alto_total=(HORA_FIN_DIA - HORA_INICIO_DIA) * PIXELES_POR_HORA,
         pixeles_hora=PIXELES_POR_HORA, error=error,
+        panel=panel, dia_panel=texto_panel, nombre_dia_panel=DIAS_SEMANA[dia_panel.weekday()],
+        es_hoy=(dia_panel == date.today()),
+        dia_anterior=(dia_panel - timedelta(days=1)).isoformat(),
+        dia_siguiente=(dia_panel + timedelta(days=1)).isoformat(),
+        entrega_sugerida=(dia_panel + timedelta(days=7)).isoformat(),
     )
 
 
 @app.route("/universidad/horario/borrar/<int:id>", methods=["POST"])
 def borrar_clase(id):
     modificar("DELETE FROM clases WHERE id = ?", (id,))
+    modificar("DELETE FROM asistencias WHERE clase_id = ?", (id,))
     return redirect(url_for("horario"))
+
+
+@app.route("/universidad/horario/asistencia/<int:id>", methods=["POST"])
+def marcar_asistencia(id):
+    """Guarda si fuiste (1) o no (0) a una clase en un día. Si vuelves a apretar el mismo botón, se borra."""
+    fecha = request.form["fecha"]
+    asistio = int(request.form["asistio"])
+    anterior = consultar("SELECT asistio FROM asistencias WHERE clase_id = ? AND fecha = ?", (id, fecha))
+    if anterior and anterior[0]["asistio"] == asistio:
+        modificar("DELETE FROM asistencias WHERE clase_id = ? AND fecha = ?", (id, fecha))
+    else:
+        modificar("INSERT OR REPLACE INTO asistencias (clase_id, fecha, asistio) VALUES (?, ?, ?)",
+                  (id, fecha, asistio))
+    return redirect(url_for("horario", fecha=fecha))
+
+
+@app.route("/universidad/horario/tarea/<int:id>", methods=["POST"])
+def tarea_rapida(id):
+    """Agrega una tarea desde el panel del horario, con la materia de esa clase."""
+    clase = consultar("SELECT nombre FROM clases WHERE id = ?", (id,))
+    if clase:
+        guardar_tarea(request.form["titulo"], clase[0]["nombre"], request.form["fecha_entrega"])
+    return redirect(url_for("horario", fecha=request.form["fecha"]))
 
 
 # ------------------------------------------------------------
 #  UNIVERSIDAD: Tareas
 # ------------------------------------------------------------
 
+def guardar_tarea(titulo, materia, fecha_entrega):
+    """Guarda una tarea nueva con la fecha de hoy como fecha de creación."""
+    modificar(
+        "INSERT INTO tareas (titulo, materia, fecha_entrega, fecha_creacion) VALUES (?, ?, ?, ?)",
+        (titulo, materia, fecha_entrega, date.today().isoformat()),
+    )
+
+
 @app.route("/universidad/tareas", methods=["GET", "POST"])
 def tareas():
     if request.method == "POST":
-        modificar(
-            "INSERT INTO tareas (titulo, materia, fecha_entrega) VALUES (?, ?, ?)",
-            (request.form["titulo"], request.form["materia"], request.form["fecha_entrega"]),
-        )
+        guardar_tarea(request.form["titulo"], request.form["materia"], request.form["fecha_entrega"])
         return redirect(url_for("tareas"))
 
     todas = consultar("SELECT * FROM tareas ORDER BY hecha, fecha_entrega")

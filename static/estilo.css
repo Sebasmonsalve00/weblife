@@ -102,3 +102,30 @@ nav .salir button { background: none; color: var(--suave); border: 1px solid #d6
   border-left: 4px solid var(--principal); border-radius: 6px; padding: 3px 6px; font-size: .78rem;
   display: flex; flex-direction: column; line-height: 1.25; }
 .bloque span { color: #555; }
+
+/* ===== Horario: panel lateral con asistencia y tareas rápidas ===== */
+.horario-layout { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; }
+.horario-principal { min-width: 0; }
+@media (max-width: 800px) { .horario-layout { grid-template-columns: 1fr; } }
+.panel-dia { background: var(--tarjeta); border-radius: 12px; padding: 12px; position: sticky; top: 12px; }
+.panel-titulo { display: flex; justify-content: space-between; align-items: center; text-align: center; margin-bottom: 8px; }
+.panel-titulo a { font-size: 1.2rem; padding: 4px 8px; }
+.centro { text-align: center; margin: 4px 0 8px; }
+.panel-clase { border: 1px solid #e3e5ec; border-left: 4px solid var(--principal); border-radius: 8px;
+  padding: 8px 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+.panel-clase.fui { border-left-color: var(--verde); }
+.panel-clase.no-fui { border-left-color: var(--rojo); }
+.asistencia { display: flex; gap: 6px; margin: 4px 0; }
+button.opcion { background: var(--fondo); color: var(--texto); border: 1px solid #d6d9e3; padding: 4px 10px; font-size: .85rem; }
+.fui button.opcion.elegida { background: var(--verde); color: white; border-color: var(--verde); }
+.no-fui button.opcion.elegida { background: var(--rojo); color: white; border-color: var(--rojo); }
+details summary { cursor: pointer; color: var(--principal); font-size: .9rem; }
+.tarea-rapida { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.tarea-rapida label { display: flex; flex-direction: column; font-size: .8rem; color: var(--suave); }
+.mini-lista { list-style: none; padding: 0; margin: 4px 0 0; font-size: .85rem; }
+.mini-lista li { margin-top: 2px; }
+
+/* ===== Tareas: fechas de entrega y creación ===== */
+.lista li { display: flex; align-items: center; gap: 6px; }
+.tarea-texto { flex: 1; }
+.fechas { display: block; margin-top: 2px; }
