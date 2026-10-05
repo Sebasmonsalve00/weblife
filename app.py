@@ -22,6 +22,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 # Diseño (colores, fuente, radios...) y textos de la web, cada uno en su archivo.
 import config_diseno
 import contenido
+import examenes
 
 # Creamos la aplicación web. "__name__" le dice a Flask dónde está este archivo.
 app = Flask(__name__)
@@ -603,7 +604,29 @@ def calendario_vista():
         semanas=semanas, anio=anio, mes=mes, nombre_mes=MESES[mes],
         dias=DIAS_SEMANA, cosas_por_dia=cosas_por_dia,
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
+        calendarios=examenes.CALENDARIOS,
     )
+
+
+@app.route("/universidad/calendario/examenes", methods=["POST"])
+def cargar_examenes():
+    """Agrega al calendario todas las fechas de examen de la carrera, curso y convocatoria elegidos."""
+    lista = examenes.examenes(request.form["carrera"], request.form["curso"], request.form["convocatoria"])
+    agregados = 0
+    for asignatura, fecha, hora, _ in lista:
+        titulo = f"Examen: {asignatura}"
+        # Si ya estaba (por cargarlo dos veces), no lo repetimos.
+        if not consultar("SELECT id FROM eventos WHERE titulo = ? AND fecha = ? AND usuario_id = ?",
+                         (titulo, fecha, yo())):
+            modificar("INSERT INTO eventos (titulo, fecha, hora, usuario_id) VALUES (?, ?, ?, ?)",
+                      (titulo, fecha, hora, yo()))
+            agregados += 1
+    if not lista:
+        return redirect(url_for("calendario_vista"))
+    flash(contenido.MENSAJES["examenes"].format(agregados))
+    # Mostramos el mes del primer examen.
+    primero = min(fecha for _, fecha, _, _ in lista)
+    return redirect(url_for("calendario_vista", anio=int(primero[:4]), mes=int(primero[5:7])))
 
 
 @app.route("/universidad/calendario/borrar/<int:id>", methods=["POST"])

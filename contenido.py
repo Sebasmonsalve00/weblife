@@ -105,6 +105,7 @@ MENSAJES = {
     "tarea": "Tarea guardada.",
     "actividad": "Actividad de asistencia guardada.",
     "cuenta": "Nombre guardado.",
+    "examenes": "Fechas de examen cargadas: {} nuevas en tu calendario.",
     "evento": "Evento agregado al calendario.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",
