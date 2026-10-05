@@ -13,7 +13,7 @@ import os
 import re
 import sqlite3
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 # Herramientas de Flask para guardar contraseñas cifradas (nunca guardamos la contraseña tal cual).
@@ -562,6 +562,42 @@ def pendientes():
 #  UNIVERSIDAD: Calendario mensual
 # ------------------------------------------------------------
 
+def avisos_calendario():
+    """Arma los dos avisos del calendario:
+    - examenes: los próximos exámenes (eventos que dicen "examen"), con su fecha y hora.
+    - urgentes: tareas sin hacer y eventos que vencen en menos de 48 horas.
+    "objetivo" es el momento exacto ("2026-12-07T12:00") que usa la cuenta regresiva."""
+    ahora = datetime.now()
+    hoy = date.today().isoformat()
+
+    examenes_proximos = []
+    urgentes = []
+    for evento in consultar("SELECT * FROM eventos WHERE usuario_id = ? AND fecha >= ? ORDER BY fecha, hora",
+                            (yo(), hoy)):
+        # Sin hora, contamos hasta el final del día.
+        objetivo = datetime.fromisoformat(f"{evento['fecha']}T{evento['hora'] or '23:59'}")
+        if objetivo < ahora:
+            continue  # ya pasó
+        aviso = {"titulo": evento["titulo"], "fecha": evento["fecha"], "hora": evento["hora"],
+                 "objetivo": objetivo.isoformat(timespec="minutes")}
+        if "examen" in evento["titulo"].lower():
+            examenes_proximos.append(aviso)
+        elif objetivo - ahora <= timedelta(hours=48):
+            urgentes.append(aviso)
+
+    en_2_dias = (date.today() + timedelta(days=2)).isoformat()
+    for tarea in consultar("SELECT * FROM tareas WHERE usuario_id = ? AND hecha = 0 "
+                           "AND fecha_entrega BETWEEN ? AND ?", (yo(), hoy, en_2_dias)):
+        # Una tarea se entrega como tarde al final de su día.
+        objetivo = datetime.fromisoformat(f"{tarea['fecha_entrega']}T23:59")
+        if ahora <= objetivo and objetivo - ahora <= timedelta(hours=48):
+            urgentes.append({"titulo": tarea["titulo"], "fecha": tarea["fecha_entrega"], "hora": None,
+                             "objetivo": objetivo.isoformat(timespec="minutes")})
+
+    urgentes.sort(key=lambda aviso: aviso["objetivo"])
+    return {"examenes": examenes_proximos[:5], "urgentes": urgentes}
+
+
 @app.route("/universidad/calendario", methods=["GET", "POST"])
 def calendario_vista():
     # Agregar un evento (examen, reunión, etc.)
@@ -604,7 +640,7 @@ def calendario_vista():
         semanas=semanas, anio=anio, mes=mes, nombre_mes=MESES[mes],
         dias=DIAS_SEMANA, cosas_por_dia=cosas_por_dia,
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
-        calendarios=examenes.CALENDARIOS,
+        calendarios=examenes.CALENDARIOS, avisos=avisos_calendario(),
     )
 
 

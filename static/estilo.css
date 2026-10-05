@@ -448,6 +448,27 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 /* ---------- Calendario ---------- */
 .mes-navegacion { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .mes-navegacion h2 { margin: 0; min-width: 0; }
+/* Avisos fijos abajo a la izquierda (en móvil van dentro de la página) */
+.avisos { display: flex; flex-direction: column; gap: 12px; margin-top: 32px; }
+.aviso-caja {
+  background: var(--color-fondo); border: 1px solid var(--borde); border-radius: var(--radio-input);
+  box-shadow: var(--sombra); padding: 14px 16px; max-height: 40vh; overflow-y: auto;
+}
+.aviso-caja h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 8px; }
+.aviso-urgente { border: 2px solid var(--color-texto); }
+.aviso-item { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--borde); font-size: 14px; }
+.aviso-item:first-of-type { border-top: none; }
+.cuenta { font-variant-numeric: tabular-nums; font-weight: 600; margin-top: 2px; }
+.aviso-examenes .cuenta { color: var(--color-texto); background: var(--acento-suave); border-radius: 8px; padding: 2px 8px; align-self: flex-start; }
+@media (min-width: 1024px) {
+  .avisos { position: fixed; left: 16px; bottom: 16px; z-index: 30; width: 240px; margin: 0; }
+  .aviso-caja { max-height: 32vh; }
+}
+/* Si la pantalla no es muy ancha, corremos el contenido para que los avisos no lo tapen */
+@media (min-width: 1024px) and (max-width: 1759px) {
+  .con-avisos main.contenedor, .con-avisos .footer .contenedor { padding-left: 288px; }
+}
+
 /* Botón pequeño "+ Fechas de examen" y su panel desplegable */
 .examenes-mini { position: relative; margin-left: auto; }
 .examenes-mini summary { list-style: none; cursor: pointer; }

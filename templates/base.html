@@ -22,7 +22,7 @@
   <!-- Marcamos que hay JavaScript antes de dibujar, para que las animaciones no parpadeen -->
   <script>document.documentElement.classList.add("js");</script>
 </head>
-<body>
+<body class="{% block clase_body %}{% endblock %}">
   <!-- Enlace para saltar el menú con el teclado (accesibilidad) -->
   <a href="#contenido" class="saltar">Ir al contenido</a>
 
