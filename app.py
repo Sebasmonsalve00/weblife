@@ -124,6 +124,12 @@ def crear_tablas():
         );
     """)
 
+    # Las cuentas creadas antes no tenían nombre y apellido: agregamos esas columnas.
+    columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(usuarios)")]
+    for columna in ("nombre_real", "apellido"):
+        if columna not in columnas:
+            conexion.execute(f"ALTER TABLE usuarios ADD COLUMN {columna} TEXT")
+
     # Las tablas creadas antes no tenían "fecha_creacion" en tareas: la agregamos.
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(tareas)")]
     if "fecha_creacion" not in columnas:
@@ -203,6 +209,7 @@ def iniciar_sesion(usuario):
     session.clear()
     session["usuario_id"] = usuario["id"]
     session["nombre"] = usuario["nombre"]
+    session["nombre_real"] = usuario["nombre_real"] or ""   # vacío si la cuenta es de antes
     session.permanent = True
 
 
@@ -224,12 +231,16 @@ def registrar():
     error = None
     if request.method == "POST":
         nombre = request.form["nombre"].strip()
+        nombre_real = request.form["nombre_real"].strip()
+        apellido = request.form["apellido"].strip()
         clave = request.form["clave"]
         codigo = request.form.get("codigo", "")
         textos = contenido.REGISTRAR
         if CODIGO and not hmac.compare_digest(codigo.encode(), CODIGO.encode()):
             time.sleep(1)
             error = textos["error_codigo"]
+        elif not (1 <= len(nombre_real) <= 40 and 1 <= len(apellido) <= 40):
+            error = textos["error_nombre_real"]
         elif not re.fullmatch(r"[A-Za-z0-9._-]{3,30}", nombre):
             error = textos["error_nombre"]
         elif len(clave) < 8:
@@ -239,8 +250,9 @@ def registrar():
         elif consultar("SELECT id FROM usuarios WHERE nombre = ?", (nombre,)):
             error = textos["error_nombre_usado"]
         else:
-            modificar("INSERT INTO usuarios (nombre, clave_hash, creado) VALUES (?, ?, ?)",
-                      (nombre, generate_password_hash(clave), date.today().isoformat()))
+            modificar("INSERT INTO usuarios (nombre, nombre_real, apellido, clave_hash, creado) "
+                      "VALUES (?, ?, ?, ?, ?)",
+                      (nombre, nombre_real, apellido, generate_password_hash(clave), date.today().isoformat()))
             usuario = consultar("SELECT * FROM usuarios WHERE nombre = ?", (nombre,))[0]
             # La primera cuenta se queda con los datos que había antes de las cuentas.
             if consultar("SELECT COUNT(*) AS n FROM usuarios")[0]["n"] == 1:
@@ -250,6 +262,22 @@ def registrar():
             flash(textos["bienvenida"])
             return redirect(url_for("inicio"))
     return render_template("registrar.html", error=error, pide_codigo=bool(CODIGO))
+
+
+@app.route("/cuenta", methods=["GET", "POST"])
+def cuenta():
+    """Para cambiar tu nombre y apellido (útil en cuentas creadas antes de que se pidieran)."""
+    if request.method == "POST":
+        nombre_real = request.form["nombre_real"].strip()[:40]
+        apellido = request.form["apellido"].strip()[:40]
+        if nombre_real and apellido:
+            modificar("UPDATE usuarios SET nombre_real = ?, apellido = ? WHERE id = ?",
+                      (nombre_real, apellido, yo()))
+            session["nombre_real"] = nombre_real
+            flash(contenido.MENSAJES["cuenta"])
+            return redirect(url_for("inicio"))
+    usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (yo(),))[0]
+    return render_template("cuenta.html", usuario=usuario)
 
 
 @app.route("/salir", methods=["POST"])

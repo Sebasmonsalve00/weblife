@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "_componentes.html" import encabezado %}
+{% block titulo %}{{ texto.cuenta.titulo }}{% endblock %}
+{% block contenido %}
+{{ encabezado(texto.cuenta) }}
+
+<form method="post" class="formulario grid-12 reveal">
+  <div class="campo md-6 lg-4">
+    <label for="c-nombre">Nombre</label>
+    <input id="c-nombre" name="nombre_real" required maxlength="40" autocomplete="given-name" value="{{ usuario.nombre_real or '' }}">
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="c-apellido">Apellido</label>
+    <input id="c-apellido" name="apellido" required maxlength="40" autocomplete="family-name" value="{{ usuario.apellido or '' }}">
+  </div>
+  <div class="campo lg-4">
+    <button class="boton-enviar">Guardar</button>
+  </div>
+</form>
+<p class="nota">Tu usuario para entrar es <b>{{ usuario.nombre }}</b>.</p>
+{% endblock %}

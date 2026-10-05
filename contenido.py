@@ -60,6 +60,7 @@ INICIO = {
     "boton_principal": {"texto": "Ver pendientes", "ruta": "pendientes"},
     "boton_secundario": {"texto": "Ver horario", "ruta": "horario"},
     "titulo_resumen": "Tu día",
+    "anadir_nombre": "Añade tu nombre",
 }
 
 # ---- Página de contraseña ----
@@ -70,6 +71,13 @@ ENTRAR = {
     "error": "Usuario o contraseña incorrectos.",
     "sin_cuenta": "¿No tienes cuenta?",
     "ir_registro": "Crear una cuenta",
+}
+
+# ---- Página "Mi cuenta" ----
+CUENTA = {
+    "etiqueta": "Cuenta",
+    "titulo": "Mi cuenta",
+    "subtitulo": "Tu nombre aparece en el saludo de la página de inicio.",
 }
 
 # ---- Página para crear una cuenta ----
@@ -83,6 +91,7 @@ REGISTRAR = {
     "ayuda_nombre": "De 3 a 30 letras o números, sin espacios (también vale . _ -).",
     "ayuda_clave": "Mínimo 8 caracteres.",
     "error_codigo": "El código de invitación no es correcto.",
+    "error_nombre_real": "Escribe tu nombre y tu apellido.",
     "error_nombre": "El usuario debe tener de 3 a 30 letras o números, sin espacios.",
     "error_nombre_usado": "Ese usuario ya existe. Elige otro.",
     "error_clave_corta": "La contraseña debe tener al menos 8 caracteres.",
@@ -95,6 +104,7 @@ MENSAJES = {
     "clase": "Clase agregada al horario.",
     "tarea": "Tarea guardada.",
     "actividad": "Actividad de asistencia guardada.",
+    "cuenta": "Nombre guardado.",
     "evento": "Evento agregado al calendario.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",
@@ -106,7 +116,7 @@ FOOTER = [
     {"titulo": "Tareas", "enlaces": [("Tareas", "tareas"), ("Calendario", "calendario_vista"),
                                      ("Pendientes", "pendientes")]},
     {"titulo": "Accesos rápidos", "enlaces": [("Inicio", "inicio"), ("Nueva tarea", "tareas"),
-                                              ("Marcar asistencia", "horario")]},
+                                              ("Marcar asistencia", "horario"), ("Mi cuenta", "cuenta")]},
     {"titulo": "Hoy", "enlaces": [("Clases de hoy", "horario"), ("Lo pendiente", "pendientes"),
                                   ("Mes actual", "calendario_vista")]},
 ]
@@ -124,6 +134,7 @@ def todo():
         "inicio": INICIO,
         "entrar": ENTRAR,
         "registrar": REGISTRAR,
+        "cuenta": CUENTA,
         "mensajes": MENSAJES,
         "footer": FOOTER,
         "copyright": COPYRIGHT,

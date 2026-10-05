@@ -7,8 +7,10 @@
 <section class="hero">
   <div class="hero-entrada">
     <p class="etiqueta-seccion">{{ hoy }}</p>
-    <h1 class="hero-titulo">{{ t.saludo }} {{ session.nombre }}, {{ t.bienvenida }}</h1>
+    <h1 class="hero-titulo">{{ t.saludo }} {{ session.nombre_real or session.nombre }}, {{ t.bienvenida }}</h1>
     <p class="subtitulo">{{ t.subtitulo }}</p>
+    {# Cuentas creadas antes de pedir el nombre: les ofrecemos añadirlo #}
+    {% if not session.nombre_real %}<p>{{ enlace_flecha(t.anadir_nombre, url_for('cuenta')) }}</p>{% endif %}
     <div class="hero-botones">
       <a href="{{ url_for(t.boton_principal.ruta) }}" class="boton boton-primario">{{ t.boton_principal.texto }}</a>
       <a href="{{ url_for(t.boton_secundario.ruta) }}" class="boton boton-secundario">{{ t.boton_secundario.texto }}</a>
