@@ -73,6 +73,7 @@ ENTRAR = {
 MENSAJES = {
     "clase": "Clase agregada al horario.",
     "tarea": "Tarea guardada.",
+    "actividad": "Actividad de asistencia guardada.",
     "evento": "Evento agregado al calendario.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",

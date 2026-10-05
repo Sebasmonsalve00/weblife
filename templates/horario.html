@@ -35,6 +35,30 @@
         {% endfor %}
       </div>
 
+      <!-- ¿Hubo actividad de asistencia (quiz, lista, taller...)? Se abre al hacer clic -->
+      {% set act = item.actividad %}
+      {% if act %}
+        <p class="actividad-guardada">
+          {% if act.hubo %}Actividad: <b>{{ act.descripcion or "sí hubo" }}</b>{% else %}Sin actividad de asistencia{% endif %}
+        </p>
+      {% endif %}
+      <details>
+        <summary>{{ "Cambiar actividad" if act else "+ ¿Hubo actividad de asistencia?" }}</summary>
+        <form method="post" action="{{ url_for('guardar_actividad', id=clase.id) }}" class="tarea-rapida">
+          <input type="hidden" name="fecha" value="{{ dia_panel }}">
+          <fieldset class="si-no">
+            <legend>¿Hubo actividad de asistencia?</legend>
+            <label><input type="radio" name="hubo" value="1" {{ "checked" if not act or act.hubo }}> Sí</label>
+            <label><input type="radio" name="hubo" value="0" {{ "checked" if act and not act.hubo }}> No</label>
+          </fieldset>
+          <div class="campo">
+            <label for="ra-{{ clase.id }}">¿Cuál fue?</label>
+            <input id="ra-{{ clase.id }}" name="descripcion" placeholder="ej: Quiz de derivadas" value="{{ act.descripcion if act else '' }}">
+          </div>
+          <button>Guardar actividad</button>
+        </form>
+      </details>
+
       <!-- ¿Dejaron tarea? Se abre al hacer clic -->
       <details>
         <summary>+ ¿Dejaron tarea?</summary>

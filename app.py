@@ -97,6 +97,14 @@ def crear_tablas():
             asistio INTEGER NOT NULL,      -- 1 = fui, 0 = no fui
             PRIMARY KEY (clase_id, fecha)  -- una sola marca por clase y día
         );
+
+        CREATE TABLE IF NOT EXISTS actividades (
+            clase_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,           -- el día de esa clase
+            hubo INTEGER NOT NULL,         -- 1 = hubo actividad de asistencia, 0 = no hubo
+            descripcion TEXT,              -- cuál fue (ej: "Quiz de derivadas")
+            PRIMARY KEY (clase_id, fecha)
+        );
     """)
 
     # Las tablas creadas antes no tenían "fecha_creacion" en tareas: la agregamos.
@@ -242,6 +250,8 @@ def horario():
     texto_panel = dia_panel.isoformat()
     marcas = {fila["clase_id"]: fila["asistio"] for fila in
               consultar("SELECT * FROM asistencias WHERE fecha = ?", (texto_panel,))}
+    actividades = {fila["clase_id"]: fila for fila in
+                   consultar("SELECT * FROM actividades WHERE fecha = ?", (texto_panel,))}
     panel = []
     for clase in clases:
         if clase["dia"] == dia_panel.weekday():
@@ -249,6 +259,7 @@ def horario():
                 "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 ORDER BY fecha_entrega",
                 (clase["nombre"],))
             panel.append({"clase": clase, "asistio": marcas.get(clase["id"]),
+                          "actividad": actividades.get(clase["id"]),
                           "pendientes": pendientes_materia})
 
     # Calculamos dónde va cada clase en la grilla:
@@ -298,6 +309,7 @@ def horario():
 def borrar_clase(id):
     modificar("DELETE FROM clases WHERE id = ?", (id,))
     modificar("DELETE FROM asistencias WHERE clase_id = ?", (id,))
+    modificar("DELETE FROM actividades WHERE clase_id = ?", (id,))
     return redirect(url_for("horario"))
 
 
@@ -312,6 +324,18 @@ def marcar_asistencia(id):
     else:
         modificar("INSERT OR REPLACE INTO asistencias (clase_id, fecha, asistio) VALUES (?, ?, ?)",
                   (id, fecha, asistio))
+    return redirect(url_for("horario", fecha=fecha))
+
+
+@app.route("/universidad/horario/actividad/<int:id>", methods=["POST"])
+def guardar_actividad(id):
+    """Guarda si en esa clase hubo una actividad de asistencia (quiz, lista, taller...) y cuál fue."""
+    fecha = request.form["fecha"]
+    hubo = int(request.form["hubo"])
+    descripcion = request.form.get("descripcion", "").strip() if hubo else ""
+    modificar("INSERT OR REPLACE INTO actividades (clase_id, fecha, hubo, descripcion) VALUES (?, ?, ?, ?)",
+              (id, fecha, hubo, descripcion))
+    flash(contenido.MENSAJES["actividad"])
     return redirect(url_for("horario", fecha=fecha))
 
 
@@ -463,6 +487,14 @@ def resumen_asistencia():
         SELECT clases.nombre, clases.hora_inicio, clases.hora_fin, asistencias.asistio
         FROM asistencias JOIN clases ON clases.id = asistencias.clase_id
     """)
+    # Actividades de asistencia (solo las que sí hubo), contadas por materia.
+    actividades_por_materia = {}
+    for fila in consultar("""
+        SELECT clases.nombre FROM actividades JOIN clases ON clases.id = actividades.clase_id
+        WHERE actividades.hubo = 1
+    """):
+        actividades_por_materia[fila["nombre"]] = actividades_por_materia.get(fila["nombre"], 0) + 1
+
     materias = {}
     for marca in marcas:
         duracion = a_minutos(marca["hora_fin"]) - a_minutos(marca["hora_inicio"])
@@ -485,6 +517,7 @@ def resumen_asistencia():
             "clases_fui": datos["clases_fui"],
             "clases_falte": datos["clases_falte"],
             "porcentaje": round(datos["fui"] * 100 / total) if total else 0,
+            "actividades": actividades_por_materia.get(nombre, 0),
         })
     minutos_fui = sum(d["fui"] for d in materias.values())
     minutos_total = minutos_fui + sum(d["falte"] for d in materias.values())
@@ -500,8 +533,11 @@ def resumen_asistencia():
 def asistencia():
     # Últimas 30 marcas, para ver el detalle día a día.
     historial = consultar("""
-        SELECT asistencias.fecha, asistencias.asistio, clases.nombre, clases.hora_inicio, clases.hora_fin
+        SELECT asistencias.fecha, asistencias.asistio, clases.nombre, clases.hora_inicio, clases.hora_fin,
+               actividades.hubo, actividades.descripcion
         FROM asistencias JOIN clases ON clases.id = asistencias.clase_id
+        LEFT JOIN actividades ON actividades.clase_id = asistencias.clase_id
+                             AND actividades.fecha = asistencias.fecha
         ORDER BY asistencias.fecha DESC, clases.hora_inicio DESC LIMIT 30
     """)
     return render_template("asistencia.html", resumen=resumen_asistencia(), historial=historial)

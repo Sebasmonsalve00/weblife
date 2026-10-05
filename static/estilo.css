@@ -471,6 +471,11 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .item .boton-icono { width: 18px; height: 18px; font-size: 0.625rem; flex-shrink: 0; }
 
 /* ---------- Asistencia ---------- */
+.actividad-guardada { font-size: 14px; margin: 8px 0 0; }
+.si-no { border: none; padding: 0; margin: 0 0 8px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.si-no legend { font-size: 13px; font-weight: 500; margin-bottom: 6px; padding: 0; }
+.si-no label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; min-height: 44px; }
+.si-no input { accent-color: var(--color-texto); width: 18px; height: 18px; }
 .titulo-tarjeta { font-size: 1.125rem; font-weight: 600; margin-bottom: 8px; }
 .grid-12 + .titulo-seccion, .tabla-contenedor + .titulo-seccion { margin-top: 64px; }
 .barra-tabla { display: inline-block; width: 96px; height: 8px; margin: 0 8px 0 0; vertical-align: middle; }
