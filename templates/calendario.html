@@ -22,55 +22,28 @@
   </div>
 </form>
 
-<!-- Cargar las fechas oficiales de examen: primero la carrera, luego el curso y la convocatoria -->
-<form method="post" action="{{ url_for('cargar_examenes') }}" class="formulario grid-12 reveal" id="form-examenes">
-  <h2 class="titulo-tarjeta">Cargar fechas de examen</h2>
-  <div class="campo md-6 lg-4">
-    <label for="ex-carrera">Carrera</label>
-    <select id="ex-carrera" name="carrera" required>
-      {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
-    </select>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="ex-curso">Curso</label>
-    <select id="ex-curso" name="curso" required></select>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="ex-convocatoria">Convocatoria</label>
-    <select id="ex-convocatoria" name="convocatoria" required></select>
-  </div>
-  <div class="campo">
-    <button class="boton-enviar">Agregar exámenes al calendario</button>
-  </div>
-</form>
-<!-- Las opciones de "Curso" y "Convocatoria" cambian según lo elegido antes -->
-<script>
-(function () {
-  var datos = {{ calendarios | tojson }};
-  var carrera = document.getElementById("ex-carrera");
-  var curso = document.getElementById("ex-curso");
-  var convocatoria = document.getElementById("ex-convocatoria");
-  function llenar(select, opciones) {
-    select.innerHTML = "";
-    opciones.forEach(function (texto) {
-      var opcion = document.createElement("option");
-      opcion.textContent = texto;
-      select.appendChild(opcion);
-    });
-  }
-  function cambiarCurso() { llenar(convocatoria, Object.keys(datos[carrera.value][curso.value] || {})); }
-  function cambiarCarrera() { llenar(curso, Object.keys(datos[carrera.value] || {})); cambiarCurso(); }
-  carrera.addEventListener("change", cambiarCarrera);
-  curso.addEventListener("change", cambiarCurso);
-  cambiarCarrera();
-})();
-</script>
 
 <section class="reveal">
   <div class="mes-navegacion">
     <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_anterior[0], mes=mes_anterior[1]) }}" aria-label="Mes anterior">←</a>
     <h2 class="titulo-seccion">{{ nombre_mes }} {{ anio }}</h2>
     <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}" aria-label="Mes siguiente">→</a>
+
+    <!-- Opción pequeña: cargar las fechas oficiales de examen (se abre al hacer clic) -->
+    <details class="examenes-mini">
+      <summary class="boton boton-secundario boton-chico">+ Fechas de examen</summary>
+      <form method="post" action="{{ url_for('cargar_examenes') }}" class="examenes-panel vidrio" id="form-examenes">
+        <label for="ex-carrera">Carrera</label>
+        <select id="ex-carrera" name="carrera" required>
+          {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
+        </select>
+        <label for="ex-curso">Curso</label>
+        <select id="ex-curso" name="curso" required></select>
+        <label for="ex-convocatoria">Convocatoria</label>
+        <select id="ex-convocatoria" name="convocatoria" required></select>
+        <button class="boton boton-primario boton-chico">Agregar</button>
+      </form>
+    </details>
   </div>
   <p class="leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span></p>
 
@@ -103,4 +76,26 @@
     </table>
   </div>
 </section>
+<!-- Las opciones de "Curso" y "Convocatoria" cambian según lo elegido antes -->
+<script>
+(function () {
+  var datos = {{ calendarios | tojson }};
+  var carrera = document.getElementById("ex-carrera");
+  var curso = document.getElementById("ex-curso");
+  var convocatoria = document.getElementById("ex-convocatoria");
+  function llenar(select, opciones) {
+    select.innerHTML = "";
+    opciones.forEach(function (texto) {
+      var opcion = document.createElement("option");
+      opcion.textContent = texto;
+      select.appendChild(opcion);
+    });
+  }
+  function cambiarCurso() { llenar(convocatoria, Object.keys(datos[carrera.value][curso.value] || {})); }
+  function cambiarCarrera() { llenar(curso, Object.keys(datos[carrera.value] || {})); cambiarCurso(); }
+  carrera.addEventListener("change", cambiarCarrera);
+  curso.addEventListener("change", cambiarCurso);
+  cambiarCarrera();
+})();
+</script>
 {% endblock %}
