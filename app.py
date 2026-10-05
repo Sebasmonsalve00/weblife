@@ -10,11 +10,14 @@
 import calendar
 import hmac
 import os
+import re
 import sqlite3
 import time
 from datetime import date, timedelta
 
 from flask import Flask, flash, redirect, render_template, request, session, url_for
+# Herramientas de Flask para guardar contraseñas cifradas (nunca guardamos la contraseña tal cual).
+from werkzeug.security import check_password_hash, generate_password_hash
 
 # Diseño (colores, fuente, radios...) y textos de la web, cada uno en su archivo.
 import config_diseno
@@ -31,18 +34,20 @@ CARPETA = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_BD = os.path.join(CARPETA, "weblife.db")
 
 # ------------------------------------------------------------
-#  Contraseña
-#  Se leen de "variables de entorno" para no escribirlas en el código.
-#  - WEBLIFE_CLAVE: la contraseña para entrar a tu web.
+#  Cuentas de usuario
+#  Cada persona crea su cuenta con un CÓDIGO DE INVITACIÓN que tú compartes.
+#  Se leen de "variables de entorno" para no escribirlos en el código:
+#  - WEBLIFE_CODIGO: el código de invitación para poder registrarse.
+#    (Si no existe, se usa WEBLIFE_CLAVE, la contraseña antigua de la web.)
 #  - WEBLIFE_SECRETO: un texto largo y aleatorio que Flask usa para
 #    firmar la "cookie" que recuerda que ya iniciaste sesión.
-#  Si no existen (en tu computador), la web funciona sin contraseña.
+#  Si no existen (en tu computador), cualquiera puede registrarse sin código.
 # ------------------------------------------------------------
-CLAVE = os.environ.get("WEBLIFE_CLAVE", "")
+CODIGO = os.environ.get("WEBLIFE_CODIGO") or os.environ.get("WEBLIFE_CLAVE", "")
 app.secret_key = os.environ.get("WEBLIFE_SECRETO", "solo-para-tu-computador")
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"           # protege los formularios
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SECURE"] = bool(CLAVE)       # la cookie solo viaja por https
+app.config["SESSION_COOKIE_SECURE"] = bool(CODIGO)      # en internet, la cookie solo viaja por https
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)  # recordarte 30 días
 
 # Nombres en español (Python los da en inglés por defecto).
@@ -63,10 +68,22 @@ def conectar():
     return conexion
 
 
+# Tablas que guardan datos de cada persona. (Asistencias y actividades
+# cuelgan de una clase, así que su dueño es el dueño de la clase.)
+TABLAS_CON_DUENO = ["clases", "tareas", "eventos"]
+
+
 def crear_tablas():
     """Crea las tablas si todavía no existen."""
     conexion = conectar()
     conexion.executescript("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL UNIQUE COLLATE NOCASE,  -- "Seb" y "seb" cuentan como el mismo
+            clave_hash TEXT NOT NULL,                     -- la contraseña cifrada
+            creado TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS clases (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
@@ -111,6 +128,14 @@ def crear_tablas():
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(tareas)")]
     if "fecha_creacion" not in columnas:
         conexion.execute("ALTER TABLE tareas ADD COLUMN fecha_creacion TEXT")
+
+    # Cada clase, tarea y evento tiene dueño ("usuario_id"). Las tablas antiguas
+    # no tenían esa columna: la agregamos. Los datos de antes quedan sin dueño
+    # hasta que se crea la primera cuenta, que se los queda (ver registrar()).
+    for tabla in TABLAS_CON_DUENO:
+        columnas = [fila["name"] for fila in conexion.execute(f"PRAGMA table_info({tabla})")]
+        if "usuario_id" not in columnas:
+            conexion.execute(f"ALTER TABLE {tabla} ADD COLUMN usuario_id INTEGER")
     conexion.commit()
     conexion.close()
 
@@ -151,28 +176,80 @@ def datos_para_plantillas():
 #  Inicio de sesión
 # ------------------------------------------------------------
 
+def yo():
+    """El número (id) del usuario que inició sesión."""
+    return session["usuario_id"]
+
+
+def es_mi_clase(id):
+    """True si la clase existe y es del usuario que inició sesión."""
+    return bool(consultar("SELECT id FROM clases WHERE id = ? AND usuario_id = ?", (id, yo())))
+
+
 @app.before_request
-def pedir_contrasena():
-    """Se ejecuta antes de cada página: si hay contraseña y no has entrado, te manda al login."""
-    if not CLAVE:
-        return None  # sin contraseña configurada: acceso libre (tu computador)
-    if session.get("dentro") or request.endpoint in ("entrar", "static"):
+def pedir_sesion():
+    """Se ejecuta antes de cada página: si no has iniciado sesión, te manda a "Entrar"."""
+    if request.endpoint in ("entrar", "registrar", "static"):
         return None
+    if session.get("usuario_id"):
+        # Comprobamos que la cuenta sigue existiendo (por si se borró).
+        if consultar("SELECT id FROM usuarios WHERE id = ?", (session["usuario_id"],)):
+            return None
+        session.clear()
     return redirect(url_for("entrar"))
+
+
+def iniciar_sesion(usuario):
+    session.clear()
+    session["usuario_id"] = usuario["id"]
+    session["nombre"] = usuario["nombre"]
+    session.permanent = True
 
 
 @app.route("/entrar", methods=["GET", "POST"])
 def entrar():
     error = None
     if request.method == "POST":
-        # compare_digest compara de forma segura (no revela pistas por el tiempo que tarda)
-        if CLAVE and hmac.compare_digest(request.form["clave"].encode(), CLAVE.encode()):
-            session["dentro"] = True
-            session.permanent = True
+        filas = consultar("SELECT * FROM usuarios WHERE nombre = ?", (request.form["nombre"].strip(),))
+        if filas and check_password_hash(filas[0]["clave_hash"], request.form["clave"]):
+            iniciar_sesion(filas[0])
             return redirect(url_for("inicio"))
-        time.sleep(1)  # frena a quien intente adivinar la contraseña muchas veces
+        time.sleep(1)  # frena a quien intente adivinar contraseñas muchas veces
         error = contenido.ENTRAR["error"]
     return render_template("entrar.html", error=error)
+
+
+@app.route("/registrar", methods=["GET", "POST"])
+def registrar():
+    error = None
+    if request.method == "POST":
+        nombre = request.form["nombre"].strip()
+        clave = request.form["clave"]
+        codigo = request.form.get("codigo", "")
+        textos = contenido.REGISTRAR
+        if CODIGO and not hmac.compare_digest(codigo.encode(), CODIGO.encode()):
+            time.sleep(1)
+            error = textos["error_codigo"]
+        elif not re.fullmatch(r"[A-Za-z0-9._-]{3,30}", nombre):
+            error = textos["error_nombre"]
+        elif len(clave) < 8:
+            error = textos["error_clave_corta"]
+        elif clave != request.form["clave2"]:
+            error = textos["error_claves_distintas"]
+        elif consultar("SELECT id FROM usuarios WHERE nombre = ?", (nombre,)):
+            error = textos["error_nombre_usado"]
+        else:
+            modificar("INSERT INTO usuarios (nombre, clave_hash, creado) VALUES (?, ?, ?)",
+                      (nombre, generate_password_hash(clave), date.today().isoformat()))
+            usuario = consultar("SELECT * FROM usuarios WHERE nombre = ?", (nombre,))[0]
+            # La primera cuenta se queda con los datos que había antes de las cuentas.
+            if consultar("SELECT COUNT(*) AS n FROM usuarios")[0]["n"] == 1:
+                for tabla in TABLAS_CON_DUENO:
+                    modificar(f"UPDATE {tabla} SET usuario_id = ? WHERE usuario_id IS NULL", (usuario["id"],))
+            iniciar_sesion(usuario)
+            flash(textos["bienvenida"])
+            return redirect(url_for("inicio"))
+    return render_template("registrar.html", error=error, pide_codigo=bool(CODIGO))
 
 
 @app.route("/salir", methods=["POST"])
@@ -191,9 +268,9 @@ def inicio():
     hoy_texto = hoy.isoformat()  # "2026-10-05"
 
     clases_hoy = consultar(
-        "SELECT * FROM clases WHERE dia = ? ORDER BY hora_inicio", (hoy.weekday(),))
+        "SELECT * FROM clases WHERE dia = ? AND usuario_id = ? ORDER BY hora_inicio", (hoy.weekday(), yo()))
     pendientes = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 ORDER BY fecha_entrega LIMIT 5")
+        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega LIMIT 5", (yo(),))
     asistencia = resumen_asistencia()
 
     return render_template(
@@ -233,14 +310,14 @@ def horario():
             error = "La hora de término tiene que ser después de la hora de inicio."
         else:
             modificar(
-                "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala) VALUES (?, ?, ?, ?, ?)",
-                (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"]),
+                "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala, usuario_id) VALUES (?, ?, ?, ?, ?, ?)",
+                (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"], yo()),
             )
             flash(contenido.MENSAJES["clase"])  # mensaje de éxito en el panel difuminado
             return redirect(url_for("horario"))
 
     # Todas las clases ordenadas por día y luego por hora.
-    clases = consultar("SELECT * FROM clases ORDER BY dia, hora_inicio")
+    clases = consultar("SELECT * FROM clases WHERE usuario_id = ? ORDER BY dia, hora_inicio", (yo(),))
 
     # ---- Panel lateral: las clases de un día (por defecto, hoy) ----
     try:
@@ -249,15 +326,17 @@ def horario():
         dia_panel = date.today()
     texto_panel = dia_panel.isoformat()
     marcas = {fila["clase_id"]: fila["asistio"] for fila in
-              consultar("SELECT * FROM asistencias WHERE fecha = ?", (texto_panel,))}
+              consultar("SELECT asistencias.* FROM asistencias JOIN clases ON clases.id = asistencias.clase_id "
+                        "WHERE asistencias.fecha = ? AND clases.usuario_id = ?", (texto_panel, yo()))}
     actividades = {fila["clase_id"]: fila for fila in
-                   consultar("SELECT * FROM actividades WHERE fecha = ?", (texto_panel,))}
+                   consultar("SELECT actividades.* FROM actividades JOIN clases ON clases.id = actividades.clase_id "
+                             "WHERE actividades.fecha = ? AND clases.usuario_id = ?", (texto_panel, yo()))}
     panel = []
     for clase in clases:
         if clase["dia"] == dia_panel.weekday():
             pendientes_materia = consultar(
-                "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 ORDER BY fecha_entrega",
-                (clase["nombre"],))
+                "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega",
+                (clase["nombre"], yo()))
             panel.append({"clase": clase, "asistio": marcas.get(clase["id"]),
                           "actividad": actividades.get(clase["id"]),
                           "pendientes": pendientes_materia})
@@ -307,6 +386,8 @@ def horario():
 
 @app.route("/universidad/horario/borrar/<int:id>", methods=["POST"])
 def borrar_clase(id):
+    if not es_mi_clase(id):
+        return redirect(url_for("horario"))
     modificar("DELETE FROM clases WHERE id = ?", (id,))
     modificar("DELETE FROM asistencias WHERE clase_id = ?", (id,))
     modificar("DELETE FROM actividades WHERE clase_id = ?", (id,))
@@ -317,6 +398,8 @@ def borrar_clase(id):
 def marcar_asistencia(id):
     """Guarda si fuiste (1) o no (0) a una clase en un día. Si vuelves a apretar el mismo botón, se borra."""
     fecha = request.form["fecha"]
+    if not es_mi_clase(id):
+        return redirect(url_for("horario", fecha=fecha))
     asistio = int(request.form["asistio"])
     anterior = consultar("SELECT asistio FROM asistencias WHERE clase_id = ? AND fecha = ?", (id, fecha))
     if anterior and anterior[0]["asistio"] == asistio:
@@ -331,6 +414,8 @@ def marcar_asistencia(id):
 def guardar_actividad(id):
     """Guarda si en esa clase hubo una actividad de asistencia (quiz, lista, taller...) y cuál fue."""
     fecha = request.form["fecha"]
+    if not es_mi_clase(id):
+        return redirect(url_for("horario", fecha=fecha))
     hubo = int(request.form["hubo"])
     descripcion = request.form.get("descripcion", "").strip() if hubo else ""
     modificar("INSERT OR REPLACE INTO actividades (clase_id, fecha, hubo, descripcion) VALUES (?, ?, ?, ?)",
@@ -342,7 +427,7 @@ def guardar_actividad(id):
 @app.route("/universidad/horario/tarea/<int:id>", methods=["POST"])
 def tarea_rapida(id):
     """Agrega una tarea desde el panel del horario, con la materia de esa clase."""
-    clase = consultar("SELECT nombre FROM clases WHERE id = ?", (id,))
+    clase = consultar("SELECT nombre FROM clases WHERE id = ? AND usuario_id = ?", (id, yo()))
     if clase:
         guardar_tarea(request.form["titulo"], clase[0]["nombre"], request.form["fecha_entrega"])
         flash(contenido.MENSAJES["tarea"])
@@ -356,8 +441,8 @@ def tarea_rapida(id):
 def guardar_tarea(titulo, materia, fecha_entrega):
     """Guarda una tarea nueva con la fecha de hoy como fecha de creación."""
     modificar(
-        "INSERT INTO tareas (titulo, materia, fecha_entrega, fecha_creacion) VALUES (?, ?, ?, ?)",
-        (titulo, materia, fecha_entrega, date.today().isoformat()),
+        "INSERT INTO tareas (titulo, materia, fecha_entrega, fecha_creacion, usuario_id) VALUES (?, ?, ?, ?, ?)",
+        (titulo, materia, fecha_entrega, date.today().isoformat(), yo()),
     )
 
 
@@ -368,10 +453,10 @@ def tareas():
         flash(contenido.MENSAJES["tarea"])
         return redirect(url_for("tareas"))
 
-    todas = consultar("SELECT * FROM tareas ORDER BY hecha, fecha_entrega")
+    todas = consultar("SELECT * FROM tareas WHERE usuario_id = ? ORDER BY hecha, fecha_entrega", (yo(),))
     # Las materias salen de las clases del horario (sin repetir y en orden alfabético).
     materias = [fila["nombre"] for fila in
-                consultar("SELECT DISTINCT nombre FROM clases ORDER BY nombre")]
+                consultar("SELECT DISTINCT nombre FROM clases WHERE usuario_id = ? ORDER BY nombre", (yo(),))]
     return render_template("tareas.html", tareas=todas, materias=materias,
                            hoy=date.today().isoformat())
 
@@ -379,14 +464,14 @@ def tareas():
 @app.route("/universidad/tareas/cambiar/<int:id>", methods=["POST"])
 def cambiar_tarea(id):
     # "1 - hecha" cambia 0 por 1 y 1 por 0 (marcar / desmarcar).
-    modificar("UPDATE tareas SET hecha = 1 - hecha WHERE id = ?", (id,))
+    modificar("UPDATE tareas SET hecha = 1 - hecha WHERE id = ? AND usuario_id = ?", (id, yo()))
     # Volvemos a la página desde donde se hizo clic.
     return redirect(request.referrer or url_for("tareas"))
 
 
 @app.route("/universidad/tareas/borrar/<int:id>", methods=["POST"])
 def borrar_tarea(id):
-    modificar("DELETE FROM tareas WHERE id = ?", (id,))
+    modificar("DELETE FROM tareas WHERE id = ? AND usuario_id = ?", (id, yo()))
     return redirect(request.referrer or url_for("tareas"))
 
 
@@ -401,12 +486,14 @@ def pendientes():
 
     # Las fechas "AAAA-MM-DD" se pueden comparar como texto. ¡Truco útil!
     atrasadas = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 AND fecha_entrega < ? ORDER BY fecha_entrega", (hoy,))
+        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? AND fecha_entrega < ? ORDER BY fecha_entrega",
+        (yo(), hoy))
     esta_semana = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 AND fecha_entrega BETWEEN ? AND ? ORDER BY fecha_entrega",
-        (hoy, en_7_dias))
+        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? AND fecha_entrega BETWEEN ? AND ? ORDER BY fecha_entrega",
+        (yo(), hoy, en_7_dias))
     despues = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 AND fecha_entrega > ? ORDER BY fecha_entrega", (en_7_dias,))
+        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? AND fecha_entrega > ? ORDER BY fecha_entrega",
+        (yo(), en_7_dias))
 
     return render_template("pendientes.html", atrasadas=atrasadas,
                            esta_semana=esta_semana, despues=despues)
@@ -420,8 +507,8 @@ def pendientes():
 def calendario_vista():
     # Agregar un evento (examen, reunión, etc.)
     if request.method == "POST":
-        modificar("INSERT INTO eventos (titulo, fecha, hora) VALUES (?, ?, ?)",
-                  (request.form["titulo"], request.form["fecha"], request.form["hora"]))
+        modificar("INSERT INTO eventos (titulo, fecha, hora, usuario_id) VALUES (?, ?, ?, ?)",
+                  (request.form["titulo"], request.form["fecha"], request.form["hora"], yo()))
         fecha = date.fromisoformat(request.form["fecha"])
         flash(contenido.MENSAJES["evento"])
         return redirect(url_for("calendario_vista", anio=fecha.year, mes=fecha.month))
@@ -438,11 +525,12 @@ def calendario_vista():
     # Buscamos tareas y eventos de este mes. "2026-10%" = todo octubre 2026.
     patron = f"{anio}-{mes:02d}-%"
     cosas_por_dia = {}
-    for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ?", (patron,)):
+    for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (patron, yo())):
         dia = int(tarea["fecha_entrega"][8:10])
         cosas_por_dia.setdefault(dia, []).append(
             {"texto": tarea["titulo"], "tipo": "tarea", "hecha": tarea["hecha"]})
-    for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? ORDER BY hora", (patron,)):
+    for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ? ORDER BY hora",
+                            (patron, yo())):
         dia = int(evento["fecha"][8:10])
         texto = f"{evento['hora']} {evento['titulo']}" if evento["hora"] else evento["titulo"]
         cosas_por_dia.setdefault(dia, []).append(
@@ -462,7 +550,7 @@ def calendario_vista():
 
 @app.route("/universidad/calendario/borrar/<int:id>", methods=["POST"])
 def borrar_evento(id):
-    modificar("DELETE FROM eventos WHERE id = ?", (id,))
+    modificar("DELETE FROM eventos WHERE id = ? AND usuario_id = ?", (id, yo()))
     return redirect(request.referrer or url_for("calendario_vista"))
 
 
@@ -486,13 +574,14 @@ def resumen_asistencia():
     marcas = consultar("""
         SELECT clases.nombre, clases.hora_inicio, clases.hora_fin, asistencias.asistio
         FROM asistencias JOIN clases ON clases.id = asistencias.clase_id
-    """)
+        WHERE clases.usuario_id = ?
+    """, (yo(),))
     # Actividades de asistencia (solo las que sí hubo), contadas por materia.
     actividades_por_materia = {}
     for fila in consultar("""
         SELECT clases.nombre FROM actividades JOIN clases ON clases.id = actividades.clase_id
-        WHERE actividades.hubo = 1
-    """):
+        WHERE actividades.hubo = 1 AND clases.usuario_id = ?
+    """, (yo(),)):
         actividades_por_materia[fila["nombre"]] = actividades_por_materia.get(fila["nombre"], 0) + 1
 
     materias = {}
@@ -538,8 +627,9 @@ def asistencia():
         FROM asistencias JOIN clases ON clases.id = asistencias.clase_id
         LEFT JOIN actividades ON actividades.clase_id = asistencias.clase_id
                              AND actividades.fecha = asistencias.fecha
+        WHERE clases.usuario_id = ?
         ORDER BY asistencias.fecha DESC, clases.hora_inicio DESC LIMIT 30
-    """)
+    """, (yo(),))
     return render_template("asistencia.html", resumen=resumen_asistencia(), historial=historial)
 
 
@@ -549,7 +639,7 @@ def asistencia():
 
 # Si pusiste contraseña pero olvidaste el secreto, mejor no arrancar:
 # sin un secreto propio, alguien podría falsificar la cookie de sesión.
-if CLAVE and "WEBLIFE_SECRETO" not in os.environ:
+if CODIGO and "WEBLIFE_SECRETO" not in os.environ:
     raise RuntimeError("Falta la variable WEBLIFE_SECRETO (mira GUIA-PUBLICAR.md)")
 
 # Creamos las tablas al cargar el archivo (también funciona en PythonAnywhere).

@@ -11,10 +11,15 @@
   <form method="post">
     {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
     <div class="campo">
+      <label for="nombre">Usuario</label>
+      <input id="nombre" name="nombre" required autofocus autocomplete="username" value="{{ request.form.nombre }}">
+    </div>
+    <div class="campo">
       <label for="clave">Contraseña</label>
-      <input id="clave" type="password" name="clave" required autofocus autocomplete="current-password">
+      <input id="clave" type="password" name="clave" required autocomplete="current-password">
     </div>
     <button class="boton-enviar">{{ t.boton }}</button>
   </form>
+  <p class="entrar-cambio">{{ t.sin_cuenta }} <a href="{{ url_for('registrar') }}">{{ t.ir_registro }}</a></p>
 </div>
 {% endblock %}

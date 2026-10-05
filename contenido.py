@@ -64,9 +64,29 @@ INICIO = {
 # ---- Página de contraseña ----
 ENTRAR = {
     "titulo": "Bienvenido de vuelta",
-    "subtitulo": "Escribe tu contraseña para entrar a weblife.",
+    "subtitulo": "Entra con tu usuario y tu contraseña.",
     "boton": "Entrar",
-    "error": "Contraseña incorrecta",
+    "error": "Usuario o contraseña incorrectos.",
+    "sin_cuenta": "¿No tienes cuenta?",
+    "ir_registro": "Crear una cuenta",
+}
+
+# ---- Página para crear una cuenta ----
+REGISTRAR = {
+    "titulo": "Crea tu cuenta",
+    "subtitulo": "Necesitas el código de invitación que te pasó quien te invitó.",
+    "subtitulo_sin_codigo": "Elige un usuario y una contraseña.",
+    "boton": "Crear cuenta",
+    "con_cuenta": "¿Ya tienes cuenta?",
+    "ir_entrar": "Entrar",
+    "ayuda_nombre": "De 3 a 30 letras o números, sin espacios (también vale . _ -).",
+    "ayuda_clave": "Mínimo 8 caracteres.",
+    "error_codigo": "El código de invitación no es correcto.",
+    "error_nombre": "El usuario debe tener de 3 a 30 letras o números, sin espacios.",
+    "error_nombre_usado": "Ese usuario ya existe. Elige otro.",
+    "error_clave_corta": "La contraseña debe tener al menos 8 caracteres.",
+    "error_claves_distintas": "Las dos contraseñas no coinciden.",
+    "bienvenida": "¡Cuenta creada! Empieza agregando tus clases en el horario.",
 }
 
 # ---- Mensajes cuando algo se guarda (aparecen en un panel arriba) ----
@@ -102,6 +122,7 @@ def todo():
         "paginas": PAGINAS,
         "inicio": INICIO,
         "entrar": ENTRAR,
+        "registrar": REGISTRAR,
         "mensajes": MENSAJES,
         "footer": FOOTER,
         "copyright": COPYRIGHT,

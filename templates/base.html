@@ -49,9 +49,9 @@
       <!-- Botones de la derecha -->
       <div class="nav-acciones">
         <a href="{{ url_for(texto.boton_menu.ruta) }}" class="boton boton-primario boton-chico">{{ texto.boton_menu.texto }}</a>
-        {% if session.dentro %}
-          <form method="post" action="{{ url_for('salir') }}" class="en-linea">
-            <button class="boton boton-secundario boton-chico">{{ texto.texto_salir }}</button>
+        {% if session.usuario_id %}
+          <form method="post" action="{{ url_for('salir') }}" class="en-linea" title="Sesión de {{ session.nombre }}">
+            <button class="boton boton-secundario boton-chico">{{ texto.texto_salir }} <span class="saltar-lector">({{ session.nombre }})</span></button>
           </form>
         {% endif %}
       </div>
@@ -70,7 +70,7 @@
         <a href="{{ url_for(ruta) }}" style="--i: {{ loop.index0 }}" {% if request.endpoint == ruta %}class="activo" aria-current="page"{% endif %}>{{ nombre }}</a>
       {% endfor %}
       <a href="{{ url_for(texto.boton_menu.ruta) }}" class="boton boton-primario" style="--i: {{ texto.menu|length }}">{{ texto.boton_menu.texto }}</a>
-      {% if session.dentro %}
+      {% if session.usuario_id %}
         <form method="post" action="{{ url_for('salir') }}" style="--i: {{ texto.menu|length + 1 }}">
           <button class="boton boton-secundario">{{ texto.texto_salir }}</button>
         </form>

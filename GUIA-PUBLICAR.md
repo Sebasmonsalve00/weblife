@@ -31,7 +31,7 @@ Al terminar, tu web quedará en **https://TU-USUARIO.pythonanywhere.com**, prote
    - En **Source code** escribe: `/home/TU-USUARIO/weblife`
    - En **Working directory** escribe lo mismo.
 
-## 4. Conecta tu código y pon tu contraseña
+## 4. Conecta tu código y pon tu código de invitación
 
 1. En esa misma sección **Code**, haz clic en el enlace del **WSGI configuration file** (termina en `_wsgi.py`).
 2. **Borra todo** lo que tiene el archivo y pega esto (cada línea debe quedar pegada al borde izquierdo, sin espacios al inicio):
@@ -41,8 +41,9 @@ import os
 import sys
 import time
 
-# Tu contraseña para entrar a la web (que sea larga y que no uses en otro lado)
-os.environ["WEBLIFE_CLAVE"] = "escribe-aqui-tu-contrasena"
+# Código de invitación: solo quien lo tenga puede crear una cuenta en tu web.
+# Compártelo solo con las personas que quieras invitar.
+os.environ["WEBLIFE_CODIGO"] = "escribe-aqui-tu-codigo"
 
 # El texto largo que generaste en el paso 2
 os.environ["WEBLIFE_SECRETO"] = "pega-aqui-el-secreto"
@@ -56,14 +57,14 @@ sys.path.insert(0, "/home/TU-USUARIO/weblife")
 from app import app as application
 ```
 
-3. Cambia `TU-USUARIO`, la contraseña, el secreto y la zona horaria. Luego haz clic en **Save**.
+3. Cambia `TU-USUARIO`, el código, el secreto y la zona horaria. Luego haz clic en **Save**.
 
 ## 5. Actívala
 
 1. Vuelve a la pestaña **Web**.
 2. En la sección **Security**, activa **Force HTTPS**.
 3. Arriba, haz clic en el botón verde **Reload**.
-4. Abre `https://TU-USUARIO.pythonanywhere.com` y entra con tu contraseña. 🎉
+4. Abre `https://TU-USUARIO.pythonanywhere.com`, pulsa **Crear una cuenta** y usa tu código. 🎉
 
 ## Cosas que debes saber
 
@@ -71,4 +72,5 @@ from app import app as application
 - **Tus datos:** la web en internet empieza vacía. Lo que guardaste en tu Mac queda en tu Mac.
 - **Si algo falla:** en la pestaña **Web**, abre el **Error log**. Ahí aparece el error, y puedes pegármelo.
 - **Para actualizar el código:** sube el archivo que cambiaste en **Files** (por ejemplo `app.py`) y vuelve a hacer clic en **Reload**. Nunca subas ni borres `weblife.db`, porque ahí están tus datos.
-- **Tu contraseña** solo está en el archivo WSGI de tu cuenta. Nadie más puede verlo.
+- **El código de invitación** solo está en el archivo WSGI de tu cuenta. Si lo cambias, quien ya tenga cuenta sigue entrando normal; solo cambia para las cuentas nuevas.
+- **Cuentas:** cada persona tiene su usuario y contraseña, y solo ve sus propias clases, tareas y asistencia. La primera cuenta que se crea se queda con los datos que había antes de que existieran las cuentas.

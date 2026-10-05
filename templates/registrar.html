@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block titulo %}Crear cuenta{% endblock %}
+{% block menu %}{% endblock %}
+{% block pie %}{% endblock %}
+{% block contenido %}
+{% set t = texto.registrar %}
+<div class="tarjeta entrar hero-entrada">
+  <p class="etiqueta-seccion">{{ texto.nombre_sitio }}</p>
+  <h1 class="titulo-seccion">{{ t.titulo }}</h1>
+  <p class="subtitulo">{{ t.subtitulo if pide_codigo else t.subtitulo_sin_codigo }}</p>
+  <form method="post">
+    {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
+    {% if pide_codigo %}
+    <div class="campo">
+      <label for="codigo">Código de invitación</label>
+      <input id="codigo" name="codigo" required autocomplete="off" value="{{ request.form.codigo }}">
+    </div>
+    {% endif %}
+    <div class="campo">
+      <label for="nombre">Usuario</label>
+      <input id="nombre" name="nombre" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._\-]{3,30}"
+             autocomplete="username" aria-describedby="ayuda-nombre" value="{{ request.form.nombre }}">
+      <small id="ayuda-nombre" class="ayuda-campo">{{ t.ayuda_nombre }}</small>
+    </div>
+    <div class="campo">
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" name="clave" required minlength="8" autocomplete="new-password" aria-describedby="ayuda-clave">
+      <small id="ayuda-clave" class="ayuda-campo">{{ t.ayuda_clave }}</small>
+    </div>
+    <div class="campo">
+      <label for="clave2">Repite la contraseña</label>
+      <input id="clave2" type="password" name="clave2" required minlength="8" autocomplete="new-password">
+    </div>
+    <button class="boton-enviar">{{ t.boton }}</button>
+  </form>
+  <p class="entrar-cambio">{{ t.con_cuenta }} <a href="{{ url_for('entrar') }}">{{ t.ir_entrar }}</a></p>
+</div>
+{% endblock %}

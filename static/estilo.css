@@ -480,7 +480,10 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .grid-12 + .titulo-seccion, .tabla-contenedor + .titulo-seccion { margin-top: 64px; }
 .barra-tabla { display: inline-block; width: 96px; height: 8px; margin: 0 8px 0 0; vertical-align: middle; }
 
-/* ---------- Página de contraseña ---------- */
+/* ---------- Páginas de entrar y crear cuenta ---------- */
+.entrar-cambio { margin: 20px 0 0; font-size: 14px; color: var(--texto-secundario); }
+.entrar-cambio a { color: var(--color-texto); font-weight: 600; }
+.ayuda-campo { display: block; font-size: 13px; color: var(--texto-secundario); margin-top: 6px; }
 .entrar { max-width: 440px; margin: 15vh auto 64px; text-align: center; }
 .entrar form { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; text-align: left; }
 
