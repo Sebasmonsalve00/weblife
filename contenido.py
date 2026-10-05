@@ -54,8 +54,9 @@ PAGINAS = {
 
 # ---- Portada (hero) de la página de inicio ----
 INICIO = {
-    "saludo": "Hola, hoy es",
-    "subtitulo": "Tus clases, tu asistencia y tus tareas, organizadas en un solo lugar.",
+    "saludo": "Hola",
+    "bienvenida": "bienvenido",  # el título queda: "Hola seb, bienvenido"
+    "subtitulo": "Organiza tus clases, tareas y asistencias de hoy",
     "boton_principal": {"texto": "Ver pendientes", "ruta": "pendientes"},
     "boton_secundario": {"texto": "Ver horario", "ruta": "horario"},
     "titulo_resumen": "Tu día",

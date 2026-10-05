@@ -7,7 +7,7 @@
 <section class="hero">
   <div class="hero-entrada">
     <p class="etiqueta-seccion">{{ hoy }}</p>
-    <h1 class="hero-titulo">{{ t.saludo }} {{ dia_nombre | lower }}</h1>
+    <h1 class="hero-titulo">{{ t.saludo }} {{ session.nombre }}, {{ t.bienvenida }}</h1>
     <p class="subtitulo">{{ t.subtitulo }}</p>
     <div class="hero-botones">
       <a href="{{ url_for(t.boton_principal.ruta) }}" class="boton boton-primario">{{ t.boton_principal.texto }}</a>
