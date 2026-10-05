@@ -9,7 +9,9 @@
   <header class="encabezado reveal">
     {% if datos.etiqueta %}<p class="etiqueta-seccion">{{ datos.etiqueta }}</p>{% endif %}
     <h{{ nivel }} class="titulo-seccion">{{ datos.titulo }}</h{{ nivel }}>
-    {% if datos.subtitulo %}<p class="subtitulo">{{ datos.subtitulo }}</p>{% endif %}
+    {# El subtítulo puede ser un texto o una lista de líneas #}
+    {% if datos.subtitulo is string %}<p class="subtitulo">{{ datos.subtitulo }}</p>
+    {% elif datos.subtitulo %}<p class="subtitulo">{% for linea in datos.subtitulo %}{{ linea }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>{% endif %}
   </header>
 {% endmacro %}
 

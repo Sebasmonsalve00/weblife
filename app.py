@@ -300,11 +300,11 @@ def a_minutos(hora_texto):
 
 
 def resumen_del_dia(clases_del_dia, nombre_dia, es_hoy):
-    """Arma un texto como: "Hoy (lunes) tienes clase de 08:00 a 13:00.
-    Horas huecas: 09:30–11:00 (1 h 30 min)." """
-    quien = f"Hoy ({nombre_dia.lower()})" if es_hoy else f"El {nombre_dia.lower()}"
+    """Devuelve dos líneas de texto, por ejemplo:
+    ["Hoy lunes tienes clase de 08:00 a 13:00", "Horas huecas: 10:00–11:00"]"""
+    quien = f"Hoy {nombre_dia.lower()}" if es_hoy else f"El {nombre_dia.lower()}"
     if not clases_del_dia:
-        return f"{quien} no tienes clases."
+        return [f"{quien} no tienes clases"]
 
     # Juntamos las clases que se pisan o van seguidas en un solo bloque.
     bloques = []
@@ -318,15 +318,11 @@ def resumen_del_dia(clases_del_dia, nombre_dia, es_hoy):
     def hora(minutos):
         return f"{minutos // 60:02d}:{minutos % 60:02d}"
 
-    texto = f"{quien} tienes clase de {hora(bloques[0][0])} a {hora(bloques[-1][1])}."
+    primera = f"{quien} tienes clase de {hora(bloques[0][0])} a {hora(bloques[-1][1])}"
     # Las horas huecas son los espacios entre un bloque y el siguiente.
-    huecos = [f"{hora(a[1])}–{hora(b[0])} ({texto_horas(b[0] - a[1])})"
-              for a, b in zip(bloques, bloques[1:])]
-    if huecos:
-        texto += " Horas huecas: " + ", ".join(huecos) + "."
-    else:
-        texto += " Sin horas huecas."
-    return texto
+    huecos = [f"{hora(a[1])}–{hora(b[0])}" for a, b in zip(bloques, bloques[1:])]
+    segunda = "Horas huecas: " + (", ".join(huecos) if huecos else "ninguna")
+    return [primera, segunda]
 
 
 @app.route("/universidad/horario", methods=["GET", "POST"])
