@@ -129,3 +129,10 @@ details summary { cursor: pointer; color: var(--principal); font-size: .9rem; }
 .lista li { display: flex; align-items: center; gap: 6px; }
 .tarea-texto { flex: 1; }
 .fechas { display: block; margin-top: 2px; }
+
+/* ===== Horario: borrar desde la grilla y resumen de materias ===== */
+.borrar-bloque { position: absolute; top: 1px; right: 1px; }
+.borrar-bloque button.borrar { font-size: .8rem; padding: 0 4px; }
+.resumen-materias { list-style: none; padding: 0; background: var(--tarjeta); border-radius: 12px; max-width: 480px; }
+.resumen-materias li { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #eef0f4; }
+.resumen-materias li:last-child { border-bottom: none; }

@@ -277,6 +277,17 @@ def horario():
             "alto": (fin - inicio) * PIXELES_POR_HORA // 60,
         })
 
+    # Horas a la semana de cada materia (sumando todas sus clases).
+    minutos_por_materia = {}
+    for clase in clases:
+        duracion = a_minutos(clase["hora_fin"]) - a_minutos(clase["hora_inicio"])
+        minutos_por_materia[clase["nombre"]] = minutos_por_materia.get(clase["nombre"], 0) + duracion
+    resumen = []
+    for nombre in sorted(minutos_por_materia):
+        horas, minutos = divmod(minutos_por_materia[nombre], 60)
+        texto = f"{horas} h" + (f" {minutos} min" if minutos else "")
+        resumen.append({"nombre": nombre, "texto": texto})
+
     # De lunes a viernes siempre; sábado y domingo solo si tienen clases.
     dias_visibles = [d for d in range(7) if d < 5 or por_dia[d]]
     horas = [f"{h:02d}:00" for h in range(HORA_INICIO_DIA, HORA_FIN_DIA + 1)]
@@ -285,7 +296,7 @@ def horario():
         "horario.html", dias=DIAS_SEMANA, dias_visibles=dias_visibles, por_dia=por_dia,
         clases=clases, horas=horas, alto_total=(HORA_FIN_DIA - HORA_INICIO_DIA) * PIXELES_POR_HORA,
         pixeles_hora=PIXELES_POR_HORA, error=error,
-        panel=panel, dia_panel=texto_panel, nombre_dia_panel=DIAS_SEMANA[dia_panel.weekday()],
+        panel=panel, resumen=resumen, dia_panel=texto_panel, nombre_dia_panel=DIAS_SEMANA[dia_panel.weekday()],
         es_hoy=(dia_panel == date.today()),
         dia_anterior=(dia_panel - timedelta(days=1)).isoformat(),
         dia_siguiente=(dia_panel + timedelta(days=1)).isoformat(),
