@@ -15,7 +15,11 @@ import sqlite3
 import time
 from datetime import date, timedelta
 
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for
+
+# Diseño (colores, fuente, radios...) y textos de la web, cada uno en su archivo.
+import config_diseno
+import contenido
 
 # Creamos la aplicación web. "__name__" le dice a Flask dónde está este archivo.
 app = Flask(__name__)
@@ -145,6 +149,22 @@ def modificar(sql, parametros=()):
 
 
 # ------------------------------------------------------------
+#  Diseño y textos para TODAS las plantillas
+#  Flask llama a esta función antes de dibujar cada página, y lo que
+#  devuelve queda disponible en el HTML (por ejemplo {{ texto.paginas }}).
+# ------------------------------------------------------------
+
+@app.context_processor
+def datos_para_plantillas():
+    return {
+        "variables_css": config_diseno.variables_css(),
+        "fuente": config_diseno.FUENTE,
+        "valores_js": config_diseno.valores_js(),
+        "texto": contenido.todo(),
+    }
+
+
+# ------------------------------------------------------------
 #  Inicio de sesión
 # ------------------------------------------------------------
 
@@ -168,7 +188,7 @@ def entrar():
             session.permanent = True
             return redirect(url_for("inicio"))
         time.sleep(1)  # frena a quien intente adivinar la contraseña muchas veces
-        error = "Contraseña incorrecta"
+        error = contenido.ENTRAR["error"]
     return render_template("entrar.html", error=error)
 
 
@@ -239,6 +259,7 @@ def horario():
                 "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala) VALUES (?, ?, ?, ?, ?)",
                 (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"]),
             )
+            flash(contenido.MENSAJES["clase"])  # mensaje de éxito en el panel difuminado
             return redirect(url_for("horario"))
 
     # Todas las clases ordenadas por día y luego por hora.
@@ -331,6 +352,7 @@ def tarea_rapida(id):
     clase = consultar("SELECT nombre FROM clases WHERE id = ?", (id,))
     if clase:
         guardar_tarea(request.form["titulo"], clase[0]["nombre"], request.form["fecha_entrega"])
+        flash(contenido.MENSAJES["tarea"])
     return redirect(url_for("horario", fecha=request.form["fecha"]))
 
 
@@ -350,6 +372,7 @@ def guardar_tarea(titulo, materia, fecha_entrega):
 def tareas():
     if request.method == "POST":
         guardar_tarea(request.form["titulo"], request.form["materia"], request.form["fecha_entrega"])
+        flash(contenido.MENSAJES["tarea"])
         return redirect(url_for("tareas"))
 
     todas = consultar("SELECT * FROM tareas ORDER BY hecha, fecha_entrega")
@@ -407,6 +430,7 @@ def calendario_vista():
         modificar("INSERT INTO eventos (titulo, fecha, hora) VALUES (?, ?, ?)",
                   (request.form["titulo"], request.form["fecha"], request.form["hora"]))
         fecha = date.fromisoformat(request.form["fecha"])
+        flash(contenido.MENSAJES["evento"])
         return redirect(url_for("calendario_vista", anio=fecha.year, mes=fecha.month))
 
     # El mes a mostrar viene en la URL: /universidad/calendario?anio=2026&mes=10
@@ -463,6 +487,7 @@ def alimentacion():
             (request.form["fecha"], request.form["tipo"], request.form["descripcion"],
              int(calorias) if calorias else None),
         )
+        flash(contenido.MENSAJES["comida"])
         return redirect(url_for("alimentacion"))
 
     comidas = consultar("SELECT * FROM comidas ORDER BY fecha DESC, id DESC LIMIT 50")
@@ -494,6 +519,7 @@ def entrenamiento():
             (request.form["fecha"], request.form["tipo"],
              int(minutos) if minutos else None, request.form["notas"]),
         )
+        flash(contenido.MENSAJES["entrenamiento"])
         return redirect(url_for("entrenamiento"))
 
     lista = consultar("SELECT * FROM entrenamientos ORDER BY fecha DESC, id DESC LIMIT 50")
@@ -521,6 +547,7 @@ def pasos():
         # "INSERT OR REPLACE": si ya había pasos ese día, se reemplazan.
         modificar("INSERT OR REPLACE INTO pasos (fecha, cantidad) VALUES (?, ?)",
                   (request.form["fecha"], int(request.form["cantidad"])))
+        flash(contenido.MENSAJES["pasos"])
         return redirect(url_for("pasos"))
 
     # Armamos los últimos 7 días, aunque alguno no tenga registro (queda en 0).

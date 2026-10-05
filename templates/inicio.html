@@ -1,40 +1,60 @@
 {% extends "base.html" %}
+{% from "_componentes.html" import enlace_flecha %}
 {% block contenido %}
-<h1>Hola 👋 Hoy es {{ dia_nombre }} {{ hoy }}</h1>
+{% set t = texto.inicio %}
 
-<div class="tarjetas">
-  <section class="tarjeta">
-    <h2>Clases de hoy</h2>
-    {% for clase in clases_hoy %}
-      <p><b>{{ clase.hora_inicio }}–{{ clase.hora_fin }}</b> {{ clase.nombre }} <small>{{ clase.sala }}</small></p>
-    {% else %}
-      <p class="vacio">No tienes clases hoy.</p>
-    {% endfor %}
-    <a href="{{ url_for('horario') }}">Ver horario →</a>
-  </section>
+<!-- ===== Portada (hero) ===== -->
+<section class="hero">
+  <div class="hero-entrada">
+    <p class="etiqueta-seccion">{{ hoy }}</p>
+    <h1 class="hero-titulo">{{ t.saludo }} {{ dia_nombre | lower }}</h1>
+    <p class="subtitulo">{{ t.subtitulo }}</p>
+    <div class="hero-botones">
+      <a href="{{ url_for(t.boton_principal.ruta) }}" class="boton boton-primario">{{ t.boton_principal.texto }}</a>
+      <a href="{{ url_for(t.boton_secundario.ruta) }}" class="boton boton-secundario">{{ t.boton_secundario.texto }}</a>
+    </div>
+  </div>
+</section>
 
-  <section class="tarjeta">
-    <h2>Próximas tareas</h2>
-    {% for tarea in pendientes %}
-      <p><b>{{ tarea.fecha_entrega }}</b> {{ tarea.titulo }} <small>{{ tarea.materia }}</small></p>
-    {% else %}
-      <p class="vacio">¡Nada pendiente! 🎉</p>
-    {% endfor %}
-    <a href="{{ url_for('pendientes') }}">Ver pendientes →</a>
-  </section>
+<!-- ===== Resumen del día: grid de tarjetas (1, 2 o 3 columnas) ===== -->
+<section aria-labelledby="titulo-resumen">
+  <h2 id="titulo-resumen" class="titulo-seccion reveal">{{ t.titulo_resumen }}</h2>
+  <div class="grid-12">
+    <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
+      <h3>Clases de hoy</h3>
+      {% for clase in clases_hoy %}
+        <p><b>{{ clase.hora_inicio }}–{{ clase.hora_fin }}</b> {{ clase.nombre }} <small>{{ clase.sala }}</small></p>
+      {% else %}
+        <p class="descripcion">No tienes clases hoy.</p>
+      {% endfor %}
+      {{ enlace_flecha("Ver horario", url_for('horario')) }}
+    </article>
 
-  <section class="tarjeta">
-    <h2>Pasos de hoy</h2>
-    <p class="numero">{{ "{:,}".format(pasos_hoy).replace(",", ".") }}</p>
-    <div class="barra"><div style="width: {{ [100, pasos_hoy * 100 // meta_pasos] | min }}%"></div></div>
-    <small>Meta: {{ meta_pasos }}</small><br>
-    <a href="{{ url_for('pasos') }}">Registrar pasos →</a>
-  </section>
+    <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
+      <h3>Próximas tareas</h3>
+      {% for tarea in pendientes %}
+        <p><b>{{ tarea.fecha_entrega }}</b> {{ tarea.titulo }} <small>{{ tarea.materia }}</small></p>
+      {% else %}
+        <p class="descripcion">¡Nada pendiente!</p>
+      {% endfor %}
+      {{ enlace_flecha("Ver pendientes", url_for('pendientes')) }}
+    </article>
 
-  <section class="tarjeta">
-    <h2>Calorías de hoy</h2>
-    <p class="numero">{{ calorias_hoy }}</p>
-    <a href="{{ url_for('alimentacion') }}">Registrar comida →</a>
-  </section>
-</div>
+    <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
+      <h3>Pasos de hoy</h3>
+      <p class="numero">{{ "{:,}".format(pasos_hoy).replace(",", ".") }}</p>
+      <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="{{ meta_pasos }}" aria-valuenow="{{ pasos_hoy }}" aria-label="Pasos de hoy">
+        <div style="width: {{ [100, pasos_hoy * 100 // meta_pasos] | min }}%"></div>
+      </div>
+      <p class="descripcion">Meta: {{ meta_pasos }}</p>
+      {{ enlace_flecha("Registrar pasos", url_for('pasos')) }}
+    </article>
+
+    <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
+      <h3>Calorías de hoy</h3>
+      <p class="numero">{{ calorias_hoy }}</p>
+      {{ enlace_flecha("Registrar comida", url_for('alimentacion')) }}
+    </article>
+  </div>
+</section>
 {% endblock %}

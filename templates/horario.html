@@ -1,21 +1,20 @@
 {% extends "base.html" %}
-{% block titulo %}Horario</div>
-</div>
-{% endblock %}
+{% from "_componentes.html" import encabezado, boton_borrar %}
+{% block titulo %}{{ texto.paginas.horario.titulo }}{% endblock %}
 {% block contenido %}
-<h1>🗓️ Horario semanal</h1>
+{{ encabezado(texto.paginas.horario) }}
 
-<div class="horario-layout">
+<div class="grid-12">
 
 <!-- ===== Panel lateral: clases del día, asistencia y tareas rápidas ===== -->
-<aside class="panel-dia">
+<aside class="panel-dia lg-4 reveal" aria-label="Clases del día">
   <div class="panel-titulo">
-    <a href="{{ url_for('horario', fecha=dia_anterior) }}" title="Día anterior">◀</a>
+    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_anterior) }}" aria-label="Día anterior">←</a>
     <div>
       <b>{{ "Hoy" if es_hoy else nombre_dia_panel }}</b><br>
       <small>{{ nombre_dia_panel }} {{ dia_panel }}</small>
     </div>
-    <a href="{{ url_for('horario', fecha=dia_siguiente) }}" title="Día siguiente">▶</a>
+    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_siguiente) }}" aria-label="Día siguiente">→</a>
   </div>
   {% if not es_hoy %}<p class="centro"><a href="{{ url_for('horario') }}">Volver a hoy</a></p>{% endif %}
 
@@ -26,12 +25,12 @@
       <small>{{ clase.hora_inicio }}–{{ clase.hora_fin }}{% if clase.sala %} · Aula {{ clase.sala }}{% endif %}</small>
 
       <!-- ¿Fuiste a clase? -->
-      <div class="asistencia">
-        {% for valor, texto in [(1, "✔ Fui"), (0, "✕ No fui")] %}
+      <div class="asistencia" role="group" aria-label="Asistencia a {{ clase.nombre }}">
+        {% for valor, etiqueta in [(1, "✓ Fui"), (0, "✕ No fui")] %}
           <form method="post" action="{{ url_for('marcar_asistencia', id=clase.id) }}" class="en-linea">
             <input type="hidden" name="fecha" value="{{ dia_panel }}">
             <input type="hidden" name="asistio" value="{{ valor }}">
-            <button class="opcion {{ 'elegida' if item.asistio == valor }}">{{ texto }}</button>
+            <button class="opcion {{ 'elegida' if item.asistio == valor }}" aria-pressed="{{ 'true' if item.asistio == valor else 'false' }}">{{ etiqueta }}</button>
           </form>
         {% endfor %}
       </div>
@@ -41,8 +40,14 @@
         <summary>+ ¿Dejaron tarea?</summary>
         <form method="post" action="{{ url_for('tarea_rapida', id=clase.id) }}" class="tarea-rapida">
           <input type="hidden" name="fecha" value="{{ dia_panel }}">
-          <input name="titulo" placeholder="¿Qué hay que hacer?" required>
-          <label>Entrega <input type="date" name="fecha_entrega" value="{{ entrega_sugerida }}" required></label>
+          <div class="campo">
+            <label for="rt-{{ clase.id }}">¿Qué hay que hacer?</label>
+            <input id="rt-{{ clase.id }}" name="titulo" required>
+          </div>
+          <div class="campo">
+            <label for="rf-{{ clase.id }}">Entrega</label>
+            <input id="rf-{{ clase.id }}" type="date" name="fecha_entrega" value="{{ entrega_sugerida }}" required>
+          </div>
           <button>Añadir a Tareas</button>
         </form>
       </details>
@@ -50,7 +55,7 @@
       {% if item.pendientes %}
         <ul class="mini-lista">
           {% for tarea in item.pendientes[:3] %}
-            <li>📌 {{ tarea.titulo }} <small>entrega {{ tarea.fecha_entrega }}</small></li>
+            <li>{{ tarea.titulo }} <small>· entrega {{ tarea.fecha_entrega }}</small></li>
           {% endfor %}
         </ul>
       {% endif %}
@@ -60,34 +65,49 @@
   {% endfor %}
 </aside>
 
-<!-- ===== Parte principal: formulario, grilla y lista ===== -->
-<div class="horario-principal">
+<!-- ===== Parte principal: formulario, grilla y materias ===== -->
+<div class="lg-8">
 
 <!-- Formulario para agregar una clase -->
-<form method="post" class="formulario">
-  <label>Materia <input name="nombre" placeholder="ej: Cálculo" required></label>
-  <label>Día
-    <select name="dia">
+<form method="post" class="formulario grid-12 reveal">
+  <div class="campo md-6 lg-4">
+    <label for="h-nombre">Materia</label>
+    <input id="h-nombre" name="nombre" placeholder="ej: Cálculo" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="h-dia">Día</label>
+    <select id="h-dia" name="dia">
       {% for nombre in dias %}
         <option value="{{ loop.index0 }}">{{ nombre }}</option>
       {% endfor %}
     </select>
-  </label>
-  <label>Desde <input type="time" name="hora_inicio" min="08:00" max="20:00" value="08:00" required></label>
-  <label>Hasta <input type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required></label>
-  <label>Aula <input name="sala" placeholder="ej: 2.14" class="corto"></label>
-  <button>Agregar clase</button>
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="h-aula">Aula</label>
+    <input id="h-aula" name="sala" placeholder="ej: 2.14">
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="h-desde">Desde</label>
+    <input id="h-desde" type="time" name="hora_inicio" min="08:00" max="20:00" value="08:00" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="h-hasta">Hasta</label>
+    <input id="h-hasta" type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <button class="boton-enviar">Agregar clase</button>
+  </div>
 </form>
-{% if error %}<p class="alerta">{{ error }}</p>{% endif %}
+{% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
 
 <!-- Grilla: una columna por día, una fila por hora de 8:00 a 20:00 -->
-<div class="grilla-contenedor">
+<div class="grilla-contenedor reveal">
   <div class="grilla" style="grid-template-columns: 56px repeat({{ dias_visibles|length }}, minmax(110px, 1fr));">
     <div></div>
     {% for d in dias_visibles %}<div class="grilla-dia">{{ dias[d] }}</div>{% endfor %}
 
     <!-- Columna con las horas -->
-    <div class="grilla-horas" style="height: {{ alto_total }}px">
+    <div class="grilla-horas" style="height: {{ alto_total }}px" aria-hidden="true">
       {% for hora in horas %}
         <span style="top: {{ loop.index0 * pixeles_hora }}px">{{ hora }}</span>
       {% endfor %}
@@ -101,10 +121,7 @@
             <b>{{ item.clase.nombre }}</b>
             <span>{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}</span>
             {% if item.clase.sala %}<span>Aula {{ item.clase.sala }}</span>{% endif %}
-            <form method="post" action="{{ url_for('borrar_clase', id=item.clase.id) }}" class="borrar-bloque"
-                  onsubmit="return confirm('¿Borrar esta clase del horario?')">
-              <button class="borrar" title="Borrar clase">✕</button>
-            </form>
+            {{ boton_borrar(url_for('borrar_clase', id=item.clase.id), "Borrar clase: " ~ item.clase.nombre ~ " del " ~ dias[d], "¿Borrar esta clase del horario?") }}
           </div>
         {% endfor %}
       </div>
@@ -113,14 +130,16 @@
 </div>
 
 <!-- Resumen: cada materia con sus horas a la semana -->
-<h2>Mis materias</h2>
-<ul class="resumen-materias">
-  {% for materia in resumen %}
-    <li><span>{{ materia.nombre }}</span><b>{{ materia.texto }} / semana</b></li>
-  {% else %}
-    <li class="vacio">Todavía no agregas clases.</li>
-  {% endfor %}
-</ul>
+<section class="seccion reveal">
+  <h2 class="titulo-seccion">Mis materias</h2>
+  <ul class="resumen-materias">
+    {% for materia in resumen %}
+      <li><span>{{ materia.nombre }}</span><b>{{ materia.texto }} / semana</b></li>
+    {% else %}
+      <li class="vacio">Todavía no agregas clases.</li>
+    {% endfor %}
+  </ul>
+</section>
 </div>
 </div>
 {% endblock %}

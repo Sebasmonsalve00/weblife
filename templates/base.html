@@ -3,38 +3,127 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block titulo %}weblife{% endblock %}</title>
+  <!-- Icono de la pestaña (un círculo con el color de acento, sin archivo aparte) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23A8C5FF%27/%3E%3C/svg%3E">
+  <title>{% block titulo %}{{ texto.nombre_sitio }}{% endblock %}</title>
+
+  <!-- Fuente Inter desde Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="{{ fuente.google_fonts }}">
+
+  <!-- Variables de diseño que vienen de config_diseno.py (colores, radios, tiempos...) -->
+  <style>
+:root {
+{{ variables_css | safe }}
+}
+  </style>
   <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+  <!-- Marcamos que hay JavaScript antes de dibujar, para que las animaciones no parpadeen -->
+  <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
-  <!-- Menú que aparece en todas las páginas (menos en la de contraseña) -->
+  <!-- Enlace para saltar el menú con el teclado (accesibilidad) -->
+  <a href="#contenido" class="saltar">Ir al contenido</a>
+
+  <!-- Manchas de color desenfocadas detrás de todo (decoración) -->
+  <div class="manchas" aria-hidden="true">
+    <span class="mancha mancha-1"></span>
+    <span class="mancha mancha-2"></span>
+    <span class="mancha mancha-3"></span>
+  </div>
+
   {% block menu %}
-  <nav>
-    <a href="{{ url_for('inicio') }}" class="logo">weblife</a>
-    <div class="grupo">
-      <span>🎓 Universidad</span>
-      <a href="{{ url_for('horario') }}">Horario</a>
-      <a href="{{ url_for('tareas') }}">Tareas</a>
-      <a href="{{ url_for('calendario_vista') }}">Calendario</a>
-      <a href="{{ url_for('pendientes') }}">Pendientes</a>
+  <!-- ===== Barra de navegación (fija arriba, difuminada) ===== -->
+  <header class="nav" id="nav">
+    <div class="nav-interior">
+      <a href="{{ url_for('inicio') }}" class="logo">{{ texto.nombre_sitio }}</a>
+
+      <!-- Enlaces del centro (escritorio) -->
+      <nav class="nav-enlaces" aria-label="Principal">
+        {% for nombre, ruta in texto.menu %}
+          <a href="{{ url_for(ruta) }}" {% if request.endpoint == ruta %}class="activo" aria-current="page"{% endif %}>{{ nombre }}</a>
+        {% endfor %}
+      </nav>
+
+      <!-- Botones de la derecha -->
+      <div class="nav-acciones">
+        <a href="{{ url_for(texto.boton_menu.ruta) }}" class="boton boton-primario boton-chico">{{ texto.boton_menu.texto }}</a>
+        {% if session.dentro %}
+          <form method="post" action="{{ url_for('salir') }}" class="en-linea">
+            <button class="boton boton-secundario boton-chico">{{ texto.texto_salir }}</button>
+          </form>
+        {% endif %}
+      </div>
+
+      <!-- Botón hamburguesa (móvil): 2 líneas que se convierten en X -->
+      <button class="hamburguesa" id="hamburguesa" aria-label="Abrir menú" aria-expanded="false" aria-controls="menu-movil">
+        <span></span><span></span>
+      </button>
     </div>
-    <div class="grupo">
-      <span>🌱 Vida</span>
-      <a href="{{ url_for('alimentacion') }}">Alimentación</a>
-      <a href="{{ url_for('entrenamiento') }}">Entrenamiento</a>
-      <a href="{{ url_for('pasos') }}">Pasos</a>
-    </div>
-    {% if session.dentro %}
-      <form method="post" action="{{ url_for('salir') }}" class="en-linea salir">
-        <button>Salir</button>
-      </form>
-    {% endif %}
-  </nav>
+  </header>
+
+  <!-- Panel del menú móvil (pantalla completa, difuminado) -->
+  <div class="menu-movil" id="menu-movil" hidden>
+    <nav aria-label="Menú móvil">
+      {% for nombre, ruta in texto.menu %}
+        <a href="{{ url_for(ruta) }}" style="--i: {{ loop.index0 }}" {% if request.endpoint == ruta %}class="activo" aria-current="page"{% endif %}>{{ nombre }}</a>
+      {% endfor %}
+      <a href="{{ url_for(texto.boton_menu.ruta) }}" class="boton boton-primario" style="--i: {{ texto.menu|length }}">{{ texto.boton_menu.texto }}</a>
+      {% if session.dentro %}
+        <form method="post" action="{{ url_for('salir') }}" style="--i: {{ texto.menu|length + 1 }}">
+          <button class="boton boton-secundario">{{ texto.texto_salir }}</button>
+        </form>
+      {% endif %}
+    </nav>
+  </div>
   {% endblock %}
 
-  <main>
+  <main id="contenido" class="contenedor">
+    <!-- Mensajes de éxito (por ejemplo "Tarea guardada.") en un panel difuminado -->
+    {% with mensajes = get_flashed_messages() %}
+      {% if mensajes %}
+        <div class="aviso-exito vidrio" role="status">
+          {% for m in mensajes %}<p>✓ {{ m }}</p>{% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
     {# Cada página rellena este bloque con su propio contenido #}
     {% block contenido %}{% endblock %}
   </main>
+
+  {% block pie %}
+  <!-- ===== Footer: 4 columnas de enlaces ===== -->
+  <footer class="footer">
+    <div class="contenedor">
+      <div class="footer-columnas">
+        {% for columna in texto.footer %}
+          <div>
+            <h3>{{ columna.titulo }}</h3>
+            <ul>
+              {% for nombre, ruta in columna.enlaces %}
+                <li><a href="{{ url_for(ruta) }}">{{ nombre }}</a></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="footer-final">
+        <span>© {{ texto.copyright }}</span>
+      </div>
+    </div>
+  </footer>
+  {% endblock %}
+
+  <!-- Animaciones, menú móvil y validación de formularios -->
+  <script>
+    window.WEBLIFE = {
+      escalonado: {{ valores_js.escalonado }},
+      menuRetraso: {{ valores_js.menuRetraso }},
+      mensajes: {{ {"obligatorio": texto.mensajes.campo_obligatorio, "numero": texto.mensajes.numero_invalido} | tojson }}
+    };
+  </script>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </body>
 </html>

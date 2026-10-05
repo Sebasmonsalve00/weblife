@@ -1,0 +1,27 @@
+{# ============================================================
+   Componentes reutilizables (macros de Jinja).
+   Se usan en todas las páginas para no repetir HTML ni estilos.
+   ============================================================ #}
+
+{# Encabezado de sección: etiqueta pequeña + título + subtítulo.
+   "datos" viene de contenido.PAGINAS, por ejemplo texto.paginas.tareas #}
+{% macro encabezado(datos, nivel=1) %}
+  <header class="encabezado reveal">
+    {% if datos.etiqueta %}<p class="etiqueta-seccion">{{ datos.etiqueta }}</p>{% endif %}
+    <h{{ nivel }} class="titulo-seccion">{{ datos.titulo }}</h{{ nivel }}>
+    {% if datos.subtitulo %}<p class="subtitulo">{{ datos.subtitulo }}</p>{% endif %}
+  </header>
+{% endmacro %}
+
+{# Enlace de texto con flecha que se mueve en hover #}
+{% macro enlace_flecha(texto, url) %}
+  <a href="{{ url }}" class="enlace-flecha">{{ texto }} <span aria-hidden="true">→</span></a>
+{% endmacro %}
+
+{# Botón pequeño redondo para borrar algo (con texto oculto para lectores de pantalla) #}
+{% macro boton_borrar(url, descripcion="Borrar", confirmar=None) %}
+  <form method="post" action="{{ url }}" class="en-linea"
+        {% if confirmar %}onsubmit="return confirm('{{ confirmar }}')"{% endif %}>
+    <button class="boton-icono" title="{{ descripcion }}" aria-label="{{ descripcion }}">✕</button>
+  </form>
+{% endmacro %}

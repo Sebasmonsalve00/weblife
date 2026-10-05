@@ -1,45 +1,62 @@
 {% extends "base.html" %}
-{% block titulo %}Calendario{% endblock %}
+{% from "_componentes.html" import encabezado, boton_borrar %}
+{% block titulo %}{{ texto.paginas.calendario.titulo }}{% endblock %}
 {% block contenido %}
-<h1>
-  <a href="{{ url_for('calendario_vista', anio=mes_anterior[0], mes=mes_anterior[1]) }}">◀</a>
-  {{ nombre_mes }} {{ anio }}
-  <a href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}">▶</a>
-</h1>
+{{ encabezado(texto.paginas.calendario) }}
 
-<form method="post" class="formulario">
-  <input name="titulo" placeholder="Evento (ej: Examen de Física)" required>
-  <input type="date" name="fecha" value="{{ hoy.isoformat() }}" required>
-  <input type="time" name="hora">
-  <button>Agregar evento</button>
+<form method="post" class="formulario grid-12 reveal">
+  <div class="campo lg-6">
+    <label for="c-titulo">Evento</label>
+    <input id="c-titulo" name="titulo" placeholder="ej: Examen de Física" required>
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="c-fecha">Fecha</label>
+    <input id="c-fecha" type="date" name="fecha" value="{{ hoy.isoformat() }}" required>
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="c-hora">Hora (opcional)</label>
+    <input id="c-hora" type="time" name="hora">
+  </div>
+  <div class="campo">
+    <button class="boton-enviar">Agregar evento</button>
+  </div>
 </form>
 
-<p><span class="punto tarea"></span> tarea &nbsp; <span class="punto evento"></span> evento</p>
+<section class="reveal">
+  <div class="mes-navegacion">
+    <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_anterior[0], mes=mes_anterior[1]) }}" aria-label="Mes anterior">←</a>
+    <h2 class="titulo-seccion">{{ nombre_mes }} {{ anio }}</h2>
+    <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}" aria-label="Mes siguiente">→</a>
+  </div>
+  <p class="leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span></p>
 
-<table class="calendario">
-  <tr>{% for nombre in dias %}<th>{{ nombre[:3] }}</th>{% endfor %}</tr>
-  {% for semana in semanas %}
-    <tr>
-      {% for dia in semana %}
-        {% if dia == 0 %}
-          <td class="fuera"></td>
-        {% else %}
-          <td class="{{ 'hoy' if (anio, mes, dia) == (hoy.year, hoy.month, hoy.day) }}">
-            <div class="num">{{ dia }}</div>
-            {% for cosa in cosas_por_dia.get(dia, []) %}
-              <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }}">
-                {{ cosa.texto }}
-                {% if cosa.tipo == "evento" %}
-                  <form method="post" action="{{ url_for('borrar_evento', id=cosa.id) }}" class="en-linea">
-                    <button class="borrar" title="Borrar">✕</button>
-                  </form>
-                {% endif %}
-              </div>
-            {% endfor %}
-          </td>
-        {% endif %}
+  <div class="calendario-contenedor">
+    <table class="calendario">
+      <thead><tr>{% for nombre in dias %}<th scope="col"><abbr title="{{ nombre }}">{{ nombre[:3] }}</abbr></th>{% endfor %}</tr></thead>
+      <tbody>
+      {% for semana in semanas %}
+        <tr>
+          {% for dia in semana %}
+            {% if dia == 0 %}
+              <td class="fuera"></td>
+            {% else %}
+              <td class="{{ 'hoy' if (anio, mes, dia) == (hoy.year, hoy.month, hoy.day) }}">
+                <div class="num">{{ dia }}</div>
+                {% for cosa in cosas_por_dia.get(dia, []) %}
+                  <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }}">
+                    <span>{{ cosa.texto }}</span>
+                    {% if cosa.tipo == "evento" %}
+                      {{ boton_borrar(url_for('borrar_evento', id=cosa.id), "Borrar evento: " ~ cosa.texto) }}
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </td>
+            {% endif %}
+          {% endfor %}
+        </tr>
       {% endfor %}
-    </tr>
-  {% endfor %}
-</table>
+      </tbody>
+    </table>
+  </div>
+</section>
 {% endblock %}

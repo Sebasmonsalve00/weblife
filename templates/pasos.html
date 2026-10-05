@@ -1,19 +1,28 @@
 {% extends "base.html" %}
-{% block titulo %}Pasos{% endblock %}
+{% from "_componentes.html" import encabezado %}
+{% block titulo %}{{ texto.paginas.pasos.titulo }}{% endblock %}
 {% block contenido %}
-<h1>👟 Pasos diarios</h1>
+{{ encabezado(texto.paginas.pasos) }}
 
-<form method="post" class="formulario">
-  <input type="date" name="fecha" value="{{ hoy }}" required>
-  <input type="number" name="cantidad" placeholder="Pasos" min="0" required>
-  <button>Guardar</button>
+<form method="post" class="formulario grid-12 reveal">
+  <div class="campo md-6 lg-4">
+    <label for="p-fecha">Fecha</label>
+    <input id="p-fecha" type="date" name="fecha" value="{{ hoy }}" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="p-cant">Pasos</label>
+    <input id="p-cant" type="number" name="cantidad" placeholder="ej: 8500" min="0" required>
+  </div>
+  <div class="campo lg-4">
+    <button class="boton-enviar">Guardar</button>
+  </div>
 </form>
-<p><small>Si guardas otra vez el mismo día, se reemplaza el número anterior.</small></p>
+<p class="nota">Si guardas otra vez el mismo día, se reemplaza el número anterior.</p>
 
-<p class="resumen">Promedio de la semana: <b>{{ promedio }}</b> pasos · Meta: {{ meta }}</p>
+<p class="resumen reveal">Promedio de la semana: <b>{{ promedio }}</b> pasos · Meta: {{ meta }}</p>
 
 <!-- Gráfico de barras hecho solo con HTML y CSS -->
-<div class="grafico">
+<div class="grafico reveal" role="img" aria-label="Pasos de los últimos 7 días: {% for dia in ultimos_7 %}{{ dia.nombre }} {{ dia.cantidad }}{{ ', ' if not loop.last }}{% endfor %}">
   {% for dia in ultimos_7 %}
     <div class="columna" title="{{ dia.fecha }}: {{ dia.cantidad }} pasos">
       <small>{{ dia.cantidad }}</small>

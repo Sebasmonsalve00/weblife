@@ -1,17 +1,16 @@
 {# Pedacito reutilizable: una fila de tarea con sus botones #}
+{% from "_componentes.html" import boton_borrar %}
 <li class="{{ 'hecha' if tarea.hecha }}">
   <form method="post" action="{{ url_for('cambiar_tarea', id=tarea.id) }}" class="en-linea">
-    <button class="check">{{ "✔" if tarea.hecha else "○" }}</button>
+    <button class="boton-check" aria-label="{{ 'Marcar como pendiente' if tarea.hecha else 'Marcar como hecha' }}: {{ tarea.titulo }}">{{ "✓" if tarea.hecha else "" }}</button>
   </form>
   <span class="tarea-texto">
     {{ tarea.titulo }}
     {% if tarea.materia %}<span class="etiqueta">{{ tarea.materia }}</span>{% endif %}
     <small class="fechas">
-      📅 Entrega: <b>{{ tarea.fecha_entrega }}</b>
+      Entrega: <b>{{ tarea.fecha_entrega }}</b>
       · Creada: {{ tarea.fecha_creacion or "—" }}
     </small>
   </span>
-  <form method="post" action="{{ url_for('borrar_tarea', id=tarea.id) }}" class="en-linea">
-    <button class="borrar" title="Borrar">✕</button>
-  </form>
+  {{ boton_borrar(url_for('borrar_tarea', id=tarea.id), "Borrar tarea: " ~ tarea.titulo) }}
 </li>

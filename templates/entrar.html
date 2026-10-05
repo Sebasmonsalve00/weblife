@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 {% block titulo %}Entrar{% endblock %}
 {% block menu %}{% endblock %}
+{% block pie %}{% endblock %}
 {% block contenido %}
-<div class="tarjeta entrar">
-  <h1>weblife 🔒</h1>
-  {% if error %}<p class="alerta">{{ error }}</p>{% endif %}
+{% set t = texto.entrar %}
+<div class="tarjeta entrar hero-entrada">
+  <p class="etiqueta-seccion">{{ texto.nombre_sitio }}</p>
+  <h1 class="titulo-seccion">{{ t.titulo }}</h1>
+  <p class="subtitulo">{{ t.subtitulo }}</p>
   <form method="post">
-    <input type="password" name="clave" placeholder="Contraseña" required autofocus>
-    <button>Entrar</button>
+    {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
+    <div class="campo">
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" name="clave" required autofocus autocomplete="current-password">
+    </div>
+    <button class="boton-enviar">{{ t.boton }}</button>
   </form>
 </div>
 {% endblock %}

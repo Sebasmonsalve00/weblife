@@ -1,24 +1,31 @@
 {% extends "base.html" %}
-{% block titulo %}Pendientes{% endblock %}
+{% from "_componentes.html" import encabezado, enlace_flecha %}
+{% block titulo %}{{ texto.paginas.pendientes.titulo }}{% endblock %}
 {% block contenido %}
-<h1>⏳ Tareas pendientes</h1>
+{{ encabezado(texto.paginas.pendientes) }}
 
 {% if atrasadas %}
-  <h2 class="alerta">Atrasadas</h2>
-  <ul class="lista">{% for tarea in atrasadas %}{% include "_tarea.html" %}{% endfor %}</ul>
+  <section class="reveal">
+    <h2 class="subtitulo-chico titulo-grupo">Atrasadas <span class="contador">{{ atrasadas|length }}</span></h2>
+    <ul class="lista">{% for tarea in atrasadas %}{% include "_tarea.html" %}{% endfor %}</ul>
+  </section>
 {% endif %}
 
-<h2>Próximos 7 días</h2>
-<ul class="lista">
-  {% for tarea in esta_semana %}{% include "_tarea.html" %}
-  {% else %}<p class="vacio">Nada para esta semana.</p>{% endfor %}
-</ul>
+<section class="reveal">
+  <h2 class="subtitulo-chico">Próximos 7 días</h2>
+  <ul class="lista">
+    {% for tarea in esta_semana %}{% include "_tarea.html" %}
+    {% else %}<li class="vacio">Nada para esta semana.</li>{% endfor %}
+  </ul>
+</section>
 
-<h2>Más adelante</h2>
-<ul class="lista">
-  {% for tarea in despues %}{% include "_tarea.html" %}
-  {% else %}<p class="vacio">Nada más adelante.</p>{% endfor %}
-</ul>
+<section class="reveal">
+  <h2 class="subtitulo-chico">Más adelante</h2>
+  <ul class="lista">
+    {% for tarea in despues %}{% include "_tarea.html" %}
+    {% else %}<li class="vacio">Nada más adelante.</li>{% endfor %}
+  </ul>
+</section>
 
-<p><a href="{{ url_for('tareas') }}">+ Agregar una tarea</a></p>
+<p>{{ enlace_flecha("Agregar una tarea", url_for('tareas')) }}</p>
 {% endblock %}

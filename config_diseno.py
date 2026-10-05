@@ -1,0 +1,135 @@
+# ============================================================
+#  config_diseno.py - Todo el "look" de la web en un solo lugar
+#
+#  Cambia aquí los colores, la fuente, los radios, el difuminado,
+#  la velocidad de las animaciones o el ancho de la página.
+#  app.py convierte estos valores en variables CSS (--color-fondo,
+#  --radio-tarjeta, etc.) y las pone en la plantilla base, así que
+#  NO hace falta tocar estilo.css para cambiarlos.
+# ============================================================
+
+# ---- 1. Paleta: solo 3 colores ----
+COLORES = {
+    "fondo": "#F5F5F7",    # fondo de la página
+    "texto": "#1D1D1F",    # texto y botones principales
+    "acento": "#A8C5FF",   # azul pastel
+}
+
+# Opacidades permitidas de esos 3 colores (variaciones, no colores nuevos).
+# Nota: el texto secundario y terciario quedan en 65% y 62% (en vez de 60% y 45%)
+# para cumplir el contraste mínimo WCAG AA sobre el fondo claro.
+OPACIDADES = {
+    "texto_secundario": 0.65,
+    "texto_terciario": 0.62,
+    "borde": 0.08,
+    "borde_boton": 0.20,
+    "superficie": 0.55,          # blanco difuminado
+    "superficie_sin_blur": 0.92, # si el navegador no soporta backdrop-filter
+    "acento_degradado": 0.35,
+    "acento_manchas": 0.40,
+    "acento_hover_fila": 0.10,
+}
+
+# ---- 2. Tipografía ----
+FUENTE = {
+    "nombre": "Inter",
+    "respaldo": '-apple-system, "Segoe UI", sans-serif',
+    # Enlace de Google Fonts con los pesos que usamos (400, 500, 600 y 700)
+    "google_fonts": "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+}
+
+# ---- 3. Bordes y radios ----
+RADIOS = {
+    "tarjeta": "28px",   # tarjetas, paneles y tablas
+    "imagen": "24px",
+    "boton": "999px",    # píldora
+    "input": "16px",
+    "modal": "32px",     # menú móvil y sección degradada
+    "chico": "12px",     # elementos pequeños (bloques del horario, días del calendario)
+}
+
+# ---- 4. Efecto difuminado (glassmorphism) ----
+BLUR = {
+    "superficies": "20px",   # barra de navegación, tarjetas, formularios...
+    "saturacion": "180%",
+    "manchas": "120px",      # manchas de color del fondo
+}
+
+# ---- Animaciones (en milisegundos) ----
+ANIMACION = {
+    "aparecer": 800,         # elementos .reveal al hacer scroll
+    "escalonado": 100,       # retraso entre tarjetas hermanas
+    "boton": 200,            # hover de botones
+    "menu": 300,             # cambio de altura del menú al hacer scroll
+    "menu_movil_retraso": 60,
+    "flotar_manchas": 20000, # 20 segundos
+}
+
+# ---- 6. Layout ----
+CONTENEDOR = {
+    "ancho_maximo": "1200px",
+    "padding_movil": "24px",
+    "padding_escritorio": "48px",
+}
+
+# Altura de la portada (hero) de la página de inicio.
+# La especificación pide 100vh; si te resulta muy alta, prueba con "60vh".
+HERO_ALTURA = "100vh"
+
+
+def variables_css():
+    """Arma el texto CSS con todas las variables para ponerlo en la plantilla base."""
+
+    def rgba(color_hex, opacidad):
+        # Convierte "#1D1D1F" + 0.08 en "rgba(29, 29, 31, 0.08)"
+        r = int(color_hex[1:3], 16)
+        g = int(color_hex[3:5], 16)
+        b = int(color_hex[5:7], 16)
+        return f"rgba({r}, {g}, {b}, {opacidad})"
+
+    texto = COLORES["texto"]
+    acento = COLORES["acento"]
+    o = OPACIDADES
+    variables = {
+        "--color-fondo": COLORES["fondo"],
+        "--color-texto": texto,
+        "--color-acento": acento,
+        "--texto-secundario": rgba(texto, o["texto_secundario"]),
+        "--texto-terciario": rgba(texto, o["texto_terciario"]),
+        "--borde": rgba(texto, o["borde"]),
+        "--borde-boton": rgba(texto, o["borde_boton"]),
+        "--superficie": f"rgba(255, 255, 255, {o['superficie']})",
+        "--superficie-sin-blur": f"rgba(255, 255, 255, {o['superficie_sin_blur']})",
+        "--acento-degradado": rgba(acento, o["acento_degradado"]),
+        "--acento-manchas": rgba(acento, o["acento_manchas"]),
+        "--acento-suave": rgba(acento, o["acento_hover_fila"]),
+        "--sombra": f"0 8px 32px {rgba(texto, 0.06)}",
+        "--sombra-hover": f"0 16px 48px {rgba(texto, 0.10)}",
+        "--fuente": f'"{FUENTE["nombre"]}", {FUENTE["respaldo"]}',
+        "--radio-tarjeta": RADIOS["tarjeta"],
+        "--radio-imagen": RADIOS["imagen"],
+        "--radio-boton": RADIOS["boton"],
+        "--radio-input": RADIOS["input"],
+        "--radio-modal": RADIOS["modal"],
+        "--radio-chico": RADIOS["chico"],
+        "--blur": BLUR["superficies"],
+        "--saturacion": BLUR["saturacion"],
+        "--blur-manchas": BLUR["manchas"],
+        "--t-aparecer": f"{ANIMACION['aparecer']}ms",
+        "--t-boton": f"{ANIMACION['boton']}ms",
+        "--t-menu": f"{ANIMACION['menu']}ms",
+        "--t-flotar": f"{ANIMACION['flotar_manchas']}ms",
+        "--ancho-contenedor": CONTENEDOR["ancho_maximo"],
+        "--padding-movil": CONTENEDOR["padding_movil"],
+        "--padding-escritorio": CONTENEDOR["padding_escritorio"],
+        "--hero-altura": HERO_ALTURA,
+    }
+    return "\n".join(f"  {nombre}: {valor};" for nombre, valor in variables.items())
+
+
+def valores_js():
+    """Los tiempos que necesita el archivo app.js (se leen desde el HTML)."""
+    return {
+        "escalonado": ANIMACION["escalonado"],
+        "menuRetraso": ANIMACION["menu_movil_retraso"],
+    }

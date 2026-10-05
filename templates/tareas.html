@@ -1,29 +1,41 @@
 {% extends "base.html" %}
-{% block titulo %}Tareas{% endblock %}
+{% from "_componentes.html" import encabezado %}
+{% block titulo %}{{ texto.paginas.tareas.titulo }}{% endblock %}
 {% block contenido %}
-<h1>📚 Tareas</h1>
+{{ encabezado(texto.paginas.tareas) }}
 
-<form method="post" class="formulario">
-  <input name="titulo" placeholder="¿Qué tienes que hacer?" required>
-  <!-- Las materias vienen del Horario semanal -->
-  <select name="materia">
-    <option value="">Sin materia</option>
-    {% for materia in materias %}
-      <option>{{ materia }}</option>
-    {% endfor %}
-  </select>
-  <input type="date" name="fecha_entrega" value="{{ hoy }}" required>
-  <button>Agregar tarea</button>
+<form method="post" class="formulario grid-12 reveal">
+  <div class="campo lg-6">
+    <label for="t-titulo">¿Qué tienes que hacer?</label>
+    <input id="t-titulo" name="titulo" placeholder="ej: Guía de ejercicios 3" required>
+  </div>
+  <div class="campo md-6 lg-3">
+    <!-- Las materias vienen del Horario semanal -->
+    <label for="t-materia">Materia</label>
+    <select id="t-materia" name="materia">
+      <option value="">Sin materia</option>
+      {% for materia in materias %}
+        <option>{{ materia }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="t-fecha">Fecha de entrega</label>
+    <input id="t-fecha" type="date" name="fecha_entrega" value="{{ hoy }}" required>
+  </div>
+  <div class="campo">
+    <button class="boton-enviar">Agregar tarea</button>
+  </div>
 </form>
 {% if not materias %}
-  <p class="vacio">Para elegir una materia, primero agrega tus clases en el <a href="{{ url_for('horario') }}">Horario</a>.</p>
+  <p class="nota">Para elegir una materia, primero agrega tus clases en el <a href="{{ url_for('horario') }}">Horario</a>.</p>
 {% endif %}
 
-<ul class="lista">
+<ul class="lista reveal">
   {% for tarea in tareas %}
     {% include "_tarea.html" %}
   {% else %}
-    <p class="vacio">Todavía no hay tareas.</p>
+    <li class="vacio">Todavía no hay tareas.</li>
   {% endfor %}
 </ul>
 {% endblock %}

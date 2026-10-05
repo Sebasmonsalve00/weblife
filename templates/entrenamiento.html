@@ -1,36 +1,51 @@
 {% extends "base.html" %}
-{% block titulo %}Entrenamiento{% endblock %}
+{% from "_componentes.html" import encabezado, boton_borrar %}
+{% block titulo %}{{ texto.paginas.entrenamiento.titulo }}{% endblock %}
 {% block contenido %}
-<h1>🏋️ Entrenamiento</h1>
+{{ encabezado(texto.paginas.entrenamiento) }}
 
-<p class="resumen">Últimos 7 días: <b>{{ semana.sesiones }}</b> sesiones,
+<p class="resumen reveal">Últimos 7 días: <b>{{ semana.sesiones }}</b> sesiones,
   <b>{{ semana.minutos or 0 }}</b> minutos en total.</p>
 
-<form method="post" class="formulario">
-  <input type="date" name="fecha" value="{{ hoy }}" required>
-  <input name="tipo" placeholder="Tipo (ej: Pesas, Correr)" required list="tipos">
-  <datalist id="tipos">
-    <option>Pesas</option><option>Correr</option><option>Bicicleta</option>
-    <option>Natación</option><option>Fútbol</option><option>Yoga</option>
-  </datalist>
-  <input type="number" name="minutos" placeholder="Minutos" min="0">
-  <input name="notas" placeholder="Notas (ej: sentadilla 4x10 60kg)">
-  <button>Registrar</button>
+<form method="post" class="formulario grid-12 reveal">
+  <div class="campo md-6 lg-3">
+    <label for="e-fecha">Fecha</label>
+    <input id="e-fecha" type="date" name="fecha" value="{{ hoy }}" required>
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="e-tipo">Tipo</label>
+    <input id="e-tipo" name="tipo" placeholder="ej: Pesas, Correr" required list="tipos">
+    <datalist id="tipos">
+      <option>Pesas</option><option>Correr</option><option>Bicicleta</option>
+      <option>Natación</option><option>Fútbol</option><option>Yoga</option>
+    </datalist>
+  </div>
+  <div class="campo md-6 lg-2">
+    <label for="e-min">Minutos</label>
+    <input id="e-min" type="number" name="minutos" placeholder="ej: 45" min="0">
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="e-notas">Notas</label>
+    <input id="e-notas" name="notas" placeholder="ej: sentadilla 4x10 60kg">
+  </div>
+  <div class="campo">
+    <button class="boton-enviar">Registrar</button>
+  </div>
 </form>
 
-<table class="tabla">
-  <tr><th>Fecha</th><th>Tipo</th><th>Minutos</th><th>Notas</th><th></th></tr>
-  {% for e in entrenamientos %}
-    <tr>
-      <td>{{ e.fecha }}</td><td>{{ e.tipo }}</td><td>{{ e.minutos or "—" }}</td><td>{{ e.notas }}</td>
-      <td>
-        <form method="post" action="{{ url_for('borrar_entrenamiento', id=e.id) }}" class="en-linea">
-          <button class="borrar" title="Borrar">✕</button>
-        </form>
-      </td>
-    </tr>
-  {% else %}
-    <tr><td colspan="5" class="vacio">Todavía no hay entrenamientos.</td></tr>
-  {% endfor %}
-</table>
+<div class="tabla-contenedor reveal">
+  <table class="tabla">
+    <thead><tr><th scope="col">Fecha</th><th scope="col">Tipo</th><th scope="col">Minutos</th><th scope="col">Notas</th><th scope="col"><span class="saltar-lector">Acciones</span></th></tr></thead>
+    <tbody>
+    {% for e in entrenamientos %}
+      <tr>
+        <td>{{ e.fecha }}</td><td>{{ e.tipo }}</td><td>{{ e.minutos or "—" }}</td><td>{{ e.notas }}</td>
+        <td>{{ boton_borrar(url_for('borrar_entrenamiento', id=e.id), "Borrar entrenamiento del " ~ e.fecha) }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="vacio">Todavía no hay entrenamientos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
