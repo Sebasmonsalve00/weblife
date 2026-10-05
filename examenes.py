@@ -33,6 +33,28 @@ CALENDARIOS = {
             # "Mayo 2027": [ ... ],   <- se agrega cuando lleguen las fechas
         },
     },
+    "Grado en Periodismo": {
+        "2º Curso": {
+            "Diciembre 2026": [
+                # Ética y persona: "detalle en enlace fila 6" (sin fecha), no está.
+                # International Communication and Public Opinion (2º Global): "Web Derecho" (sin fecha), no está.
+                ("International Journalism", "2026-12-04", "16:00", "4"),
+                ("Teoría del periodismo", "2026-12-11", "16:00", "4"),
+                ("La entrevista y el perfil periodístico", "2026-12-02", "16:00", "4"),
+                ("Sistemas políticos", "2026-12-16", "16:00", "3"),
+                ("Cultura periodística", "2026-12-14", "09:00", "2 y 5"),
+            ],
+        },
+        "3º Curso": {
+            "Diciembre 2026": [
+                ("Fundamentos de periodismo económico", "2026-12-07", "12:00", "4"),
+                ("Géneros y edición de diarios y revistas", "2026-12-16", "12:00", "5"),
+                ("Géneros y programas de radio", "2026-12-10", "12:00", "5"),
+                ("Media and Politics", "2026-12-02", "12:00", "11"),
+                ("Medios de comunicación y política en la España reciente", "2026-12-02", "12:00", "3"),
+            ],
+        },
+    },
 }
 
 
