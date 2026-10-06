@@ -1,179 +1,184 @@
 // ============================================================
 //  pagina-siguiente.js - Scroll continuo entre páginas
 //
-//  - Al final de la página, si sigues bajando (rueda, trackpad o dedo), se
-//    llena el círculo de "Siguiente" y pasas a la página siguiente.
-//  - Al principio de la página, si sigues subiendo, aparece "Anterior" y
-//    vuelves a la página anterior (que se abre por el final).
-//  Si paras o cambias de sentido, todo vuelve a su sitio.
-//  El orden de páginas y los umbrales están en config_diseno.py.
+//  Cada página es un "tramo" (<div class="tramo">). Antes de que llegues al
+//  final, se descarga la página siguiente y su tramo se añade debajo, así que
+//  sigues bajando sin pararte y sin pantalla de carga. Al subir arriba del
+//  todo pasa lo mismo con la página anterior, que aparece encima.
+//  Mientras bajas, la dirección de la barra, el título de la pestaña y el
+//  menú cambian a la página que estás viendo.
+//  El orden de páginas y la precarga están en config_diseno.py.
 // ============================================================
 
 (function () {
   "use strict";
-  var config = window.WEBLIFE || {};
-  var ajustes = config.siguiente || {};
-  var raiz = document.documentElement;
-  var sinMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  // Las dos direcciones: "abajo" (siguiente) y "arriba" (anterior).
-  var bloqueSiguiente = document.getElementById("siguiente");
-  var avisoAnterior = ajustes.anterior !== false ? document.getElementById("anterior") : null;
-  if (!bloqueSiguiente && !avisoAnterior) return;
-  // En el móvil, tirar hacia abajo arriba del todo recargaría la página: lo usamos para "Anterior".
-  if (avisoAnterior && !sinMovimiento) raiz.style.overscrollBehaviorY = "none";
-
-  // ---------- Precarga de la página siguiente cuando el footer entra en pantalla ----------
-  // Añade <link rel="prefetch"> una sola vez por dirección.
-  function precargar(enlace) {
-    if (!enlace || enlace._precargada) return;
-    enlace._precargada = true;
-    var link = document.createElement("link");
-    link.rel = "prefetch";
-    link.href = enlace.getAttribute("href");
-    document.head.appendChild(link);
-  }
+  var ajustes = (window.WEBLIFE || {}).siguiente || {};
+  var precarga = ajustes.precarga || 1.5;   // pantallas de antelación
+  var primero = document.querySelector(".tramo");
+  if (!primero || !window.fetch || !window.DOMParser) return;
   var footer = document.querySelector(".footer");
-  if (footer && bloqueSiguiente && "IntersectionObserver" in window) {
-    new IntersectionObserver(function (entradas, obs) {
-      if (entradas[0].isIntersecting) { precargar(bloqueSiguiente); obs.disconnect(); }
-    }).observe(footer);
-  }
-  precargar(avisoAnterior);   // la anterior casi siempre ya está en caché, pero por si acaso
+  var cargadas = {};   // dirección -> true (cada página aparece una sola vez)
+  cargadas[primero.dataset.url] = true;
+  var cargando = { abajo: false, arriba: false };
 
-  // ---------- Navegar (una sola vez) ----------
-  var navegando = false;
-  // Abre la página vecina. "direccion" decide cómo entra la nueva (desde abajo o desde arriba).
-  function ir(enlace, direccion) {
-    if (navegando || !enlace) return;
-    navegando = true;
-    try { sessionStorage.setItem("weblife-siguiente", direccion); } catch (e) { /* sin almacenamiento: transición normal */ }
-    window.location.href = enlace.getAttribute("href");
+  // ---------- Traer una página y sacar su tramo ----------
+  var guardadas = {};   // dirección -> promesa con el documento (una descarga por página)
+  function traer(url) {
+    if (!guardadas[url]) {
+      guardadas[url] = fetch(url, { credentials: "same-origin" }).then(function (r) {
+        // Si la sesión caducó nos manda a "Entrar": entonces no seguimos
+        if (!r.ok || r.redirected) throw new Error("sin página");
+        return r.text();
+      }).then(function (html) {
+        return new DOMParser().parseFromString(html, "text/html");
+      });
+      guardadas[url].catch(function () { delete guardadas[url]; });
+    }
+    return guardadas[url];
   }
-  // El bloque "Siguiente" también es un enlace normal: le damos la misma transición.
-  if (bloqueSiguiente) {
-    bloqueSiguiente.addEventListener("click", function (e) {
-      e.preventDefault();
-      ir(bloqueSiguiente, "abajo");
+
+  // Convierte el tramo de otra página en uno de esta: su <main> pasa a ser un
+  // <div> (solo puede haber un <main>) y sus scripts se vuelven a crear para que se ejecuten.
+  function adoptar(doc) {
+    var tramo = doc.querySelector(".tramo");
+    if (!tramo) return null;
+    tramo = document.importNode(tramo, true);
+    tramo.classList.remove("actual");
+    tramo.dataset.titulo = tramo.dataset.titulo || doc.title;
+    var main = tramo.querySelector("main");
+    if (main) {
+      var div = document.createElement("div");
+      div.className = main.className;
+      while (main.firstChild) div.appendChild(main.firstChild);
+      main.replaceWith(div);
+    }
+    // Los mensajes de "guardado" ya se vieron en su página
+    tramo.querySelectorAll(".aviso-exito").forEach(function (el) { el.remove(); });
+    return tramo;
+  }
+
+  // Ejecuta los scripts del tramo (al añadir HTML así, el navegador no los ejecuta solo)
+  function activar(tramo) {
+    tramo.querySelectorAll("script").forEach(function (viejo) {
+      var nuevo = document.createElement("script");
+      nuevo.textContent = viejo.textContent;
+      viejo.replaceWith(nuevo);
+    });
+    if (window.Weblife) window.Weblife.preparar(tramo);
+    if (window.ScrollEngine && window.ScrollEngine.preparar) {
+      window.ScrollEngine.preparar(tramo);
+      window.ScrollEngine.pedirDibujo();
+    }
+  }
+
+  // ---------- Hacia abajo: añadir la página siguiente debajo ----------
+  function cargarSiguiente() {
+    var tramos = document.querySelectorAll(".tramo");
+    var ultimo = tramos[tramos.length - 1];
+    var enlace = ultimo.querySelector(".siguiente");
+    if (cargando.abajo || !enlace) return;
+    var url = new URL(enlace.href).pathname;
+    if (cargadas[url]) return;
+    cargando.abajo = true;
+    traer(url).then(function (doc) {
+      var tramo = adoptar(doc);
+      if (!tramo) throw new Error("sin tramo");
+      cargadas[url] = true;
+      ultimo.after(tramo);
+      activar(tramo);
+    }).catch(function () {
+      enlace.dataset.fallo = "1";   // si falla, el enlace sigue funcionando como siempre
+    }).then(function () { cargando.abajo = false; revisar(); });
+  }
+
+  // ---------- Hacia arriba: añadir la página anterior encima ----------
+  // La ponemos sin que lo que ves se mueva (corregimos el scroll con lo que mide).
+  function cargarAnterior() {
+    if (ajustes.anterior === false || cargando.arriba) return;
+    var arriba = document.querySelector(".tramo");
+    var url = arriba.dataset.anterior;
+    if (!url || cargadas[url]) return;
+    cargando.arriba = true;
+    traer(url).then(function (doc) {
+      var tramo = adoptar(doc);
+      if (!tramo) throw new Error("sin tramo");
+      cargadas[url] = true;
+      var antes = arriba.getBoundingClientRect().top;
+      arriba.before(tramo);
+      activar(tramo);
+      window.scrollBy(0, arriba.getBoundingClientRect().top - antes);
+    }).catch(function () {}).then(function () { cargando.arriba = false; });
+  }
+
+  // ---------- Página actual: barra de direcciones, título y menú ----------
+  var actual = primero;
+  function marcarActual(tramo) {
+    if (tramo === actual) return;
+    actual.classList.remove("actual");
+    tramo.classList.add("actual");
+    actual = tramo;
+    var url = tramo.dataset.url;
+    try { history.replaceState(history.state, "", url); } catch (e) { /* sin historial: da igual */ }
+    if (tramo.dataset.titulo) document.title = tramo.dataset.titulo;
+    // Los avisos del calendario solo se ven mientras estás en el calendario
+    document.body.classList.toggle("con-avisos", tramo.classList.contains("con-avisos"));
+    document.querySelectorAll(".nav-enlaces a, .menu-movil nav > a").forEach(function (a) {
+      var es = new URL(a.href).pathname === url;
+      a.classList.toggle("activo", es);
+      if (es) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
   }
 
-  // Con "reducir movimiento" solo queda el enlace (sin gesto).
-  if (sinMovimiento) return;
-
-  var umbralEscritorio = ajustes.umbralEscritorio || 180;
-  var umbralMovil = ajustes.umbralMovil || 90;
-  var esperaInercia = ajustes.esperaInercia || 200;
-  var reinicio = ajustes.reinicio || 600;
-
-  var acumulado = 0;          // px acumulados en la dirección actual
-  var sentido = null;         // "abajo", "arriba" o null
-  var umbral = umbralEscritorio;
-  var llegadaAbajo = 0;       // momento en que se llegó al final (para ignorar la inercia)
-  var llegadaArriba = 0;      // momento en que se llegó al principio
-  var temporizador = null;
-
-  // ¿Está el scroll en el final exacto de la página? (margen de 2px)
-  function enElFinal() { return window.innerHeight + window.scrollY >= raiz.scrollHeight - 2; }
-  // ¿Está arriba del todo?
-  function enElPrincipio() { return window.scrollY <= 2; }
-
-  // Anota cuándo se llega a cada borde, para empezar a contar un poco después.
-  function revisarBordes() {
-    var ahora = Date.now();
-    if (enElFinal()) { if (!llegadaAbajo) llegadaAbajo = ahora; } else { llegadaAbajo = 0; if (sentido === "abajo") cancelar(); }
-    if (enElPrincipio()) { if (!llegadaArriba) llegadaArriba = ahora; } else { llegadaArriba = 0; if (sentido === "arriba") cancelar(); }
-  }
-  window.addEventListener("scroll", function () { requestAnimationFrame(revisarBordes); }, { passive: true });
-  revisarBordes();
-  // Al cargar arriba del todo no hay que esperar la inercia (no venimos de un scroll).
-  llegadaArriba = llegadaArriba ? llegadaArriba - esperaInercia : 0;
-
-  // ¿Hay algo que impide el gesto? (menú abierto, panel o formulario abierto, foco en un campo)
-  function bloqueado(objetivo, dir) {
-    if (navegando) return true;
-    if (document.body.classList.contains("menu-abierto")) return true;
-    if (document.querySelector("main details[open], dialog[open]")) return true;
-    var activo = document.activeElement;
-    if (activo && (activo.matches("input, textarea, select") || activo.isContentEditable)) return true;
-    // No interferimos con secciones animadas, carruseles ni cajas con su propio scroll.
-    for (var el = objetivo; el && el !== document.body && el.nodeType === 1; el = el.parentElement) {
-      if (el.matches(".scroll-section, [data-carrusel]")) return true;
-      var estilo = getComputedStyle(el);
-      if (/(auto|scroll)/.test(estilo.overflowY) && el.scrollHeight > el.clientHeight + 1) {
-        var leQuedaAbajo = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
-        var leQuedaArriba = el.scrollTop > 1;
-        if ((dir === "abajo" && leQuedaAbajo) || (dir === "arriba" && leQuedaArriba)) return true;
-      }
-    }
-    return false;
-  }
-
-  // Dibuja el avance en las variables CSS --siguiente y --anterior.
-  function pintar() {
-    var avance = Math.min(1, acumulado / umbral);
-    raiz.style.setProperty("--siguiente", sentido === "abajo" ? avance.toFixed(3) : "0");
-    raiz.style.setProperty("--anterior", sentido === "arriba" ? avance.toFixed(3) : "0");
-  }
-
-  // Vuelve todo a su sitio con una animación suave (la hace el CSS).
-  function cancelar() {
-    acumulado = 0;
-    sentido = null;
-    raiz.classList.remove("siguiente-activo");
-    pintar();
-  }
-
-  // Suma desplazamiento en una dirección y decide si ya toca cambiar de página.
-  function sumar(cantidad, dir, umbralUsado) {
-    if (sentido !== dir) { acumulado = 0; sentido = dir; }
-    umbral = umbralUsado;
-    acumulado += cantidad;
-    raiz.classList.add("siguiente-activo");   // sin transición mientras sigue el gesto
-    pintar();
-    clearTimeout(temporizador);
-    temporizador = setTimeout(cancelar, reinicio);   // si deja de moverse, se cancela
-    if (acumulado >= umbral) {
-      if (dir === "abajo") ir(bloqueSiguiente, "abajo");
-      else ir(avisoAnterior, "arriba");
-    }
-  }
-
-  // ¿Se puede contar en esa dirección? (en el borde y pasada la espera de inercia)
-  function listo(dir) {
-    var ahora = Date.now();
-    if (dir === "abajo") return bloqueSiguiente && enElFinal() && llegadaAbajo && ahora - llegadaAbajo >= esperaInercia;
-    return avisoAnterior && enElPrincipio() && llegadaArriba && ahora - llegadaArriba >= esperaInercia;
-  }
-
-  // Recibe un movimiento (positivo = hacia abajo) y lo reparte.
-  function mover(px, objetivo, umbralUsado) {
-    var dir = px > 0 ? "abajo" : "arriba";
-    if (sentido && sentido !== dir) { cancelar(); }   // cambió de sentido: se cancela
-    if (!listo(dir) || bloqueado(objetivo, dir)) return;
-    sumar(Math.abs(px), dir, umbralUsado);
-  }
-
-  // ---------- Escritorio: rueda o trackpad ----------
-  window.addEventListener("wheel", function (e) {
-    if (!e.deltaY) return;
-    // deltaMode 1 = líneas, 2 = páginas: lo pasamos a píxeles
-    var px = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1);
-    mover(px, e.target, umbralEscritorio);
-  }, { passive: true });
-
-  // ---------- Móvil: arrastre del dedo ----------
-  var ultimoY = null;
-  window.addEventListener("touchstart", function (e) { ultimoY = e.touches[0].clientY; }, { passive: true });
-  window.addEventListener("touchmove", function (e) {
-    if (ultimoY === null) return;
-    var y = e.touches[0].clientY;
-    var arrastre = ultimoY - y;   // positivo = el dedo sube = la página quiere bajar
+  // ---------- Revisar en cada cuadro de scroll ----------
+  var ultimoY = window.scrollY;
+  var pendiente = false;
+  function revisar() {
+    pendiente = false;
+    var alto = window.innerHeight;
+    var y = window.scrollY;
+    // Cerca del final: traemos la siguiente para que ya esté cuando llegues
+    var finalContenido = footer ? footer.getBoundingClientRect().top : document.documentElement.scrollHeight - y;
+    if (finalContenido < alto * (1 + precarga)) cargarSiguiente();
+    // Subiendo cerca del principio: traemos la anterior
+    if (y < ultimoY && y < alto) cargarAnterior();
     ultimoY = y;
-    if (arrastre) mover(arrastre, e.target, umbralMovil);
-  }, { passive: true });
-  window.addEventListener("touchend", function () { ultimoY = null; }, { passive: true });
+    // La página actual es la que ocupa la línea a 40% de la pantalla
+    var linea = alto * 0.4;
+    document.querySelectorAll(".tramo").forEach(function (t) {
+      var caja = t.getBoundingClientRect();
+      if (caja.top <= linea && caja.bottom > linea) marcarActual(t);
+    });
+  }
+  function pedir() { if (!pendiente) { pendiente = true; requestAnimationFrame(revisar); } }
+  window.addEventListener("scroll", pedir, { passive: true });
+  window.addEventListener("resize", pedir);
 
-  // Al volver con el botón "atrás", la página puede quedar a medio camino: la reiniciamos.
-  window.addEventListener("pageshow", function () { navegando = false; cancelar(); });
+  // Arriba del todo no hay evento de scroll: miramos la rueda y el dedo
+  window.addEventListener("wheel", function (e) {
+    if (e.deltaY < 0 && window.scrollY < window.innerHeight) cargarAnterior();
+  }, { passive: true });
+  var dedoY = null;
+  window.addEventListener("touchstart", function (e) { dedoY = e.touches[0].clientY; }, { passive: true });
+  window.addEventListener("touchmove", function (e) {
+    if (dedoY !== null && e.touches[0].clientY > dedoY && window.scrollY < window.innerHeight) cargarAnterior();
+  }, { passive: true });
+
+  // El enlace "Siguiente" baja hasta la página siguiente si ya está debajo
+  document.addEventListener("click", function (e) {
+    var enlace = e.target.closest && e.target.closest(".siguiente");
+    if (!enlace || enlace.dataset.fallo) return;
+    var tramo = enlace.closest(".tramo");
+    var siguiente = tramo && tramo.nextElementSibling;
+    if (siguiente && siguiente.classList.contains("tramo")) {
+      e.preventDefault();
+      var sinMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      siguiente.scrollIntoView({ behavior: sinMovimiento ? "auto" : "smooth" });
+    }
+  });
+
+  // La anterior la dejamos descargada de antemano, para que aparezca al instante
+  if (ajustes.anterior !== false && primero.dataset.anterior) {
+    (window.requestIdleCallback || setTimeout)(function () { traer(primero.dataset.anterior); });
+  }
+  revisar();
 })();

@@ -272,7 +272,8 @@
     });
   });
   // Botones atrás/adelante del navegador
-  history.replaceState({ mes: location.href }, "", location.href);
+  // (solo si estamos en el calendario: con el scroll continuo puede estar debajo de otra página)
+  if (location.pathname === "{{ request.path }}") history.replaceState({ mes: location.href }, "", location.href);
   window.addEventListener("popstate", function (e) {
     if (e.state && e.state.mes) cambiarMes(e.state.mes, false);
   });

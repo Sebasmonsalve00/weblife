@@ -24,31 +24,6 @@
   {% if efectos.transiciones_pagina %}
   <!-- Transición suave entre páginas (los navegadores sin soporte navegan normal) -->
   <style>@view-transition { navigation: auto; }</style>
-  <script>
-    // Si venimos de "seguir bajando", la página nueva entra desde abajo.
-    // Si venimos de "seguir subiendo", entra desde arriba y empieza al final.
-    try {
-      var direccion = sessionStorage.getItem("weblife-siguiente");
-      if (direccion) {
-        sessionStorage.removeItem("weblife-siguiente");
-        var clase = direccion === "arriba" ? "transicion-anterior" : "transicion-siguiente";
-        var raiz = document.documentElement;
-        raiz.classList.add(clase);
-        var quitar = function () { raiz.classList.remove(clase); };
-        window.addEventListener("pagereveal", function (e) {
-          if (e.viewTransition) e.viewTransition.finished.then(quitar, quitar); else quitar();
-        });
-        setTimeout(quitar, 2000);
-        if (direccion === "arriba") {
-          // Empezamos abajo del todo, como si siguieras subiendo por la misma página
-          if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-          var alFinal = function () { window.scrollTo(0, raiz.scrollHeight); };
-          document.addEventListener("DOMContentLoaded", alFinal);
-          window.addEventListener("load", alFinal);
-        }
-      }
-    } catch (e) {}
-  </script>
   {% endif %}
   {% if not efectos.microinteracciones %}<script>document.documentElement.classList.add("sin-micro");</script>{% endif %}
 </head>
@@ -109,7 +84,11 @@
   </div>
   {% endblock %}
 
-  <main id="contenido" class="contenedor">
+  {# Cada página es un "tramo". Al seguir bajando, el tramo de la página siguiente
+     se añade debajo (y al subir, el de la anterior encima): scroll continuo. #}
+  <div class="tramo actual {{ self.clase_body() | trim }}" data-url="{{ request.path }}" data-titulo="{{ self.titulo() | trim }}"
+       {% if efectos.pagina_siguiente and anterior and session.usuario_id and valores_js.siguiente.anterior %}data-anterior="{{ url_for(anterior[1]) }}"{% endif %}>
+  <main id="contenido" class="contenedor tramo-cuerpo">
     <!-- Mensajes de éxito (por ejemplo "Tarea guardada.") en un panel difuminado -->
     {% with mensajes = get_flashed_messages() %}
       {% if mensajes %}
@@ -122,14 +101,14 @@
     {# Cada página rellena este bloque con su propio contenido #}
     {% block contenido %}{% endblock %}
   </main>
-  {# Cosas fijas en pantalla (como los avisos del calendario) van fuera de <main>,
-     para que no se muevan con el efecto de "seguir bajando" #}
+  {# Cosas fijas en pantalla (como los avisos del calendario) van fuera de <main> #}
   {% block fuera_main %}{% endblock %}
 
   {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
-  <!-- Enlace "Siguiente": la página que sigue. Al seguir bajando, la página se apaga y pasa a la siguiente -->
-  <a id="siguiente" class="siguiente" href="{{ url_for(siguiente[1]) }}">Siguiente: <b>{{ siguiente[0] }}</b></a>
+  <!-- "Siguiente": la página que sigue. Al llegar aquí, se carga debajo sin recargar -->
+  <a class="siguiente" href="{{ url_for(siguiente[1]) }}">Siguiente: <b>{{ siguiente[0] }}</b></a>
   {% endif %}
+  </div>
 
   {% block pie %}
   <!-- ===== Footer: 4 columnas de enlaces ===== -->
@@ -154,10 +133,6 @@
   </footer>
   {% endblock %}
 
-  {% if efectos.pagina_siguiente and anterior and session.usuario_id %}
-  <!-- Enlace oculto "Anterior": lo usa el gesto de seguir subiendo al principio de la página -->
-  <a id="anterior" class="anterior" href="{{ url_for(anterior[1]) }}" aria-hidden="true" tabindex="-1">Anterior: <b>{{ anterior[0] }}</b></a>
-  {% endif %}
 
 
   <!-- Animaciones, menú móvil y validación de formularios -->
@@ -174,7 +149,7 @@
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   <!-- Motor de scroll (titulares por palabra y secciones animadas) -->
   <script src="{{ url_for('static', filename='scroll-engine.js') }}" defer></script>
-  {% if efectos.pagina_siguiente and (siguiente or anterior) and session.usuario_id %}
+  {% if efectos.pagina_siguiente and session.usuario_id %}
   <script src="{{ url_for('static', filename='pagina-siguiente.js') }}" defer></script>
   {% endif %}
 </body>

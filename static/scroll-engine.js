@@ -199,16 +199,20 @@
   // ---------- Arranque ----------
   // Con "reducir movimiento" o sin IntersectionObserver no se anima nada:
   // las secciones quedan a su altura natural (lo hace el CSS) y todo el texto se ve.
+  // Prepara las secciones y titulares que hay dentro de "raiz" (la página, o un
+  // trozo añadido luego por el scroll continuo).
+  function preparar(raiz) {
+    if (sinMovimiento || !vigilante) return;
+    if (efectos.motor_scroll !== false) {
+      raiz.querySelectorAll(".scroll-section").forEach(prepararSeccion);
+    }
+    if (efectos.titulares_por_palabra !== false) {
+      raiz.querySelectorAll("[data-revelar-palabras]").forEach(prepararTitular);
+    }
+  }
+  window.ScrollEngine = { pedirDibujo: pedirDibujo, suavizar: suavizar, avanceEnRango: avanceEnRango, preparar: preparar };
   if (sinMovimiento || !vigilante) return;
-  if (efectos.motor_scroll !== false) {
-    document.querySelectorAll(".scroll-section").forEach(prepararSeccion);
-  }
-  if (efectos.titulares_por_palabra !== false) {
-    document.querySelectorAll("[data-revelar-palabras]").forEach(prepararTitular);
-  }
+  preparar(document);
   window.addEventListener("scroll", pedirDibujo, { passive: true });
   window.addEventListener("resize", pedirDibujo);
-
-  // Lo dejamos disponible para otros archivos (por ejemplo una futura portada con secuencia).
-  window.ScrollEngine = { pedirDibujo: pedirDibujo, suavizar: suavizar, avanceEnRango: avanceEnRango };
 })();

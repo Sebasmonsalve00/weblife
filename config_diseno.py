@@ -70,7 +70,7 @@ EFECTOS = {
     "motor_scroll": True,          # scroll-engine.js: secciones .scroll-section y atributos data-anim
     "titulares_por_palabra": True, # titulares que se encienden palabra por palabra al bajar
     "transiciones_pagina": True,   # fundido suave al cambiar de página (View Transitions)
-    "pagina_siguiente": True,      # al seguir bajando al final, pasa a la página siguiente
+    "pagina_siguiente": True,      # scroll continuo: la página siguiente aparece debajo al bajar
     "microinteracciones": True,    # botones que crecen/se encogen, tarjetas que suben
 }
 
@@ -87,17 +87,13 @@ TRANSICIONES = {
     "fundido": 700,      # la página se apaga y la nueva se aclara (en ms)
 }
 
-# Orden de páginas para "seguir bajando". Son los nombres de las rutas de app.py.
+# Orden de páginas para el scroll continuo. Son los nombres de las rutas de app.py.
 # La última no lleva a ninguna. El nombre que se muestra sale del menú de contenido.py.
 ORDEN_PAGINAS = ["inicio", "horario", "tareas", "pendientes", "calendario_vista", "asistencia"]
 
 PAGINA_SIGUIENTE = {
-    "anterior": True,           # al subir del todo arriba, vuelve a la página anterior
-    "umbral_escritorio": 180,   # px de rueda/trackpad acumulados al final (o al principio)
-    "umbral_movil": 90,         # px de dedo arrastrado
-    "espera_inercia": 200,      # ms al llegar al final antes de empezar a contar
-    "reinicio": 600,            # ms sin bajar para que el acumulado vuelva a 0
-    "volver": 400,              # ms que tarda todo en volver a su sitio si se cancela
+    "anterior": True,   # al subir arriba del todo, la página anterior aparece encima
+    "precarga": 1.5,    # cuántas pantallas antes del final se carga la página siguiente
 }
 
 # ---- 6. Layout ----
@@ -160,7 +156,6 @@ def variables_css():
         "--hero-altura": HERO_ALTURA,
         "--easing": SCROLL["easing"],
         "--t-fundido": f"{TRANSICIONES['fundido']}ms",
-        "--t-volver": f"{PAGINA_SIGUIENTE['volver']}ms",
         "--alto-corta": SCROLL["alturas"]["corta"],
         "--alto-media": SCROLL["alturas"]["media"],
         "--alto-larga": SCROLL["alturas"]["larga"],
@@ -177,11 +172,8 @@ def valores_js():
         "efectos": EFECTOS,
         "palabraInicial": SCROLL["opacidad_inicial_palabras"],
         "siguiente": {
-            "umbralEscritorio": PAGINA_SIGUIENTE["umbral_escritorio"],
-            "umbralMovil": PAGINA_SIGUIENTE["umbral_movil"],
-            "esperaInercia": PAGINA_SIGUIENTE["espera_inercia"],
-            "reinicio": PAGINA_SIGUIENTE["reinicio"],
             "anterior": PAGINA_SIGUIENTE["anterior"],
+            "precarga": PAGINA_SIGUIENTE["precarga"],
         },
     }
 

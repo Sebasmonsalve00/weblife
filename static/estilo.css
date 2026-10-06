@@ -24,7 +24,7 @@ body {
 }
 @media (min-width: 1024px) { body { font-size: 1.0625rem; } }
 body.menu-abierto { overflow: hidden; }   /* bloquea el scroll con el menú móvil abierto */
-main { flex: 1; }
+.tramo { flex: 1 0 auto; }
 a { color: var(--color-texto); }
 img { max-width: 100%; border-radius: var(--radio-imagen); }
 small, .texto-chico { font-size: 0.8125rem; }
@@ -58,7 +58,7 @@ h3 { font-size: 1.125rem; font-weight: 600; }
 .seccion { margin-top: 64px; }
 @media (min-width: 640px) { .seccion { margin-top: 80px; } }
 @media (min-width: 1024px) { .seccion { margin-top: 120px; } }
-main > :last-child { margin-bottom: 64px; }
+.tramo-cuerpo > :last-child { margin-bottom: 64px; }
 
 /* Grid de 12 columnas con gap de 24px */
 .grid-12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; }
@@ -497,10 +497,13 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   .avisos { position: fixed; left: 16px; top: 80px; z-index: 30; width: 240px; margin: 0;
             max-height: calc(100vh - 96px); overflow-y: auto; }
   .aviso-caja { max-height: 32vh; }
+  /* Con el scroll continuo, los avisos solo se ven mientras estás en el calendario */
+  .avisos { transition: opacity 300ms var(--easing), visibility 300ms; }
+  .tramo:not(.actual) .avisos { opacity: 0; visibility: hidden; }
 }
 /* Si la pantalla no es muy ancha, corremos el contenido para que los avisos no lo tapen */
 @media (min-width: 1024px) and (max-width: 1759px) {
-  .con-avisos main.contenedor, .con-avisos .footer .contenedor { padding-left: 288px; }
+  .tramo.con-avisos > .contenedor, .con-avisos .footer .contenedor { padding-left: 288px; }
 }
 
 /* Botón pequeño "+ Fechas de examen" y su panel desplegable */
@@ -652,15 +655,9 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 }
 .siguiente b { color: var(--color-texto); font-weight: 600; }
 .siguiente:hover b { text-decoration: underline; }
-/* El aviso "Anterior" solo sirve de enlace para el gesto: no se ve */
-.anterior { display: none; }
-
-/* Mientras sigues bajando (o subiendo) en el borde, el contenido se va apagando.
-   El footer se queda quieto. */
-.js main { opacity: calc(1 - 0.75 * var(--siguiente, 0) - 0.75 * var(--anterior, 0)); }
-.js main { transition: opacity var(--t-volver) var(--easing); }
-/* Mientras el gesto sigue, sin transición: sigue a la rueda o al dedo */
-.siguiente-activo main { transition: none !important; }
+/* Scroll continuo: cada página es un tramo y la siguiente aparece debajo.
+   El enlace "Siguiente" queda entre las dos como separador. */
+.tramo + .tramo { border-top: 1px solid var(--borde); }
 
 /* Sin animaciones si la persona lo pidió en su sistema */
 @media (prefers-reduced-motion: reduce) {

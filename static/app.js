@@ -65,21 +65,8 @@
   }
 
   // ---------- 3. Aparecer al hacer scroll ----------
-  var elementos = document.querySelectorAll(".reveal");
-  // Retraso escalonado de 100ms entre hermanos (elementos .reveal con el mismo padre)
-  elementos.forEach(function (el) {
-    var padre = el.parentElement;
-    if (padre) {
-      var hermanos = Array.prototype.filter.call(padre.children, function (h) {
-        return h.classList.contains("reveal");
-      });
-      el.style.transitionDelay = hermanos.indexOf(el) * config.escalonado + "ms";
-    }
-  });
-  if (sinMovimiento || !("IntersectionObserver" in window)) {
-    elementos.forEach(function (el) { el.classList.add("visible"); });
-  } else {
-    var observador = new IntersectionObserver(function (entradas) {
+  var observador = (sinMovimiento || !("IntersectionObserver" in window)) ? null :
+    new IntersectionObserver(function (entradas) {
       entradas.forEach(function (entrada) {
         if (entrada.isIntersecting) {
           entrada.target.classList.add("visible");
@@ -87,8 +74,21 @@
         }
       });
     }, { threshold: 0.15 });
-    elementos.forEach(function (el) { observador.observe(el); });
-  }
+  // Prepara los .reveal que hay dentro de "raiz"
+  var prepararReveal = function (raiz) {
+    var elementos = raiz.querySelectorAll(".reveal");
+    // Retraso escalonado de 100ms entre hermanos (elementos .reveal con el mismo padre)
+    elementos.forEach(function (el) {
+      var padre = el.parentElement;
+      if (padre) {
+        var hermanos = Array.prototype.filter.call(padre.children, function (h) {
+          return h.classList.contains("reveal");
+        });
+        el.style.transitionDelay = hermanos.indexOf(el) * config.escalonado + "ms";
+      }
+      if (observador) observador.observe(el); else el.classList.add("visible");
+    });
+  };
 
   // ---------- 4. Validación en vivo ----------
   var validar = function (input) {
@@ -109,26 +109,38 @@
     campo.classList.toggle("invalido", texto !== "");
     return texto === "";
   };
-  document.querySelectorAll("form").forEach(function (form) {
-    var campos = form.querySelectorAll(".campo input, .campo select");
-    if (!campos.length) return;
-    // Usamos nuestros mensajes en vez de los globos del navegador
-    form.noValidate = true;
-    form.addEventListener("submit", function (e) {
-      var primeroMalo = null;
+  // Prepara los formularios que hay dentro de "raiz"
+  var prepararFormularios = function (raiz) {
+    raiz.querySelectorAll("form").forEach(function (form) {
+      var campos = form.querySelectorAll(".campo input, .campo select");
+      if (!campos.length) return;
+      // Usamos nuestros mensajes en vez de los globos del navegador
+      form.noValidate = true;
+      form.addEventListener("submit", function (e) {
+        var primeroMalo = null;
+        campos.forEach(function (input) {
+          if (!validar(input) && !primeroMalo) primeroMalo = input;
+        });
+        if (primeroMalo) {
+          e.preventDefault();
+          primeroMalo.focus();
+        }
+      });
       campos.forEach(function (input) {
-        if (!validar(input) && !primeroMalo) primeroMalo = input;
-      });
-      if (primeroMalo) {
-        e.preventDefault();
-        primeroMalo.focus();
-      }
-    });
-    campos.forEach(function (input) {
-      input.addEventListener("blur", function () { validar(input); });
-      input.addEventListener("input", function () {
-        if (input.closest(".campo").classList.contains("invalido")) validar(input);
+        input.addEventListener("blur", function () { validar(input); });
+        input.addEventListener("input", function () {
+          if (input.closest(".campo").classList.contains("invalido")) validar(input);
+        });
       });
     });
-  });
+  };
+
+  // Preparamos la página, y dejamos la función a mano para el contenido que
+  // se añade luego (el scroll continuo añade la página siguiente debajo).
+  var preparar = function (raiz) {
+    prepararReveal(raiz);
+    prepararFormularios(raiz);
+  };
+  preparar(document);
+  window.Weblife = { preparar: preparar };
 })();
