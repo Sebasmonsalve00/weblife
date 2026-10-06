@@ -15,6 +15,26 @@ COLORES = {
     "acento": "#A8C5FF",   # azul pastel
 }
 
+# Colores que cada usuario puede elegir en Mi perfil → Ajustes para sustituir el azul
+# (el acento). Todos son pastel, para que el texto oscuro se siga leyendo bien.
+COLORES_ACENTO = [
+    ("Azul", "#A8C5FF"),
+    ("Celeste", "#A8E0FF"),
+    ("Menta", "#A8F0D1"),
+    ("Verde", "#C5E8A8"),
+    ("Amarillo", "#FFE8A3"),
+    ("Melocotón", "#FFC9A8"),
+    ("Rosa", "#FFB8D1"),
+    ("Lila", "#D1B8FF"),
+]
+
+
+def color_valido(texto):
+    """True si el texto es un color tipo "#A8C5FF"."""
+    import re
+    return bool(texto) and re.fullmatch(r"#[0-9A-Fa-f]{6}", texto) is not None
+
+
 # Opacidades permitidas de esos 3 colores (variaciones, no colores nuevos).
 # Nota: el texto secundario y terciario quedan en 65% y 62% (en vez de 60% y 45%)
 # para cumplir el contraste mínimo WCAG AA sobre el fondo claro.
@@ -107,13 +127,13 @@ def _mezclar(hex_a, hex_b, cuanto):
     return ", ".join(str(round(x + (y - x) * cuanto)) for x, y in zip(a, b))
 
 
-def colores_fondo(ruta):
+def colores_fondo(ruta, acento=None):
     """Colores de las burbujas arriba y abajo de una página, según su lugar en ORDEN_PAGINAS.
     La primera empieza en celeste y la última termina casi blanca: un degradado continuo."""
     total = len(ORDEN_PAGINAS)
     posicion = ORDEN_PAGINAS.index(ruta) if ruta in ORDEN_PAGINAS else 0
     color = lambda t: "rgba({}, {})".format(
-        _mezclar(COLORES["acento"], COLORES["fondo"], t * FONDO_BURBUJAS["hasta"]), FONDO_BURBUJAS["opacidad"])
+        _mezclar(acento or COLORES["acento"], COLORES["fondo"], t * FONDO_BURBUJAS["hasta"]), FONDO_BURBUJAS["opacidad"])
     if ruta not in ORDEN_PAGINAS:
         return {"arriba": color(0), "abajo": color(0)}
     return {"arriba": color(posicion / total), "abajo": color((posicion + 1) / total)}
@@ -136,8 +156,9 @@ CONTENEDOR = {
 HERO_ALTURA = "100vh"
 
 
-def variables_css():
-    """Arma el texto CSS con todas las variables para ponerlo en la plantilla base."""
+def variables_css(acento=None):
+    """Arma el texto CSS con todas las variables para ponerlo en la plantilla base.
+    "acento" es el color que eligió el usuario en Ajustes (si no eligió, el azul)."""
 
     def rgba(color_hex, opacidad):
         # Convierte "#1D1D1F" + 0.08 en "rgba(29, 29, 31, 0.08)"
@@ -147,7 +168,7 @@ def variables_css():
         return f"rgba({r}, {g}, {b}, {opacidad})"
 
     texto = COLORES["texto"]
-    acento = COLORES["acento"]
+    acento = acento if color_valido(acento) else COLORES["acento"]
     o = OPACIDADES
     variables = {
         "--color-fondo": COLORES["fondo"],

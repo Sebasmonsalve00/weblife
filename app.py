@@ -145,7 +145,7 @@ def crear_tablas():
 
     # Las cuentas creadas antes no tenían nombre y apellido: agregamos esas columnas.
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(usuarios)")]
-    for columna in ("nombre_real", "apellido", "examenes_sel"):
+    for columna in ("nombre_real", "apellido", "examenes_sel", "color_acento"):
         if columna not in columnas:
             conexion.execute(f"ALTER TABLE usuarios ADD COLUMN {columna} TEXT")
 
@@ -187,16 +187,27 @@ def modificar(sql, parametros=()):
 #  devuelve queda disponible en el HTML (por ejemplo {{ texto.paginas }}).
 # ------------------------------------------------------------
 
+def mi_acento():
+    """El color que el usuario eligió en Ajustes (o None si usa el azul de siempre)."""
+    if not session.get("usuario_id"):
+        return None
+    fila = consultar("SELECT color_acento FROM usuarios WHERE id = ?", (session["usuario_id"],))
+    color = fila[0]["color_acento"] if fila else None
+    return color if config_diseno.color_valido(color) else None
+
+
 @app.context_processor
 def datos_para_plantillas():
+    acento = mi_acento()
     return {
-        "variables_css": config_diseno.variables_css(),
+        "variables_css": config_diseno.variables_css(acento),
+        "acento": acento or config_diseno.COLORES["acento"],
         "fuente": config_diseno.FUENTE,
         "valores_js": config_diseno.valores_js(),
         "efectos": config_diseno.EFECTOS,
         "siguiente": config_diseno.pagina_siguiente(request.endpoint, contenido.MENU),
         "anterior": config_diseno.pagina_anterior(request.endpoint, contenido.MENU),
-        "fondo": config_diseno.colores_fondo(request.endpoint),
+        "fondo": config_diseno.colores_fondo(request.endpoint, acento),
         "texto": contenido.todo(),
     }
 
@@ -324,6 +335,25 @@ def perfil():
     """Mi perfil: tus datos y dos botones (Mis datos y Mis avances)."""
     usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (yo(),))[0]
     return render_template("perfil.html", usuario=usuario)
+
+
+@app.route("/perfil/ajustes", methods=["GET", "POST"])
+def ajustes():
+    """Ajustes: elegir el color que sustituye al azul en toda la web (solo para ti)."""
+    if request.method == "POST":
+        if request.form.get("accion") == "restablecer":
+            color = None
+        else:
+            color = request.form.get("color_propio") if request.form.get("color") == "propio" else request.form.get("color")
+            if not config_diseno.color_valido(color):
+                flash(contenido.MENSAJES["color_invalido"])
+                return redirect(url_for("ajustes"))
+            color = color.upper()
+        modificar("UPDATE usuarios SET color_acento = ? WHERE id = ?", (color, yo()))
+        flash(contenido.MENSAJES["color"])
+        return redirect(url_for("ajustes"))
+    return render_template("ajustes.html", colores=config_diseno.COLORES_ACENTO,
+                           elegido=mi_acento() or config_diseno.COLORES["acento"])
 
 
 @app.route("/perfil/avances")

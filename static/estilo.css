@@ -475,6 +475,26 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .avance-lista li small { color: var(--texto-secundario); margin-left: 6px; }
 .avance-lista .barra { flex-basis: 100%; margin: 0; height: 8px; }
 .de-total { font-size: 1rem; font-weight: 500; color: var(--texto-secundario); letter-spacing: 0; }
+/* Ajustes: elegir el color de la web */
+.ajustes-color fieldset { border: none; padding: 0; margin: 0; }
+.muestras { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+.muestra { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+.muestra input[type=radio] { position: absolute; opacity: 0; pointer-events: none; }
+.muestra-circulo {
+  width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--borde-boton);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.muestra:hover .muestra-circulo { transform: scale(1.06); }
+.muestra input[type=radio]:checked ~ .muestra-circulo { box-shadow: 0 0 0 3px var(--color-fondo), 0 0 0 5px var(--color-texto); }
+.muestra input[type=radio]:focus-visible ~ .muestra-circulo { outline: 2px solid var(--color-texto); outline-offset: 4px; }
+.selector-color { padding: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; overflow: hidden; }
+.selector-color::-webkit-color-swatch-wrapper { padding: 0; }
+.selector-color::-webkit-color-swatch { border: none; border-radius: 50%; }
+.selector-color::-moz-color-swatch { border: none; border-radius: 50%; }
+.ajustes-botones { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+.muestra-color { display: inline-block; width: 16px; height: 16px; border-radius: 50%; vertical-align: middle;
+                 margin-left: 6px; border: 1px solid var(--borde-boton); }
+
 /* Tarjeta que es un enlace (Mi perfil) */
 .tarjeta-enlace { display: block; color: inherit; text-decoration: none; }
 

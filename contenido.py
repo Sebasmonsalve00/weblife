@@ -88,6 +88,8 @@ PERFIL = {
     "datos_texto": "Cambia tu nombre, tu apellido o tu contraseña.",
     "avances_titulo": "Mis avances",
     "avances_texto": "Mira tu asistencia y las tareas que has cumplido.",
+    "ajustes_titulo": "Ajustes",
+    "ajustes_texto": "Elige el color de la web: sustituye al azul en botones, marcas y burbujas.",
 }
 
 # ---- Página "Mis avances" ----
@@ -121,6 +123,8 @@ MENSAJES = {
     "clase": "Clase agregada al horario.",
     "tarea": "Tarea guardada.",
     "actividad": "Actividad de asistencia guardada.",
+    "color": "Color guardado.",
+    "color_invalido": "Ese color no es válido.",
     "actividad_tarea": "Actividad guardada y tarea marcada como hecha.",
     "cuenta": "Nombre guardado.",
     "clave": "Contraseña cambiada.",
