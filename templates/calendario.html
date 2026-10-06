@@ -46,6 +46,7 @@
         <select id="ex-convocatoria" name="convocatoria" required></select>
         <button class="boton boton-primario boton-chico" name="accion" value="ver">Ver exámenes</button>
         {% if eleccion %}<button class="boton boton-secundario boton-chico" name="accion" value="quitar" formnovalidate>Quitar</button>{% endif %}
+        {% if ocultos %}<button class="boton boton-secundario boton-chico" name="accion" value="mostrar_ocultos" formnovalidate>Volver a mostrar borrados ({{ ocultos }})</button>{% endif %}
         <p class="nota-mini">{{ texto.nota_examenes }}</p>
       </form>
     </details>
@@ -134,6 +135,12 @@
                       {{ boton_borrar(url_for('borrar_evento', id=cosa.id), "Borrar evento: " ~ cosa.texto) }}
                     {% elif cosa.manual_id %}
                       {{ boton_borrar(url_for('borrar_examen_manual', id=cosa.manual_id), "Borrar examen: " ~ cosa.texto) }}
+                    {% elif cosa.tipo == "examen" %}
+                      <form method="post" action="{{ url_for('borrar_examen_automatico') }}" class="en-linea">
+                        <input type="hidden" name="asignatura" value="{{ cosa.asignatura }}">
+                        <input type="hidden" name="fecha" value="{{ cosa.fecha }}">
+                        <button class="boton-icono" title="Borrar examen: {{ cosa.texto }}" aria-label="Borrar examen: {{ cosa.texto }}">✕</button>
+                      </form>
                     {% endif %}
                   </div>
                 {% endfor %}

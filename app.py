@@ -124,6 +124,13 @@ def crear_tablas():
             PRIMARY KEY (clase_id, fecha)
         );
 
+        CREATE TABLE IF NOT EXISTS examenes_ocultos (
+            usuario_id INTEGER NOT NULL,
+            asignatura TEXT NOT NULL,      -- examen automático que borraste del calendario
+            fecha TEXT NOT NULL,
+            PRIMARY KEY (usuario_id, asignatura, fecha)
+        );
+
         CREATE TABLE IF NOT EXISTS examenes_manuales (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER,
@@ -667,7 +674,8 @@ def calendario_vista():
     for asignatura, fecha, hora, _ in sorted(lista_examenes, key=lambda e: (e[1], e[2] or "")):
         if fecha.startswith(f"{anio}-{mes:02d}-") and (asignatura, fecha) not in ya_manuales:
             texto = f"{hora} {asignatura}" if hora else asignatura
-            cosas_por_dia.setdefault(int(fecha[8:10]), []).insert(0, {"texto": texto, "tipo": "examen"})
+            cosas_por_dia.setdefault(int(fecha[8:10]), []).insert(
+                0, {"texto": texto, "tipo": "examen", "asignatura": asignatura, "fecha": fecha})
     # Exámenes manuales (siempre se ven, con su botón para borrarlos).
     for examen in reversed(manuales):
         if examen["fecha"].startswith(f"{anio}-{mes:02d}-"):
@@ -686,6 +694,7 @@ def calendario_vista():
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
         calendarios=examenes.CALENDARIOS, avisos=avisos_calendario(), eleccion=eleccion,
         manuales=manuales, cursos=examenes.CURSOS, convocatorias=examenes.CONVOCATORIAS,
+        ocultos=cuantos_ocultos(eleccion),
     )
 
 
@@ -700,7 +709,28 @@ def examenes_elegidos():
     eleccion = tuple(texto.split("|"))
     if len(eleccion) != 3:
         return [], None
-    return examenes.examenes(*eleccion), eleccion
+    # Quitamos los que borraste con la ✕.
+    ocultos = {(fila["asignatura"], fila["fecha"]) for fila in
+               consultar("SELECT asignatura, fecha FROM examenes_ocultos WHERE usuario_id = ?", (yo(),))}
+    lista = [examen for examen in examenes.examenes(*eleccion) if (examen[0], examen[1]) not in ocultos]
+    return lista, eleccion
+
+
+def cuantos_ocultos(eleccion):
+    """Cuántos exámenes del calendario elegido borraste (para poder volver a mostrarlos)."""
+    if not eleccion:
+        return 0
+    ocultos = {(fila["asignatura"], fila["fecha"]) for fila in
+               consultar("SELECT asignatura, fecha FROM examenes_ocultos WHERE usuario_id = ?", (yo(),))}
+    return sum(1 for examen in examenes.examenes(*eleccion) if (examen[0], examen[1]) in ocultos)
+
+
+@app.route("/universidad/calendario/examen/borrar", methods=["POST"])
+def borrar_examen_automatico():
+    """Esconde un examen automático: sigue en examenes.py, pero tú ya no lo ves."""
+    modificar("INSERT OR IGNORE INTO examenes_ocultos (usuario_id, asignatura, fecha) VALUES (?, ?, ?)",
+              (yo(), request.form["asignatura"], request.form["fecha"]))
+    return redirect(request.referrer or url_for("calendario_vista"))
 
 
 @app.route("/universidad/calendario/examenes", methods=["POST"])
@@ -709,6 +739,9 @@ def elegir_examenes():
     if request.form.get("accion") == "quitar":
         modificar("UPDATE usuarios SET examenes_sel = NULL WHERE id = ?", (yo(),))
         return redirect(url_for("calendario_vista"))
+    if request.form.get("accion") == "mostrar_ocultos":
+        modificar("DELETE FROM examenes_ocultos WHERE usuario_id = ?", (yo(),))
+        return redirect(request.referrer or url_for("calendario_vista"))
 
     eleccion = (request.form["carrera"], request.form["curso"], request.form["convocatoria"])
     lista = examenes.examenes(*eleccion)
