@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_componentes.html" import encabezado, enlace_flecha %}
+{% block titulo %}{{ texto.avances.titulo }}{% endblock %}
+{% block contenido %}
+{{ encabezado(texto.avances) }}
+
+<!-- ===== Números grandes ===== -->
+<div class="grid-12">
+  <article class="tarjeta reveal md-6 lg-3">
+    <h2 class="titulo-tarjeta">Horas asistidas</h2>
+    <p class="numero">{{ asistencia.total_fui if asistencia.hay_datos else "0 h" }}</p>
+    <p class="descripcion">{{ asistencia.clases_fui }} clase{{ "s" if asistencia.clases_fui != 1 }} a las que fuiste, {{ asistencia.clases_falte }} falta{{ "s" if asistencia.clases_falte != 1 }}.</p>
+  </article>
+  <article class="tarjeta reveal md-6 lg-3">
+    <h2 class="titulo-tarjeta">Asistencia</h2>
+    <p class="numero">{{ asistencia.porcentaje }}%</p>
+    <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ asistencia.porcentaje }}" aria-label="Asistencia total">
+      <div style="width: {{ asistencia.porcentaje }}%"></div>
+    </div>
+  </article>
+  <article class="tarjeta reveal md-6 lg-3">
+    <h2 class="titulo-tarjeta">Tareas cumplidas</h2>
+    <p class="numero">{{ tareas.hechas }} <small class="de-total">de {{ tareas.total }}</small></p>
+    <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ tareas.porcentaje }}" aria-label="Tareas cumplidas">
+      <div style="width: {{ tareas.porcentaje }}%"></div>
+    </div>
+  </article>
+  <article class="tarjeta reveal md-6 lg-3">
+    <h2 class="titulo-tarjeta">Por hacer</h2>
+    <p class="numero">{{ tareas.pendientes }}</p>
+    <p class="descripcion">{% if tareas.atrasadas %}{{ tareas.atrasadas }} atrasada{{ "s" if tareas.atrasadas != 1 }}.{% else %}Ninguna atrasada.{% endif %} {{ asistencia.actividades }} actividad{{ "es" if asistencia.actividades != 1 }} de asistencia.</p>
+  </article>
+</div>
+
+<!-- ===== Por materia ===== -->
+<div class="grid-12 seccion">
+  <section class="lg-6 reveal">
+    <h2 class="subtitulo-chico">Asistencia por materia</h2>
+    <ul class="resumen-materias avance-lista">
+      {% for m in asistencia.materias %}
+        <li>
+          <span>{{ m.nombre }} <small>{{ m.horas_fui }}</small></span>
+          <b>{{ m.porcentaje }}%</b>
+          <div class="barra"><div style="width: {{ m.porcentaje }}%"></div></div>
+        </li>
+      {% else %}
+        <li class="vacio">Marca en el horario si fuiste a tus clases.</li>
+      {% endfor %}
+    </ul>
+    <p>{{ enlace_flecha("Ver asistencia", url_for('asistencia')) }}</p>
+  </section>
+  <section class="lg-6 reveal">
+    <h2 class="subtitulo-chico">Tareas por materia</h2>
+    <ul class="resumen-materias avance-lista">
+      {% for m in tareas.por_materia %}
+        <li>
+          <span>{{ m.materia }} <small>{{ m.hechas }} de {{ m.total }}</small></span>
+          <b>{{ m.porcentaje }}%</b>
+          <div class="barra"><div style="width: {{ m.porcentaje }}%"></div></div>
+        </li>
+      {% else %}
+        <li class="vacio">Todavía no tienes tareas.</li>
+      {% endfor %}
+    </ul>
+    <p>{{ enlace_flecha("Ver tareas", url_for('tareas')) }}</p>
+  </section>
+</div>
+{% endblock %}

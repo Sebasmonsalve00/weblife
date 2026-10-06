@@ -1,10 +1,13 @@
 {% extends "base.html" %}
-{% from "_componentes.html" import encabezado %}
+{% from "_componentes.html" import encabezado, enlace_flecha %}
 {% block titulo %}{{ texto.cuenta.titulo }}{% endblock %}
 {% block contenido %}
 {{ encabezado(texto.cuenta) }}
 
+<!-- Nombre y apellido (salen en el saludo de inicio) -->
+<h2 class="subtitulo-chico">Nombre</h2>
 <form method="post" class="formulario grid-12 reveal">
+  <input type="hidden" name="accion" value="nombre">
   <div class="campo md-6 lg-4">
     <label for="c-nombre">Nombre</label>
     <input id="c-nombre" name="nombre_real" required maxlength="40" autocomplete="given-name" value="{{ usuario.nombre_real or '' }}">
@@ -14,8 +17,32 @@
     <input id="c-apellido" name="apellido" required maxlength="40" autocomplete="family-name" value="{{ usuario.apellido or '' }}">
   </div>
   <div class="campo lg-4">
-    <button class="boton-enviar">Guardar</button>
+    <button class="boton-enviar">Guardar nombre</button>
   </div>
 </form>
 <p class="nota">Tu usuario para entrar es <b>{{ usuario.nombre }}</b>.</p>
+
+<!-- Cambiar contraseña -->
+<h2 class="subtitulo-chico" id="clave">Contraseña</h2>
+{% if error_clave %}<p class="aviso-error" role="alert">{{ error_clave }}</p>{% endif %}
+<form method="post" action="{{ url_for('cuenta') }}#clave" class="formulario grid-12 reveal">
+  <input type="hidden" name="accion" value="clave">
+  <div class="campo md-6 lg-4">
+    <label for="c-actual">Contraseña actual</label>
+    <input id="c-actual" type="password" name="clave_actual" required autocomplete="current-password">
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="c-nueva">Contraseña nueva</label>
+    <input id="c-nueva" type="password" name="clave_nueva" required minlength="8" autocomplete="new-password">
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="c-repetir">Repite la contraseña nueva</label>
+    <input id="c-repetir" type="password" name="clave_repetir" required minlength="8" autocomplete="new-password">
+  </div>
+  <div class="campo">
+    <button class="boton-enviar">Cambiar contraseña</button>
+  </div>
+</form>
+
+<p>{{ enlace_flecha("Volver a Mi perfil", url_for('perfil')) }}</p>
 {% endblock %}

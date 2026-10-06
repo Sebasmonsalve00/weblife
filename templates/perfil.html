@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_componentes.html" import encabezado, enlace_flecha %}
+{% block titulo %}{{ texto.perfil.titulo }}{% endblock %}
+{% block contenido %}
+{% set t = texto.perfil %}
+{# El subtítulo es tu nombre completo y tu usuario #}
+{{ encabezado({"etiqueta": t.etiqueta, "titulo": t.titulo,
+               "subtitulo": ((usuario.nombre_real or "") ~ " " ~ (usuario.apellido or "")).strip() ~ " · usuario " ~ usuario.nombre}) }}
+
+<!-- Dos botones grandes: Mis datos y Mis avances -->
+<div class="grid-12">
+  <a class="tarjeta tarjeta-interactiva tarjeta-enlace reveal md-6" href="{{ url_for('cuenta') }}">
+    <h2 class="titulo-tarjeta">{{ t.datos_titulo }}</h2>
+    <p class="descripcion">{{ t.datos_texto }}</p>
+    <span class="enlace-flecha">Abrir <span aria-hidden="true">→</span></span>
+  </a>
+  <a class="tarjeta tarjeta-interactiva tarjeta-enlace reveal md-6" href="{{ url_for('avances') }}">
+    <h2 class="titulo-tarjeta">{{ t.avances_titulo }}</h2>
+    <p class="descripcion">{{ t.avances_texto }}</p>
+    <span class="enlace-flecha">Abrir <span aria-hidden="true">→</span></span>
+  </a>
+</div>
+{% endblock %}

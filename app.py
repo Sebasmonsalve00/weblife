@@ -287,8 +287,24 @@ def registrar():
 
 @app.route("/cuenta", methods=["GET", "POST"])
 def cuenta():
-    """Para cambiar tu nombre y apellido (útil en cuentas creadas antes de que se pidieran)."""
-    if request.method == "POST":
+    """Mis datos: cambiar nombre y apellido, o cambiar la contraseña."""
+    error_clave = None
+    if request.method == "POST" and request.form.get("accion") == "clave":
+        actual = request.form.get("clave_actual", "")
+        nueva = request.form.get("clave_nueva", "")
+        repetir = request.form.get("clave_repetir", "")
+        fila = consultar("SELECT clave_hash FROM usuarios WHERE id = ?", (yo(),))[0]
+        if not check_password_hash(fila["clave_hash"], actual):
+            error_clave = "La contraseña actual no es correcta."
+        elif len(nueva) < 8:
+            error_clave = "La contraseña nueva debe tener al menos 8 caracteres."
+        elif nueva != repetir:
+            error_clave = "Las dos contraseñas nuevas no coinciden."
+        else:
+            modificar("UPDATE usuarios SET clave_hash = ? WHERE id = ?", (generate_password_hash(nueva), yo()))
+            flash(contenido.MENSAJES["clave"])
+            return redirect(url_for("perfil"))
+    elif request.method == "POST":
         nombre_real = request.form["nombre_real"].strip()[:40]
         apellido = request.form["apellido"].strip()[:40]
         if nombre_real and apellido:
@@ -296,9 +312,43 @@ def cuenta():
                       (nombre_real, apellido, yo()))
             session["nombre_real"] = nombre_real
             flash(contenido.MENSAJES["cuenta"])
-            return redirect(url_for("inicio"))
+            return redirect(url_for("perfil"))
     usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (yo(),))[0]
-    return render_template("cuenta.html", usuario=usuario)
+    return render_template("cuenta.html", usuario=usuario, error_clave=error_clave)
+
+
+@app.route("/perfil")
+def perfil():
+    """Mi perfil: tus datos y dos botones (Mis datos y Mis avances)."""
+    usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (yo(),))[0]
+    return render_template("perfil.html", usuario=usuario)
+
+
+@app.route("/perfil/avances")
+def avances():
+    """Mis avances: asistencia (de la página Asistencia) y tareas cumplidas."""
+    hoy = date.today().isoformat()
+    contar = lambda sql, *extra: consultar(sql, (yo(),) + extra)[0][0]
+    total = contar("SELECT COUNT(*) FROM tareas WHERE usuario_id = ?")
+    hechas = contar("SELECT COUNT(*) FROM tareas WHERE usuario_id = ? AND hecha = 1")
+    atrasadas = contar("SELECT COUNT(*) FROM tareas WHERE usuario_id = ? AND hecha = 0 AND fecha_entrega < ?", hoy)
+    # Tareas cumplidas por materia
+    por_materia = consultar("""
+        SELECT COALESCE(NULLIF(materia, ''), 'Sin materia') AS materia,
+               SUM(hecha) AS hechas, COUNT(*) AS total
+        FROM tareas WHERE usuario_id = ? GROUP BY 1 ORDER BY 1
+    """, (yo(),))
+    tareas = {
+        "total": total, "hechas": hechas, "pendientes": total - hechas, "atrasadas": atrasadas,
+        "porcentaje": round(hechas * 100 / total) if total else 0,
+        "por_materia": [{"materia": f["materia"], "hechas": f["hechas"], "total": f["total"],
+                         "porcentaje": round(f["hechas"] * 100 / f["total"])} for f in por_materia],
+    }
+    resumen = resumen_asistencia()
+    resumen["actividades"] = sum(m["actividades"] for m in resumen["materias"])
+    resumen["clases_fui"] = sum(m["clases_fui"] for m in resumen["materias"])
+    resumen["clases_falte"] = sum(m["clases_falte"] for m in resumen["materias"])
+    return render_template("avances.html", asistencia=resumen, tareas=tareas)
 
 
 @app.route("/salir", methods=["POST"])

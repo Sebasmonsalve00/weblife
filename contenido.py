@@ -19,7 +19,7 @@ MENU = [
 ]
 
 # Botón en píldora a la derecha del menú
-BOTON_MENU = {"texto": "Nueva tarea", "ruta": "tareas"}
+BOTON_MENU = {"texto": "Mi perfil", "ruta": "perfil"}
 TEXTO_SALIR = "Salir"
 
 # ---- Encabezado de cada página ----
@@ -75,9 +75,26 @@ ENTRAR = {
 
 # ---- Página "Mi cuenta" ----
 CUENTA = {
+    "etiqueta": "Mi perfil",
+    "titulo": "Mis datos",
+    "subtitulo": "Cambia tu nombre o tu contraseña.",
+}
+
+# ---- Página "Mi perfil" ----
+PERFIL = {
     "etiqueta": "Cuenta",
-    "titulo": "Mi cuenta",
-    "subtitulo": "Tu nombre aparece en el saludo de la página de inicio.",
+    "titulo": "Mi perfil",
+    "datos_titulo": "Mis datos",
+    "datos_texto": "Cambia tu nombre, tu apellido o tu contraseña.",
+    "avances_titulo": "Mis avances",
+    "avances_texto": "Mira tu asistencia y las tareas que has cumplido.",
+}
+
+# ---- Página "Mis avances" ----
+AVANCES = {
+    "etiqueta": "Mi perfil",
+    "titulo": "Mis avances",
+    "subtitulo": "Tu asistencia y tus tareas cumplidas.",
 }
 
 # ---- Página para crear una cuenta ----
@@ -105,6 +122,7 @@ MENSAJES = {
     "tarea": "Tarea guardada.",
     "actividad": "Actividad de asistencia guardada.",
     "cuenta": "Nombre guardado.",
+    "clave": "Contraseña cambiada.",
     "evento": "Evento agregado al calendario.",
     "examen": "Examen agregado al calendario.",
     "campo_obligatorio": "Este campo es obligatorio.",
@@ -117,7 +135,7 @@ FOOTER = [
     {"titulo": "Tareas", "enlaces": [("Tareas", "tareas"), ("Calendario", "calendario_vista"),
                                      ("Pendientes", "pendientes")]},
     {"titulo": "Accesos rápidos", "enlaces": [("Inicio", "inicio"), ("Nueva tarea", "tareas"),
-                                              ("Marcar asistencia", "horario"), ("Mi cuenta", "cuenta")]},
+                                              ("Marcar asistencia", "horario"), ("Mi perfil", "perfil")]},
     {"titulo": "Hoy", "enlaces": [("Clases de hoy", "horario"), ("Lo pendiente", "pendientes"),
                                   ("Mes actual", "calendario_vista")]},
 ]
@@ -139,6 +157,8 @@ def todo():
         "entrar": ENTRAR,
         "registrar": REGISTRAR,
         "cuenta": CUENTA,
+        "perfil": PERFIL,
+        "avances": AVANCES,
         "mensajes": MENSAJES,
         "footer": FOOTER,
         "copyright": COPYRIGHT,

@@ -466,6 +466,14 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .resumen-materias { list-style: none; padding: 8px 0; margin: 0; border-radius: var(--radio-tarjeta); box-shadow: var(--sombra); max-width: 560px; }
 .resumen-materias li { display: flex; justify-content: space-between; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--borde); }
 .resumen-materias li:last-child { border-bottom: none; }
+/* Mis avances: lista con barra debajo de cada materia */
+.avance-lista { max-width: none; }
+.avance-lista li { flex-wrap: wrap; row-gap: 8px; }
+.avance-lista li small { color: var(--texto-secundario); margin-left: 6px; }
+.avance-lista .barra { flex-basis: 100%; margin: 0; height: 8px; }
+.de-total { font-size: 1rem; font-weight: 500; color: var(--texto-secundario); letter-spacing: 0; }
+/* Tarjeta que es un enlace (Mi perfil) */
+.tarjeta-enlace { display: block; color: inherit; text-decoration: none; }
 
 /* ---------- Calendario ---------- */
 .mes-navegacion { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -684,3 +692,4 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 
 /* Texto solo para lectores de pantalla (invisible en pantalla) */
 .saltar-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.nota + .subtitulo-chico { margin-top: 48px; }
