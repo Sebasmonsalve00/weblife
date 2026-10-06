@@ -548,9 +548,17 @@ def guardar_actividad(id):
         return redirect(url_for("horario", fecha=fecha))
     hubo = int(request.form["hubo"])
     descripcion = request.form.get("descripcion", "").strip() if hubo else ""
+    # Si la actividad era una de tus tareas pendientes, esa tarea queda como hecha
+    tarea = None
+    if hubo and request.form.get("tarea_id", "").isdigit():
+        tarea = consultar("SELECT * FROM tareas WHERE id = ? AND usuario_id = ?",
+                          (int(request.form["tarea_id"]), yo()))
+    if tarea:
+        modificar("UPDATE tareas SET hecha = 1 WHERE id = ? AND usuario_id = ?", (tarea[0]["id"], yo()))
+        descripcion = descripcion or tarea[0]["titulo"]
     modificar("INSERT OR REPLACE INTO actividades (clase_id, fecha, hubo, descripcion) VALUES (?, ?, ?, ?)",
               (id, fecha, hubo, descripcion))
-    flash(contenido.MENSAJES["actividad"])
+    flash(contenido.MENSAJES["actividad_tarea" if tarea else "actividad"])
     return redirect(url_for("horario", fecha=fecha))
 
 

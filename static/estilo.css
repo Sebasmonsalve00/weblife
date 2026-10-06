@@ -433,6 +433,9 @@ input:focus, select:focus, textarea:focus {
 .opcion { background: transparent; color: var(--color-texto); border: 1px solid var(--borde-boton); padding: 8px 16px; font-size: 14px; }
 .opcion.elegida { background: var(--color-texto); color: var(--color-fondo); border-color: var(--color-texto); }
 details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4px 0; border-radius: 8px; }
+/* Tareas pendientes en el panel del horario, con su círculo para marcarlas como hechas */
+.mini-tarea { display: flex; align-items: center; gap: 8px; }
+.mini-tarea .boton-check { width: 22px; height: 22px; flex-shrink: 0; }
 .tarea-rapida { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
 .mini-lista { list-style: none; padding: 0; margin: 6px 0 0; font-size: 0.8125rem; }
 .mini-lista li { margin-top: 4px; }

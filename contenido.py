@@ -121,6 +121,7 @@ MENSAJES = {
     "clase": "Clase agregada al horario.",
     "tarea": "Tarea guardada.",
     "actividad": "Actividad de asistencia guardada.",
+    "actividad_tarea": "Actividad guardada y tarea marcada como hecha.",
     "cuenta": "Nombre guardado.",
     "clave": "Contraseña cambiada.",
     "evento": "Evento agregado al calendario.",

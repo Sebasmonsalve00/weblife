@@ -56,6 +56,16 @@
             <label for="ra-{{ clase.id }}">¿Cuál fue?</label>
             <input id="ra-{{ clase.id }}" name="descripcion" placeholder="ej: Quiz de derivadas" value="{{ act.descripcion if act else '' }}">
           </div>
+          {% if item.pendientes %}
+          <!-- Si la actividad era una tarea que ya hiciste, se marca como completada -->
+          <div class="campo">
+            <label for="rk-{{ clase.id }}">¿Era una de tus tareas? (se marcará como hecha)</label>
+            <select id="rk-{{ clase.id }}" name="tarea_id">
+              <option value="">No, otra cosa</option>
+              {% for tarea in item.pendientes %}<option value="{{ tarea.id }}">{{ tarea.titulo }} · entrega {{ tarea.fecha_entrega }}</option>{% endfor %}
+            </select>
+          </div>
+          {% endif %}
           <button>Guardar actividad</button>
         </form>
       </details>
@@ -80,7 +90,12 @@
       {% if item.pendientes %}
         <ul class="mini-lista">
           {% for tarea in item.pendientes[:3] %}
-            <li>{{ tarea.titulo }} <small>· entrega {{ tarea.fecha_entrega }}</small></li>
+            <li class="mini-tarea">
+              <form method="post" action="{{ url_for('cambiar_tarea', id=tarea.id) }}" class="en-linea">
+                <button class="boton-check" title="Marcar como hecha" aria-label="Marcar como hecha: {{ tarea.titulo }}"></button>
+              </form>
+              <span>{{ tarea.titulo }} <small>· entrega {{ tarea.fecha_entrega }}</small></span>
+            </li>
           {% endfor %}
         </ul>
       {% endif %}
