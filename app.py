@@ -71,7 +71,7 @@ def conectar():
 
 # Tablas que guardan datos de cada persona. (Asistencias y actividades
 # cuelgan de una clase, así que su dueño es el dueño de la clase.)
-TABLAS_CON_DUENO = ["clases", "tareas", "eventos"]
+TABLAS_CON_DUENO = ["clases", "tareas", "eventos", "examenes_manuales"]
 
 
 def crear_tablas():
@@ -122,6 +122,17 @@ def crear_tablas():
             hubo INTEGER NOT NULL,         -- 1 = hubo actividad de asistencia, 0 = no hubo
             descripcion TEXT,              -- cuál fue (ej: "Quiz de derivadas")
             PRIMARY KEY (clase_id, fecha)
+        );
+
+        CREATE TABLE IF NOT EXISTS examenes_manuales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER,
+            asignatura TEXT NOT NULL,
+            fecha TEXT NOT NULL,           -- "2026-12-02"
+            hora TEXT,                     -- "16:00" o vacío
+            carrera TEXT,
+            curso TEXT,
+            convocatoria TEXT
         );
     """)
 
@@ -594,12 +605,22 @@ def avisos_calendario():
             urgentes.append({"titulo": tarea["titulo"], "fecha": tarea["fecha_entrega"], "hora": None,
                              "objetivo": objetivo.isoformat(timespec="minutes")})
 
-    # Exámenes del calendario elegido en "Fechas de examen".
+    # Exámenes del calendario elegido en "Fechas de examen" (sin repetir los manuales).
+    manuales = examenes_manuales()
+    ya_manuales = {(examen["asignatura"], examen["fecha"]) for examen in manuales}
     for asignatura, fecha, hora, _ in examenes_elegidos()[0]:
+        if (asignatura, fecha) in ya_manuales:
+            continue
         objetivo = datetime.fromisoformat(f"{fecha}T{hora or '23:59'}")
         if objetivo >= ahora:
             examenes_proximos.append({"titulo": asignatura, "fecha": fecha, "hora": hora,
                                       "objetivo": objetivo.isoformat(timespec="minutes")})
+    # Exámenes que agregaste con "Examen manual".
+    for examen in manuales:
+        objetivo = datetime.fromisoformat(f"{examen['fecha']}T{examen['hora'] or '23:59'}")
+        if objetivo >= ahora:
+            examenes_proximos.append({"titulo": examen["asignatura"], "fecha": examen["fecha"],
+                                      "hora": examen["hora"], "objetivo": objetivo.isoformat(timespec="minutes")})
     examenes_proximos.sort(key=lambda aviso: aviso["objetivo"])
 
     urgentes.sort(key=lambda aviso: aviso["objetivo"])
@@ -641,10 +662,18 @@ def calendario_vista():
 
     # Exámenes del calendario elegido (solo se ven mientras esté elegido).
     lista_examenes, eleccion = examenes_elegidos()
+    manuales = examenes_manuales()
+    ya_manuales = {(examen["asignatura"], examen["fecha"]) for examen in manuales}
     for asignatura, fecha, hora, _ in sorted(lista_examenes, key=lambda e: (e[1], e[2] or "")):
-        if fecha.startswith(f"{anio}-{mes:02d}-"):
+        if fecha.startswith(f"{anio}-{mes:02d}-") and (asignatura, fecha) not in ya_manuales:
             texto = f"{hora} {asignatura}" if hora else asignatura
             cosas_por_dia.setdefault(int(fecha[8:10]), []).insert(0, {"texto": texto, "tipo": "examen"})
+    # Exámenes manuales (siempre se ven, con su botón para borrarlos).
+    for examen in reversed(manuales):
+        if examen["fecha"].startswith(f"{anio}-{mes:02d}-"):
+            texto = f"{examen['hora']} {examen['asignatura']}" if examen["hora"] else examen["asignatura"]
+            cosas_por_dia.setdefault(int(examen["fecha"][8:10]), []).insert(
+                0, {"texto": texto, "tipo": "examen", "manual_id": examen["id"]})
 
     # Mes anterior y siguiente para los botones ◀ ▶
     mes_anterior = (anio, mes - 1) if mes > 1 else (anio - 1, 12)
@@ -656,6 +685,7 @@ def calendario_vista():
         dias=DIAS_SEMANA, cosas_por_dia=cosas_por_dia,
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
         calendarios=examenes.CALENDARIOS, avisos=avisos_calendario(), eleccion=eleccion,
+        manuales=manuales, cursos=examenes.CURSOS, convocatorias=examenes.CONVOCATORIAS,
     )
 
 
@@ -697,6 +727,52 @@ def elegir_examenes():
     # Mostramos el mes del primer examen.
     primero = min(fecha for _, fecha, _, _ in lista)
     return redirect(url_for("calendario_vista", anio=int(primero[:4]), mes=int(primero[5:7])))
+
+
+def examenes_manuales():
+    """Los exámenes que el usuario agregó con "Examen manual", ordenados por fecha."""
+    return consultar("SELECT * FROM examenes_manuales WHERE usuario_id = ? ORDER BY fecha, hora",
+                     (yo(),))
+
+
+@app.route("/universidad/calendario/examen-manual", methods=["POST"])
+def examen_manual():
+    """Agrega un examen suelto: elegido de la lista cargada o escrito a mano."""
+    carrera = request.form.get("carrera", "")
+    curso = request.form.get("curso", "")
+    convocatoria = request.form.get("convocatoria", "")
+    if request.form.get("modo") == "lista":
+        # El examen elegido viene como su número dentro de la lista de esa opción.
+        lista = examenes.examenes(carrera, curso, convocatoria)
+        numero = request.form.get("examen", type=int)
+        if numero is None or not 0 <= numero < len(lista):
+            return redirect(url_for("calendario_vista"))
+        asignatura, fecha, hora, _ = lista[numero]
+    else:
+        asignatura = request.form.get("asignatura", "").strip()
+        fecha = request.form.get("fecha", "")
+        hora = request.form.get("hora") or None
+        try:
+            date.fromisoformat(fecha)
+        except ValueError:
+            fecha = ""
+        if not asignatura or not fecha:
+            flash(contenido.MENSAJES["campo_obligatorio"])
+            return redirect(url_for("calendario_vista"))
+
+    # Si ya lo tenías, no lo repetimos.
+    if not consultar("SELECT id FROM examenes_manuales WHERE usuario_id = ? AND asignatura = ? AND fecha = ?",
+                     (yo(), asignatura, fecha)):
+        modificar("INSERT INTO examenes_manuales (usuario_id, asignatura, fecha, hora, carrera, curso, convocatoria) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?)", (yo(), asignatura, fecha, hora, carrera, curso, convocatoria))
+    flash(contenido.MENSAJES["examen"])
+    return redirect(url_for("calendario_vista", anio=int(fecha[:4]), mes=int(fecha[5:7])))
+
+
+@app.route("/universidad/calendario/examen-manual/borrar/<int:id>", methods=["POST"])
+def borrar_examen_manual(id):
+    modificar("DELETE FROM examenes_manuales WHERE id = ? AND usuario_id = ?", (id, yo()))
+    return redirect(request.referrer or url_for("calendario_vista"))
 
 
 @app.route("/universidad/calendario/borrar/<int:id>", methods=["POST"])

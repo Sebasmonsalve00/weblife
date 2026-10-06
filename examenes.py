@@ -58,6 +58,11 @@ CALENDARIOS = {
 }
 
 
+# Opciones para "Examen manual" -> "Escribir a mano" (puedes agregar más).
+CURSOS = ["1º Curso", "2º Curso", "3º Curso", "4º Curso"]
+CONVOCATORIAS = ["Diciembre 2026", "Mayo 2027", "Junio 2027"]
+
+
 def examenes(carrera, curso, convocatoria):
     """Devuelve la lista de exámenes de esa opción, o una lista vacía si no existe."""
     return CALENDARIOS.get(carrera, {}).get(curso, {}).get(convocatoria, [])

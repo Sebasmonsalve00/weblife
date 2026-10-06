@@ -470,7 +470,8 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 }
 
 /* Botón pequeño "+ Fechas de examen" y su panel desplegable */
-.examenes-mini { position: relative; margin-left: auto; }
+.examenes-botones { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+.examenes-mini { position: relative; }
 .examenes-mini summary { list-style: none; cursor: pointer; }
 .examenes-mini summary::-webkit-details-marker { display: none; }
 /* Flecha que gira: apunta abajo cerrado y arriba abierto */
@@ -486,6 +487,23 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .examenes-panel label { font-size: 13px; font-weight: 500; }
 .examenes-panel select { height: 40px; padding: 0 12px; font-size: 14px; margin-bottom: 4px; }
 .examenes-panel .boton { margin-top: 4px; }
+.examenes-panel input { height: 40px; padding: 0 12px; font-size: 14px; margin-bottom: 4px; }
+.examenes-form { display: flex; flex-direction: column; gap: 6px; }
+.examenes-form[hidden] { display: none; }
+/* Pestañas "De la lista" / "Escribir a mano" */
+.pestanas { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--borde); border-radius: 999px; margin-bottom: 6px; }
+.pestana { flex: 1; border: 0; background: transparent; color: var(--color-texto); font: inherit; font-size: 13px; font-weight: 500; padding: 6px 8px; border-radius: 999px; cursor: pointer; }
+.pestana[aria-pressed="true"] { background: var(--color-texto); color: var(--color-fondo); }
+.manuales { border-top: 1px solid var(--borde); margin-top: 8px; padding-top: 8px; max-height: 160px; overflow-y: auto; }
+.manual-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
+.manual-item small { display: block; color: var(--texto-secundario); }
+.manual-item .boton-icono { width: 22px; height: 22px; font-size: 0.6875rem; flex-shrink: 0; }
+/* En móvil los botones bajan de línea: el panel se abre pegado a la izquierda */
+@media (max-width: 639px) {
+  .examenes-botones { position: relative; margin-left: 0; }
+  .examenes-mini { position: static; }
+  .examenes-panel { left: 0; right: auto; }
+}
 .boton-redondo { width: 44px; height: 44px; padding: 0; background: transparent; color: var(--color-texto); border: 1px solid var(--borde-boton); }
 .leyenda { display: flex; gap: 16px; font-size: 0.8125rem; color: var(--texto-secundario); margin: 0 0 12px; }
 .punto { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
@@ -511,6 +529,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .examenes-actual { font-size: 13px; margin: 0 0 6px; color: var(--texto-secundario); }
 .item.hecha { text-decoration: line-through; opacity: 0.6; }
 .item .boton-icono { width: 18px; height: 18px; font-size: 0.625rem; flex-shrink: 0; }
+.item.examen .boton-icono, .item.examen .boton-icono:hover { background: transparent; color: var(--color-fondo); border-color: var(--color-fondo); }
 
 /* ---------- Asistencia ---------- */
 .actividad-guardada { font-size: 14px; margin: 8px 0 0; }

@@ -106,6 +106,7 @@ MENSAJES = {
     "actividad": "Actividad de asistencia guardada.",
     "cuenta": "Nombre guardado.",
     "evento": "Evento agregado al calendario.",
+    "examen": "Examen agregado al calendario.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",
 }

@@ -30,6 +30,7 @@
     <h2 class="titulo-seccion">{{ nombre_mes }} {{ anio }}</h2>
     <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}" aria-label="Mes siguiente">→</a>
 
+    <div class="examenes-botones">
     <!-- Opción pequeña: cargar las fechas oficiales de examen (se abre al hacer clic) -->
     <details class="examenes-mini">
       <summary class="boton boton-secundario boton-chico">Fechas de examen <span class="flecha" aria-hidden="true">▾</span></summary>
@@ -48,8 +49,71 @@
         <p class="nota-mini">{{ texto.nota_examenes }}</p>
       </form>
     </details>
+
+    <!-- Examen manual: elegir uno de la lista o escribirlo a mano -->
+    <details class="examenes-mini">
+      <summary class="boton boton-secundario boton-chico">Examen manual <span class="flecha" aria-hidden="true">▾</span></summary>
+      <div class="examenes-panel vidrio">
+        <div class="pestanas" role="group" aria-label="Cómo agregar el examen">
+          <button type="button" class="pestana" data-pestana="lista" aria-pressed="true">De la lista</button>
+          <button type="button" class="pestana" data-pestana="mano" aria-pressed="false">Escribir a mano</button>
+        </div>
+
+        <form method="post" action="{{ url_for('examen_manual') }}" class="examenes-form" data-panel="lista">
+          <input type="hidden" name="modo" value="lista">
+          <label for="em-carrera">Carrera</label>
+          <select id="em-carrera" name="carrera" required>
+            {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
+          </select>
+          <label for="em-curso">Curso</label>
+          <select id="em-curso" name="curso" required></select>
+          <label for="em-convocatoria">Convocatoria</label>
+          <select id="em-convocatoria" name="convocatoria" required></select>
+          <label for="em-examen">Examen</label>
+          <select id="em-examen" name="examen" required></select>
+          <button class="boton boton-primario boton-chico">Añadir examen</button>
+        </form>
+
+        <form method="post" action="{{ url_for('examen_manual') }}" class="examenes-form" data-panel="mano" hidden>
+          <input type="hidden" name="modo" value="mano">
+          <label for="mm-carrera">Carrera</label>
+          <select id="mm-carrera" name="carrera" required>
+            {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
+          </select>
+          <label for="mm-curso">Año</label>
+          <select id="mm-curso" name="curso" required>
+            {% for curso in cursos %}<option>{{ curso }}</option>{% endfor %}
+          </select>
+          <label for="mm-convocatoria">Convocatoria</label>
+          <select id="mm-convocatoria" name="convocatoria" required>
+            {% for convocatoria in convocatorias %}<option>{{ convocatoria }}</option>{% endfor %}
+          </select>
+          <label for="mm-asignatura">Nombre del examen</label>
+          <input id="mm-asignatura" name="asignatura" placeholder="ej: Ética I" required>
+          <label for="mm-fecha">Fecha</label>
+          <input id="mm-fecha" type="date" name="fecha" required>
+          <label for="mm-hora">Hora (opcional)</label>
+          <input id="mm-hora" type="time" name="hora">
+          <button class="boton boton-primario boton-chico">Añadir examen</button>
+        </form>
+
+        {% if manuales %}
+        <div class="manuales">
+          <p class="examenes-actual">Tus exámenes manuales</p>
+          {% for examen in manuales %}
+            <div class="manual-item">
+              <span>{{ examen.asignatura }} <small>{{ examen.fecha }}{% if examen.hora %} · {{ examen.hora }}{% endif %}</small></span>
+              {{ boton_borrar(url_for('borrar_examen_manual', id=examen.id), "Borrar examen: " ~ examen.asignatura) }}
+            </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <p class="nota-mini">Los exámenes manuales se ven siempre, aunque no tengas elegidas unas fechas de examen.</p>
+      </div>
+    </details>
+    </div>
   </div>
-  <p class="leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span>{% if eleccion %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
+  <p class="leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span>{% if eleccion or manuales %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
 
   <div class="calendario-contenedor">
     <table class="calendario">
@@ -68,6 +132,8 @@
                     <span>{{ cosa.texto }}</span>
                     {% if cosa.tipo == "evento" %}
                       {{ boton_borrar(url_for('borrar_evento', id=cosa.id), "Borrar evento: " ~ cosa.texto) }}
+                    {% elif cosa.manual_id %}
+                      {{ boton_borrar(url_for('borrar_examen_manual', id=cosa.manual_id), "Borrar examen: " ~ cosa.texto) }}
                     {% endif %}
                   </div>
                 {% endfor %}
@@ -151,6 +217,55 @@
   if (elegido.length === 3 && datos[elegido[0]]) carrera.value = elegido[0];
   cambiarCarrera();
   if (elegido.length === 3) { curso.value = elegido[1]; cambiarCurso(); convocatoria.value = elegido[2]; }
+})();
+</script>
+
+<!-- Examen manual: pestañas, listas que dependen de lo elegido, y un solo panel abierto a la vez -->
+<script>
+(function () {
+  var datos = {{ calendarios | tojson }};
+  var carrera = document.getElementById("em-carrera");
+  var curso = document.getElementById("em-curso");
+  var convocatoria = document.getElementById("em-convocatoria");
+  var examen = document.getElementById("em-examen");
+  function llenar(select, opciones) {
+    select.innerHTML = "";
+    opciones.forEach(function (op) {
+      var opcion = document.createElement("option");
+      opcion.textContent = op.texto;
+      opcion.value = op.valor;
+      select.appendChild(opcion);
+    });
+  }
+  function nombres(objeto) { return Object.keys(objeto || {}).map(function (k) { return {texto: k, valor: k}; }); }
+  function cambiarConvocatoria() {
+    var lista = ((datos[carrera.value] || {})[curso.value] || {})[convocatoria.value] || [];
+    llenar(examen, lista.map(function (e, i) {
+      return {texto: e[0] + " · " + e[1].slice(8, 10) + "/" + e[1].slice(5, 7) + (e[2] ? " " + e[2] : ""), valor: i};
+    }));
+  }
+  function cambiarCurso() { llenar(convocatoria, nombres((datos[carrera.value] || {})[curso.value])); cambiarConvocatoria(); }
+  function cambiarCarrera() { llenar(curso, nombres(datos[carrera.value])); cambiarCurso(); }
+  carrera.addEventListener("change", cambiarCarrera);
+  curso.addEventListener("change", cambiarCurso);
+  convocatoria.addEventListener("change", cambiarConvocatoria);
+  cambiarCarrera();
+
+  // Pestañas "De la lista" / "Escribir a mano"
+  document.querySelectorAll(".pestana").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      document.querySelectorAll(".pestana").forEach(function (b) { b.setAttribute("aria-pressed", b === boton); });
+      document.querySelectorAll(".examenes-form[data-panel]").forEach(function (f) { f.hidden = f.dataset.panel !== boton.dataset.pestana; });
+    });
+  });
+
+  // Al abrir un panel se cierra el otro
+  var paneles = document.querySelectorAll(".examenes-mini");
+  paneles.forEach(function (panel) {
+    panel.addEventListener("toggle", function () {
+      if (panel.open) paneles.forEach(function (otro) { if (otro !== panel) otro.open = false; });
+    });
+  });
 })();
 </script>
 {% endblock %}
