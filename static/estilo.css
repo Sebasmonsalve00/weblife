@@ -448,7 +448,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 /* ---------- Calendario ---------- */
 .mes-navegacion { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .mes-navegacion h2 { margin: 0; min-width: 0; }
-/* Avisos fijos abajo a la izquierda (en móvil van dentro de la página) */
+/* Avisos fijos arriba a la izquierda (en móvil van dentro de la página) */
 .avisos { display: flex; flex-direction: column; gap: 12px; margin-top: 32px; }
 .aviso-caja {
   background: var(--color-fondo); border: 1px solid var(--borde); border-radius: var(--radio-input);
@@ -461,7 +461,9 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .cuenta { font-variant-numeric: tabular-nums; font-weight: 600; margin-top: 2px; }
 .aviso-examenes .cuenta { color: var(--color-texto); background: var(--acento-suave); border-radius: 8px; padding: 2px 8px; align-self: flex-start; }
 @media (min-width: 1024px) {
-  .avisos { position: fixed; left: 16px; bottom: 16px; z-index: 30; width: 240px; margin: 0; }
+  /* Empiezan arriba (debajo del menú) y crecen hacia abajo */
+  .avisos { position: fixed; left: 16px; top: 80px; z-index: 30; width: 240px; margin: 0;
+            max-height: calc(100vh - 96px); overflow-y: auto; }
   .aviso-caja { max-height: 32vh; }
 }
 /* Si la pantalla no es muy ancha, corremos el contenido para que los avisos no lo tapen */
