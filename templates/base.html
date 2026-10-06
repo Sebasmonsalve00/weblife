@@ -150,19 +150,13 @@
   {% endblock %}
 
   {% if efectos.pagina_siguiente and anterior and session.usuario_id %}
-  <!-- Aviso "Anterior": aparece arriba solo mientras sigues subiendo al principio de la página -->
-  <a id="anterior" class="anterior" href="{{ url_for(anterior[1]) }}" aria-hidden="true" tabindex="-1">↑ Anterior: <b>{{ anterior[0] }}</b></a>
+  <!-- Enlace oculto "Anterior": lo usa el gesto de seguir subiendo al principio de la página -->
+  <a id="anterior" class="anterior" href="{{ url_for(anterior[1]) }}" aria-hidden="true" tabindex="-1">Anterior: <b>{{ anterior[0] }}</b></a>
   {% endif %}
 
   {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
-  <!-- Bloque "Siguiente": enlace a la página que sigue. Al seguir bajando se llena el círculo -->
-  <a id="siguiente" class="siguiente" href="{{ url_for(siguiente[1]) }}">
-    <span class="siguiente-texto">Siguiente: <b>{{ siguiente[0] }}</b></span>
-    <span class="siguiente-circulo" aria-hidden="true">
-      <svg viewBox="0 0 36 36"><circle class="pista" cx="18" cy="18" r="16"/><circle class="relleno" cx="18" cy="18" r="16"/></svg>
-      <span class="siguiente-flecha">↓</span>
-    </span>
-  </a>
+  <!-- Enlace "Siguiente": la página que sigue. Al seguir bajando, la página se apaga y pasa a la siguiente -->
+  <a id="siguiente" class="siguiente" href="{{ url_for(siguiente[1]) }}">Siguiente: <b>{{ siguiente[0] }}</b></a>
   {% endif %}
 
   <!-- Animaciones, menú móvil y validación de formularios -->

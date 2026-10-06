@@ -84,8 +84,7 @@ SCROLL = {
 
 # Tiempos de las transiciones entre páginas (en milisegundos).
 TRANSICIONES = {
-    "pagina": 450,       # cambio normal de página
-    "siguiente": 600,    # cambio al seguir bajando
+    "fundido": 700,      # la página se apaga y la nueva se aclara (en ms)
 }
 
 # Orden de páginas para "seguir bajando". Son los nombres de las rutas de app.py.
@@ -99,7 +98,6 @@ PAGINA_SIGUIENTE = {
     "espera_inercia": 200,      # ms al llegar al final antes de empezar a contar
     "reinicio": 600,            # ms sin bajar para que el acumulado vuelva a 0
     "volver": 400,              # ms que tarda todo en volver a su sitio si se cancela
-    "empuje": 40,               # px que sube el contenido al acercarse al umbral
 }
 
 # ---- 6. Layout ----
@@ -161,10 +159,8 @@ def variables_css():
         "--padding-escritorio": CONTENEDOR["padding_escritorio"],
         "--hero-altura": HERO_ALTURA,
         "--easing": SCROLL["easing"],
-        "--t-pagina": f"{TRANSICIONES['pagina']}ms",
-        "--t-siguiente": f"{TRANSICIONES['siguiente']}ms",
+        "--t-fundido": f"{TRANSICIONES['fundido']}ms",
         "--t-volver": f"{PAGINA_SIGUIENTE['volver']}ms",
-        "--empuje": f"{PAGINA_SIGUIENTE['empuje']}px",
         "--alto-corta": SCROLL["alturas"]["corta"],
         "--alto-media": SCROLL["alturas"]["media"],
         "--alto-larga": SCROLL["alturas"]["larga"],

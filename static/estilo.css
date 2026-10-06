@@ -631,72 +631,33 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 [data-revelar-palabras] .palabra { transition: none; }
 
 /* ---------- Transiciones entre páginas (View Transitions) ---------- */
-::view-transition-old(root) { animation: pagina-sale var(--t-pagina) var(--easing) both; }
-::view-transition-new(root) { animation: pagina-entra var(--t-pagina) var(--easing) both; }
-@keyframes pagina-sale { to { opacity: 0; transform: translateY(-12px); } }
-@keyframes pagina-entra { from { opacity: 0; transform: translateY(12px); } }
-/* Al "seguir bajando": la actual sale hacia arriba y la nueva entra desde abajo */
-.transicion-siguiente::view-transition-old(root) { animation: siguiente-sale var(--t-siguiente) var(--easing) both; }
-.transicion-siguiente::view-transition-new(root) { animation: siguiente-entra var(--t-siguiente) var(--easing) both; }
-@keyframes siguiente-sale { to { opacity: 0; transform: translateY(-80px); } }
-@keyframes siguiente-entra { from { opacity: 0; transform: translateY(80px); } }
-/* Al "seguir subiendo": la actual baja y la anterior entra desde arriba */
-.transicion-anterior::view-transition-old(root) { animation: anterior-sale var(--t-siguiente) var(--easing) both; }
-.transicion-anterior::view-transition-new(root) { animation: anterior-entra var(--t-siguiente) var(--easing) both; }
-@keyframes anterior-sale { to { opacity: 0; transform: translateY(80px); } }
-@keyframes anterior-entra { from { opacity: 0; transform: translateY(-80px); } }
-/* El menú y el footer no se animan */
+/* La página actual se apaga (se vuelve opaca) y la nueva se va aclarando.
+   Un solo fundido, sin desplazamientos, igual al cambiar de página con el menú o con el scroll. */
+::view-transition-old(root) { animation: pagina-sale calc(var(--t-fundido) * 0.5) ease-in both; }
+::view-transition-new(root) { animation: pagina-entra var(--t-fundido) var(--easing) calc(var(--t-fundido) * 0.3) both; }
+@keyframes pagina-sale { to { opacity: 0; } }
+@keyframes pagina-entra { from { opacity: 0; } }
+/* El menú se queda quieto. El footer no se mueve: solo se funde con la página */
 .nav { view-transition-name: menu; }
-.footer { view-transition-name: pie; }
-::view-transition-group(menu), ::view-transition-group(pie),
-::view-transition-new(menu), ::view-transition-new(pie) { animation: none; }
-::view-transition-old(menu), ::view-transition-old(pie) { display: none; }
+::view-transition-group(menu), ::view-transition-new(menu) { animation: none; }
+::view-transition-old(menu) { display: none; }
 
-/* ---------- Bloque "Siguiente" (debajo del footer) ---------- */
+/* ---------- Enlace "Siguiente" (debajo del footer, discreto) ---------- */
 .siguiente {
-  display: flex; align-items: center; justify-content: center; gap: 14px;
-  margin: 0 auto; padding: 28px 24px 40px; max-width: 420px;
-  color: var(--color-texto); text-decoration: none; font-size: 15px;
+  display: block; text-align: center; padding: 20px 24px 32px;
+  color: var(--texto-secundario); text-decoration: none; font-size: 14px;
 }
-.siguiente-texto { color: var(--texto-secundario); }
-.siguiente-texto b { color: var(--color-texto); font-weight: 600; }
-.siguiente-circulo { position: relative; width: 40px; height: 40px; flex-shrink: 0; }
-.siguiente-circulo svg { width: 40px; height: 40px; transform: rotate(-90deg); }
-.siguiente-circulo circle { fill: none; stroke-width: 2.5; }
-.siguiente-circulo .pista { stroke: var(--borde-boton); }
-.siguiente-circulo .relleno {
-  stroke: var(--color-texto); stroke-linecap: round;
-  stroke-dasharray: 100.53; stroke-dashoffset: calc(100.53 * (1 - var(--siguiente, 0)));
-}
-.siguiente-flecha { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; }
-.siguiente:hover .siguiente-flecha { transform: translateY(2px); }
-/* Al acercarse al umbral: el contenido sube y se aclara, el bloque crece de 0.95 a 1 */
-.js .siguiente { transform: scale(calc(0.95 + 0.05 * var(--siguiente, 0))); }
-.js main, .js .footer {
-  transform: translateY(calc((var(--anterior, 0) - var(--siguiente, 0)) * var(--empuje)));
-  opacity: calc(1 - 0.4 * var(--siguiente, 0) - 0.4 * var(--anterior, 0));
-}
-/* Aviso "Anterior" arriba: aparece y baja un poco mientras sigues subiendo */
-.anterior {
-  position: fixed; top: 76px; left: 50%; z-index: 40;
-  transform: translate(-50%, calc(-12px + 12px * var(--anterior, 0)));
-  opacity: var(--anterior, 0); pointer-events: none;
-  padding: 10px 20px; border-radius: var(--radio-boton);
-  background: var(--superficie-sin-blur); box-shadow: var(--sombra); border: 1px solid var(--borde);
-  color: var(--texto-secundario); text-decoration: none; font-size: 14px; white-space: nowrap;
-  transition: transform var(--t-volver) var(--easing), opacity var(--t-volver) var(--easing);
-}
-.anterior b { color: var(--color-texto); }
-html:not(.js) .anterior { display: none; }
-.siguiente-activo .anterior { transition: none !important; }
-.js .siguiente, .js .siguiente-circulo .relleno,
-.js main, .js .footer {
-  transition: transform var(--t-volver) var(--easing), opacity var(--t-volver) var(--easing),
-              stroke-dashoffset var(--t-volver) var(--easing);
-}
-/* Mientras el gesto sigue, sin transición: sigue al dedo o a la rueda */
-.siguiente-activo .siguiente, .siguiente-activo .siguiente-circulo .relleno,
-.siguiente-activo main, .siguiente-activo .footer { transition: none !important; }
+.siguiente b { color: var(--color-texto); font-weight: 600; }
+.siguiente:hover b { text-decoration: underline; }
+/* El aviso "Anterior" solo sirve de enlace para el gesto: no se ve */
+.anterior { display: none; }
+
+/* Mientras sigues bajando (o subiendo) en el borde, el contenido se va apagando.
+   El footer se queda quieto. */
+.js main { opacity: calc(1 - 0.75 * var(--siguiente, 0) - 0.75 * var(--anterior, 0)); }
+.js main { transition: opacity var(--t-volver) var(--easing); }
+/* Mientras el gesto sigue, sin transición: sigue a la rueda o al dedo */
+.siguiente-activo main { transition: none !important; }
 
 /* Sin animaciones si la persona lo pidió en su sistema */
 @media (prefers-reduced-motion: reduce) {
