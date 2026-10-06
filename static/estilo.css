@@ -312,6 +312,13 @@ input, select, textarea {
   color: var(--color-texto);
   transition: border-color var(--t-boton) ease, box-shadow var(--t-boton) ease;
 }
+/* Fecha y hora: en el iPhone salían centradas y más anchas que la casilla */
+input[type="date"], input[type="time"] {
+  -webkit-appearance: none; appearance: none;
+  display: block; min-width: 0; max-width: 100%;
+  text-align: left; line-height: 50px;
+}
+input::-webkit-date-and-time-value { text-align: left; margin: 0; min-height: 1.5em; }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--color-acento);
@@ -394,6 +401,15 @@ input:focus, select:focus, textarea:focus {
 
 /* ---------- Horario ---------- */
 .panel-dia { border-radius: var(--radio-tarjeta); padding: 20px; box-shadow: var(--sombra); }
+/* En móvil y tablet el orden es: horario, clases del día, agregar clase, mis materias */
+@media (max-width: 1023px) {
+  .horario-principal { display: contents; }
+  .horario-principal > * { grid-column: 1 / -1; min-width: 0; }
+  .horario-principal > .grilla-contenedor { order: 1; }
+  .grid-12 > .panel-dia { order: 2; }
+  .horario-principal > .form-clase, .horario-principal > .aviso-error { order: 3; }
+  .horario-principal > .seccion { order: 4; margin-top: 0; }
+}
 @media (min-width: 1024px) { .panel-dia { position: sticky; top: 76px; } }
 .panel-titulo { display: flex; justify-content: space-between; align-items: center; text-align: center; margin-bottom: 12px; }
 .centro { text-align: center; margin: 4px auto 12px; }
