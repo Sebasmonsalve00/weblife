@@ -543,6 +543,9 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .punto { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: middle; margin-right: 4px; }
 .punto.tarea { background: var(--acento-degradado); border: 1px solid var(--color-acento); }
 .punto.evento { background: transparent; border: 1px solid var(--borde-boton); }
+/* Al cambiar de mes, el calendario se funde suavemente */
+.calendario-contenedor { transition: opacity 250ms var(--easing); }
+.calendario-contenedor.cambiando { opacity: 0.35; }
 .calendario-contenedor { border-radius: var(--radio-tarjeta); padding: 12px; overflow-x: auto; box-shadow: var(--sombra); }
 .calendario { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
 .calendario th { font-size: 0.8125rem; font-weight: 600; color: var(--texto-secundario); padding: 6px; }

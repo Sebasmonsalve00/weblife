@@ -26,9 +26,9 @@
 
 <section class="reveal">
   <div class="mes-navegacion">
-    <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_anterior[0], mes=mes_anterior[1]) }}" aria-label="Mes anterior">←</a>
-    <h2 class="titulo-seccion">{{ nombre_mes }} {{ anio }}</h2>
-    <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}" aria-label="Mes siguiente">→</a>
+    <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_anterior[0], mes=mes_anterior[1]) }}" aria-label="Mes anterior" id="mes-anterior" data-cambiar-mes>←</a>
+    <h2 class="titulo-seccion" id="mes-titulo" aria-live="polite">{{ nombre_mes }} {{ anio }}</h2>
+    <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}" aria-label="Mes siguiente" id="mes-siguiente" data-cambiar-mes>→</a>
 
     <div class="examenes-botones">
     <!-- Opción pequeña: cargar las fechas oficiales de examen (se abre al hacer clic) -->
@@ -114,9 +114,9 @@
     </details>
     </div>
   </div>
-  <p class="leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span>{% if eleccion or manuales %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
+  <p class="leyenda" id="mes-leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span>{% if eleccion or manuales %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
 
-  <div class="calendario-contenedor">
+  <div class="calendario-contenedor" id="mes-calendario">
     <table class="calendario">
       <thead><tr>{% for nombre in dias %}<th scope="col"><abbr title="{{ nombre }}">{{ nombre[:3] }}</abbr></th>{% endfor %}</tr></thead>
       <tbody>
@@ -225,6 +225,56 @@
     panel.addEventListener("toggle", function () {
       if (panel.open) paneles.forEach(function (otro) { if (otro !== panel) otro.open = false; });
     });
+  });
+})();
+</script>
+<!-- Cambiar de mes sin recargar la página: solo se cambia el calendario -->
+<script>
+(function () {
+  var partes = ["mes-titulo", "mes-leyenda", "mes-calendario"];   // lo que cambia con el mes
+  var cargando = false;
+
+  // Pide el mes a la web, y reemplaza solo el calendario, el título y las flechas.
+  function cambiarMes(url, guardarEnHistorial) {
+    if (cargando) return;
+    cargando = true;
+    var calendario = document.getElementById("mes-calendario");
+    calendario.classList.add("cambiando");
+    fetch(url, { headers: { "X-Requested-With": "fetch" } })
+      .then(function (respuesta) {
+        if (!respuesta.ok) throw new Error("sin respuesta");
+        return respuesta.text();
+      })
+      .then(function (html) {
+        var nueva = new DOMParser().parseFromString(html, "text/html");
+        partes.forEach(function (id) {
+          var viejo = document.getElementById(id), nuevo = nueva.getElementById(id);
+          if (viejo && nuevo) viejo.replaceWith(nuevo);
+        });
+        ["mes-anterior", "mes-siguiente"].forEach(function (id) {
+          var nuevo = nueva.getElementById(id);
+          if (nuevo) document.getElementById(id).href = nuevo.getAttribute("href");
+        });
+        if (guardarEnHistorial) history.pushState({ mes: url }, "", url);
+        var recien = document.getElementById("mes-calendario");
+        recien.classList.add("cambiando");
+        requestAnimationFrame(function () { requestAnimationFrame(function () { recien.classList.remove("cambiando"); }); });
+      })
+      .catch(function () { window.location.href = url; })   // si algo falla, carga la página normal
+      .finally(function () { cargando = false; });
+  }
+
+  document.querySelectorAll("[data-cambiar-mes]").forEach(function (flecha) {
+    flecha.addEventListener("click", function (e) {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;   // abrir en otra pestaña sigue funcionando
+      e.preventDefault();
+      cambiarMes(flecha.href, true);
+    });
+  });
+  // Botones atrás/adelante del navegador
+  history.replaceState({ mes: location.href }, "", location.href);
+  window.addEventListener("popstate", function (e) {
+    if (e.state && e.state.mes) cambiarMes(e.state.mes, false);
   });
 })();
 </script>
