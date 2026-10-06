@@ -123,6 +123,30 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   }
 }
 
+/* ---------- Borde de cristal (como las notificaciones del iPhone) ----------
+   Las islas mantienen su relleno, pero el borde brilla: más claro arriba a la
+   izquierda y abajo a la derecha, como luz sobre un cristal, con un leve brillo
+   hacia dentro. Va en una capa encima que no se puede pulsar (en las cajas que
+   se desplazan por dentro, como la tabla del horario, solo el brillo interior). */
+:where(.vidrio, .tarjeta, .formulario, .lista li, .panel-dia, .resumen-materias,
+       .aviso-exito, .aviso-error) { position: relative; }
+.vidrio::after, .tarjeta::after, .formulario::after, .nav::after, .menu-movil::after,
+.lista li::after, .panel-dia::after, .resumen-materias::after, .aviso-exito::after, .aviso-error::after, .aviso-flotante::after, .dia-vista::after {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; z-index: 1;
+  padding: 1.5px;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.35) 22%,
+              rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.35) 78%, rgba(255, 255, 255, 0.85) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+}
+/* Brillo interior suave en el borde de arriba */
+.vidrio, .tarjeta, .formulario, .tabla-contenedor, .lista li, .panel-dia, .resumen-materias,
+.grilla-contenedor, .calendario-contenedor, .aviso-caja, .dia-vista {
+  --brillo-cristal: inset 0 1px 1px rgba(255, 255, 255, 0.9), inset 0 -1px 1px rgba(255, 255, 255, 0.35);
+}
+
 /* ---------- Manchas de color desenfocadas del fondo ---------- */
 .manchas { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .mancha {
@@ -162,7 +186,7 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   gap: 16px;
   transition: height var(--t-menu) ease;
 }
-.nav.compacta { box-shadow: var(--sombra); }
+.nav.compacta { box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
 .nav.compacta .nav-interior { height: 52px; }
 .logo { font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; text-decoration: none; }
 .nav-enlaces, .nav-acciones { display: none; }
@@ -268,10 +292,10 @@ button:active, .boton:active { transform: scale(0.97); }
 .tarjeta {
   border-radius: var(--radio-tarjeta);
   padding: 28px;
-  box-shadow: var(--sombra);
+  box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
   transition: transform var(--t-boton) ease, box-shadow var(--t-boton) ease;
 }
-.tarjeta-interactiva:hover { transform: translateY(-6px); box-shadow: var(--sombra-hover); }
+.tarjeta-interactiva:hover { transform: translateY(-6px); box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra-hover); }
 /* Si una tarjeta tiene imagen, hace un zoom suave al pasar el ratón */
 .tarjeta img { transition: transform 600ms var(--easing); }
 .tarjeta-interactiva:hover img { transform: scale(1.04); }
@@ -300,7 +324,7 @@ button:active, .boton:active { transform: scale(0.97); }
 .formulario {
   border-radius: var(--radio-tarjeta);
   padding: 24px;
-  box-shadow: var(--sombra);
+  box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
   margin-bottom: 24px;
   align-items: end;
 }
@@ -341,7 +365,7 @@ input:focus, select:focus, textarea:focus {
   margin-top: 24px;
   border-radius: var(--radio-tarjeta);
   padding: 14px 24px;
-  box-shadow: var(--sombra);
+  box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
   font-weight: 500;
 }
 .aviso-exito p { margin: 0; }
@@ -357,7 +381,7 @@ input:focus, select:focus, textarea:focus {
 /* ---------- Tablas ---------- */
 .tabla-contenedor {
   border-radius: var(--radio-tarjeta);
-  box-shadow: var(--sombra);
+  box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
   overflow: auto;            /* scroll horizontal propio en móvil */
   max-height: 70vh;          /* para que el encabezado quede fijo al bajar */
   margin-bottom: 24px;
@@ -379,7 +403,7 @@ input:focus, select:focus, textarea:focus {
   border-radius: var(--radio-imagen);
   padding: 14px 18px;
   display: flex; align-items: center; gap: 12px;
-  box-shadow: var(--sombra);
+  box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
 }
 .lista li.hecha .tarea-texto { opacity: 0.55; text-decoration: line-through; }
 .tarea-texto { flex: 1; min-width: 0; }
@@ -406,7 +430,7 @@ input:focus, select:focus, textarea:focus {
 .hero .etiqueta-seccion { margin-bottom: 16px; }
 
 /* ---------- Horario ---------- */
-.panel-dia { border-radius: var(--radio-tarjeta); padding: 20px; box-shadow: var(--sombra); }
+.panel-dia { border-radius: var(--radio-tarjeta); padding: 20px; box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
 /* En móvil y tablet el orden es: horario, clases del día, agregar clase, mis materias */
 @media (max-width: 1023px) {
   .horario-principal { display: contents; }
@@ -440,7 +464,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .mini-lista { list-style: none; padding: 0; margin: 6px 0 0; font-size: 0.8125rem; }
 .mini-lista li { margin-top: 4px; }
 
-.grilla-contenedor { border-radius: var(--radio-tarjeta); padding: 20px; overflow-x: auto; box-shadow: var(--sombra); }
+.grilla-contenedor { border-radius: var(--radio-tarjeta); padding: 20px; overflow-x: auto; box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
 .grilla { display: grid; gap: 0 6px; min-width: 600px; }
 .grilla-dia { text-align: center; font-weight: 600; font-size: 14px; padding-bottom: 10px; }
 .grilla-horas { position: relative; }
@@ -466,7 +490,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .bloque form { position: absolute; top: 4px; right: 4px; }
 .bloque .boton-icono { width: 22px; height: 22px; font-size: 0.6875rem; }
 
-.resumen-materias { list-style: none; padding: 8px 0; margin: 0; border-radius: var(--radio-tarjeta); box-shadow: var(--sombra); max-width: 560px; }
+.resumen-materias { list-style: none; padding: 8px 0; margin: 0; border-radius: var(--radio-tarjeta); box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); max-width: 560px; }
 .resumen-materias li { display: flex; justify-content: space-between; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--borde); }
 .resumen-materias li:last-child { border-bottom: none; }
 /* Mis avances: lista con barra debajo de cada materia */
@@ -495,7 +519,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .muestra:hover .muestra-icono { transform: translateY(-2px) scale(1.04); }
 .muestra:active .muestra-icono { transform: scale(0.94); }
 .muestra > input[type=radio]:checked + .muestra-icono {
-  box-shadow: inset 0 0 0 2px #1D1D1F, 0 0 0 3px var(--color-fondo), 0 0 0 5px #007AFF, 0 6px 14px rgba(29, 29, 31, 0.12);
+  box-shadow: inset 0 0 0 2px #007AFF, 0 0 0 3px var(--color-fondo), 0 0 0 5px #007AFF, 0 6px 14px rgba(29, 29, 31, 0.12);
 }
 .muestra > input[type=radio]:focus-visible + .muestra-icono { outline: 2px solid var(--color-texto); outline-offset: 6px; }
 /* Mismo tipo de letra que el resto de la web */
@@ -562,7 +586,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .avisos { display: flex; flex-direction: column; gap: 12px; margin-top: 32px; }
 .aviso-caja {
   background: var(--color-fondo); border: 1px solid var(--borde); border-radius: var(--radio-input);
-  box-shadow: var(--sombra); padding: 14px 16px; max-height: 40vh; overflow-y: auto;
+  box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); padding: 14px 16px; max-height: 40vh; overflow-y: auto;
 }
 .aviso-caja h2 { font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin: 0 0 8px; }
 .aviso-urgente { border: 2px solid var(--color-texto); }
@@ -590,7 +614,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .dia-vista {
   width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 20px;
   border: 1px solid var(--borde); border-radius: var(--radio-tarjeta, 24px);
-  background: var(--color-fondo); color: var(--color-texto); box-shadow: var(--sombra);
+  background: var(--color-fondo); color: var(--color-texto); box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
 }
 .dia-vista::backdrop { background: rgba(29, 29, 31, 0.3); backdrop-filter: blur(6px); }
 .dia-vista[open] { animation: dia-entra 250ms var(--easing); }
@@ -630,7 +654,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   position: absolute; right: 0; top: calc(100% + 8px); z-index: 20;
   width: min(280px, calc(100vw - 32px));
   display: flex; flex-direction: column; gap: 6px;
-  padding: 16px; border-radius: var(--radio-input); box-shadow: var(--sombra);
+  padding: 16px; border-radius: var(--radio-input); box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
 }
 .examenes-panel.vidrio { background: var(--color-fondo); }   /* fondo sólido: que no se vea el calendario detrás */
 .examenes-panel label { font-size: 13px; font-weight: 500; }
@@ -661,7 +685,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 /* Al cambiar de mes, el calendario se funde suavemente */
 .calendario-contenedor { transition: opacity 250ms var(--easing); }
 .calendario-contenedor.cambiando { opacity: 0.35; }
-.calendario-contenedor { border-radius: var(--radio-tarjeta); padding: 12px; overflow-x: auto; box-shadow: var(--sombra); }
+.calendario-contenedor { border-radius: var(--radio-tarjeta); padding: 12px; overflow-x: auto; box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
 .calendario { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
 .calendario th { font-size: 0.8125rem; font-weight: 600; color: var(--texto-secundario); padding: 6px; }
 .calendario td {
