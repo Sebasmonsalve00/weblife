@@ -474,7 +474,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .avance-lista li { flex-wrap: wrap; row-gap: 8px; }
 .avance-lista li small { color: var(--texto-secundario); margin-left: 6px; }
 .avance-lista .barra { flex-basis: 100%; margin: 0; height: 8px; }
-.de-total { font-size: 1rem; font-weight: 500; color: var(--texto-secundario); letter-spacing: 0; }
+.de-total { font-size: 1rem; font-weight: 500; color: #1D1D1F; letter-spacing: 0; }
 /* Ajustes: elegir el color de la web */
 .ajustes-color fieldset { border: none; padding: 0; margin: 0; }
 /* Cada color es un icono como los de Apple: cuadrado redondeado, con brillo arriba,
@@ -488,7 +488,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 48%),
     linear-gradient(180deg, var(--muestra), color-mix(in srgb, var(--muestra) 88%, #1D1D1F));
-  box-shadow: inset 0 0 0 0.5px rgba(29, 29, 31, 0.12), 0 1px 2px rgba(29, 29, 31, 0.10), 0 6px 14px rgba(29, 29, 31, 0.10);
+  box-shadow: inset 0 0 0 2px #1D1D1F, 0 1px 2px rgba(29, 29, 31, 0.10), 0 6px 14px rgba(29, 29, 31, 0.10);
   display: flex; align-items: center; justify-content: center;
   transition: transform 200ms var(--easing), box-shadow 200ms var(--easing);
 }
@@ -497,19 +497,20 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .muestra-check { color: var(--color-texto); font-size: 22px; font-weight: 700; opacity: 0; transform: scale(0.6);
                  transition: opacity 200ms ease, transform 200ms var(--easing); }
 .muestra > input[type=radio]:checked + .muestra-icono {
-  box-shadow: 0 0 0 3px var(--color-fondo), 0 0 0 5px var(--color-texto), 0 6px 14px rgba(29, 29, 31, 0.12);
+  box-shadow: inset 0 0 0 2px #1D1D1F, 0 0 0 3px var(--color-fondo), 0 0 0 5px var(--color-texto), 0 6px 14px rgba(29, 29, 31, 0.12);
 }
 .muestra > input[type=radio]:checked + .muestra-icono .muestra-check { opacity: 1; transform: none; }
 .muestra > input[type=radio]:focus-visible + .muestra-icono { outline: 2px solid var(--color-texto); outline-offset: 6px; }
 /* Mismo tipo de letra que el resto de la web */
-.muestra-nombre { font-family: inherit; font-size: 0.8125rem; font-weight: 500; color: var(--texto-secundario); letter-spacing: -0.01em; }
+.muestra-nombre { font-family: inherit; font-size: 0.8125rem; font-weight: 500; color: #1D1D1F; letter-spacing: -0.01em; }
 .muestra > input[type=radio]:checked ~ .muestra-nombre { color: var(--color-texto); font-weight: 600; }
-/* "Otro": arcoíris pastel hasta que eliges un color; el selector va invisible encima */
+/* "Otro": gris oscuro hasta que eliges un color; el selector va invisible encima */
 .muestra-otro:not(.con-color) {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 48%),
-    conic-gradient(from 200deg, #FFB8D1, #FFC9A8, #FFE8A3, #C5E8A8, #A8F0D1, #A8E0FF, #A8C5FF, #D1B8FF, #FFB8D1);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 48%),
+    linear-gradient(180deg, #4A4A4F, #2C2C2E);
 }
+.muestra-otro:not(.con-color) .muestra-check { color: #FFFFFF; }
 .selector-color { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; }
 .ajustes-botones { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
 .muestra-color { display: inline-block; width: 16px; height: 16px; border-radius: 27%; vertical-align: middle;
