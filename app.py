@@ -353,6 +353,7 @@ def ajustes():
         flash(contenido.MENSAJES["color"])
         return redirect(url_for("ajustes"))
     return render_template("ajustes.html", colores=config_diseno.COLORES_ACENTO,
+                           opacidad_burbujas=config_diseno.FONDO_BURBUJAS["opacidad"],
                            elegido=mi_acento() or config_diseno.COLORES["acento"])
 
 
