@@ -60,6 +60,7 @@
   // Ejecuta los scripts del tramo (al añadir HTML así, el navegador no los ejecuta solo)
   function activar(tramo) {
     tramo.querySelectorAll("script").forEach(function (viejo) {
+      if (viejo.type && viejo.type !== "text/javascript") return;   // datos (JSON), no código
       var nuevo = document.createElement("script");
       nuevo.textContent = viejo.textContent;
       viejo.replaceWith(nuevo);

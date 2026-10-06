@@ -506,6 +506,38 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   .tramo.con-avisos > .contenedor, .con-avisos .footer .contenedor { padding-left: 288px; }
 }
 
+/* ---------- Vista de un día (se abre al pulsar una fecha): de 8:00 a 20:00 ---------- */
+.dia-vista {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 20px;
+  border: 1px solid var(--borde); border-radius: var(--radio-tarjeta, 24px);
+  background: var(--color-fondo); color: var(--color-texto); box-shadow: var(--sombra);
+}
+.dia-vista::backdrop { background: rgba(29, 29, 31, 0.3); backdrop-filter: blur(6px); }
+.dia-vista[open] { animation: dia-entra 250ms var(--easing); }
+@keyframes dia-entra { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+.dia-vista-cabecera { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.dia-vista-cabecera h2 { flex: 1; margin: 0; font-size: 1.25rem; text-align: center; }
+.dia-vista-cerrar { margin-left: 4px; }
+.dia-vista-sin-hora { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.dia-item { display: flex; flex-direction: column; border-radius: 10px; padding: 6px 10px; font-size: 14px; }
+/* 13 líneas (8:00 a 20:00), 48px por hora */
+.dia-vista-horas { --alto-hora: 48px; position: relative; height: calc(12 * var(--alto-hora)); margin: 8px 0 16px 48px; }
+.dia-linea { position: absolute; left: 0; right: 0; top: calc(var(--fila) * var(--alto-hora)); border-top: 1px solid var(--borde); }
+.dia-linea span { position: absolute; left: -48px; top: -9px; font-size: 12px; color: var(--texto-secundario); font-variant-numeric: tabular-nums; }
+.dia-bloque {
+  position: absolute; top: calc(var(--inicio) * var(--alto-hora) + 1px); height: calc(var(--duracion) * var(--alto-hora) - 2px);
+  left: calc(100% / var(--columnas, 1) * var(--columna, 0)); width: calc(100% / var(--columnas, 1) - 4px);
+  border-radius: 10px; padding: 4px 8px; font-size: 13px; overflow: hidden;
+  display: flex; flex-direction: column; line-height: 1.25; z-index: 1;
+}
+.dia-bloque small, .dia-item small { opacity: 0.75; font-size: 12px; }
+.dia-bloque.clase, .dia-item.clase { background: linear-gradient(var(--acento-suave), var(--acento-suave)), var(--color-fondo); border: 1px solid var(--color-acento); }
+.dia-bloque.tarea, .dia-item.tarea { background: var(--acento-degradado); }
+.dia-item.tarea-hecha { background: var(--acento-degradado); text-decoration: line-through; opacity: 0.6; }
+.dia-bloque.evento, .dia-item.evento { background: var(--color-fondo); border: 1px solid var(--borde-boton); }
+.dia-bloque.examen, .dia-item.examen { background: var(--color-texto); color: var(--color-fondo); }
+.punto.clase { background: var(--acento-suave); border: 1px solid var(--color-acento); }
+
 /* Botón pequeño "+ Fechas de examen" y su panel desplegable */
 .examenes-botones { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
 .examenes-mini { position: relative; }
@@ -559,7 +591,12 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 }
 .calendario td.fuera { border-color: transparent; }
 .calendario td.hoy { background: var(--acento-suave); border-color: var(--color-acento); }
-.calendario .num { font-weight: 600; }
+.calendario .num {
+  font: inherit; font-weight: 600; background: none; border: none; padding: 0 4px; margin-left: -4px;
+  border-radius: 6px; color: inherit; cursor: pointer;
+}
+.calendario .num:hover, .calendario .num:focus-visible { background: var(--acento-suave); }
+.calendario td:not(.fuera) { cursor: pointer; }
 .item { border-radius: 8px; padding: 2px 6px; margin-top: 4px; overflow-wrap: anywhere; display: flex; justify-content: space-between; gap: 4px; align-items: flex-start; }
 .item.tarea { background: var(--acento-degradado); }
 .item.evento { border: 1px solid var(--borde-boton); }

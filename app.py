@@ -738,6 +738,7 @@ def calendario_vista():
 
     # Mes anterior y siguiente para los botones ◀ ▶
     mes_anterior = (anio, mes - 1) if mes > 1 else (anio - 1, 12)
+    agenda = agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales)
     mes_siguiente = (anio, mes + 1) if mes < 12 else (anio + 1, 1)
 
     return render_template(
@@ -747,8 +748,51 @@ def calendario_vista():
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
         calendarios=examenes.CALENDARIOS, avisos=avisos_calendario(), eleccion=eleccion,
         manuales=manuales, cursos=examenes.CURSOS, convocatorias=examenes.CONVOCATORIAS,
-        ocultos=cuantos_ocultos(eleccion),
+        ocultos=cuantos_ocultos(eleccion), agenda=agenda, texto_meses=MESES,
     )
+
+
+def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales):
+    """Lo que tienes cada día del mes, para la vista de un día (8:00 a 20:00).
+    Devuelve {dia: {"sin_hora": [...], "con_hora": [...]}}. Cada cosa con hora
+    lleva "inicio" y "fin" ("09:00"); las que no tienen hora van en "sin_hora"."""
+    agenda = {}
+
+    def anotar(dia, texto, tipo, inicio=None, fin=None, detalle=""):
+        del_dia = agenda.setdefault(dia, {"sin_hora": [], "con_hora": []})
+        if inicio:
+            # Sin hora de fin (eventos y exámenes), ocupa una hora
+            if not fin:
+                hora, minutos = int(inicio[:2]), inicio[3:5]
+                fin = f"{min(hora + 1, 23):02d}:{minutos}"
+            del_dia["con_hora"].append({"texto": texto, "tipo": tipo, "inicio": inicio[:5],
+                                        "fin": fin[:5], "detalle": detalle})
+        else:
+            del_dia["sin_hora"].append({"texto": texto, "tipo": tipo, "detalle": detalle})
+
+    prefijo = f"{anio}-{mes:02d}-"
+    # Clases: se repiten cada semana el mismo día (0 = lunes)
+    clases_por_dia = {}
+    for clase in consultar("SELECT * FROM clases WHERE usuario_id = ? ORDER BY hora_inicio", (yo(),)):
+        clases_por_dia.setdefault(clase["dia"], []).append(clase)
+    for semana in semanas:
+        for dia_semana, dia in enumerate(semana):
+            for clase in clases_por_dia.get(dia_semana, []) if dia else []:
+                anotar(dia, clase["nombre"], "clase", clase["hora_inicio"], clase["hora_fin"], clase["sala"] or "")
+    for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (prefijo + "%", yo())):
+        anotar(int(tarea["fecha_entrega"][8:10]), tarea["titulo"], "tarea-hecha" if tarea["hecha"] else "tarea",
+               detalle=tarea["materia"] or "")
+    for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ?", (prefijo + "%", yo())):
+        anotar(int(evento["fecha"][8:10]), evento["titulo"], "evento", evento["hora"])
+    for asignatura, fecha, hora, _ in lista_examenes:
+        if fecha.startswith(prefijo) and (asignatura, fecha) not in ya_manuales:
+            anotar(int(fecha[8:10]), asignatura, "examen", hora)
+    for examen in manuales:
+        if examen["fecha"].startswith(prefijo):
+            anotar(int(examen["fecha"][8:10]), examen["asignatura"], "examen", examen["hora"])
+    for del_dia in agenda.values():
+        del_dia["con_hora"].sort(key=lambda cosa: cosa["inicio"])
+    return agenda
 
 
 def examenes_elegidos():
