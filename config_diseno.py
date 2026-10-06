@@ -93,9 +93,10 @@ TRANSICIONES = {
 ORDEN_PAGINAS = ["inicio", "horario", "tareas", "pendientes", "calendario_vista", "asistencia"]
 
 PAGINA_SIGUIENTE = {
-    "umbral_escritorio": 300,   # px de rueda/trackpad acumulados al final de la página
-    "umbral_movil": 120,        # px de dedo arrastrado hacia arriba
-    "espera_inercia": 400,      # ms al llegar al final antes de empezar a contar
+    "anterior": True,           # al subir del todo arriba, vuelve a la página anterior
+    "umbral_escritorio": 180,   # px de rueda/trackpad acumulados al final (o al principio)
+    "umbral_movil": 90,         # px de dedo arrastrado
+    "espera_inercia": 200,      # ms al llegar al final antes de empezar a contar
     "reinicio": 600,            # ms sin bajar para que el acumulado vuelva a 0
     "volver": 400,              # ms que tarda todo en volver a su sitio si se cancela
     "empuje": 40,               # px que sube el contenido al acercarse al umbral
@@ -184,19 +185,29 @@ def valores_js():
             "umbralMovil": PAGINA_SIGUIENTE["umbral_movil"],
             "esperaInercia": PAGINA_SIGUIENTE["espera_inercia"],
             "reinicio": PAGINA_SIGUIENTE["reinicio"],
+            "anterior": PAGINA_SIGUIENTE["anterior"],
         },
     }
 
 
-def pagina_siguiente(ruta_actual, menu):
-    """Devuelve (nombre, ruta) de la página que sigue a la actual, o None si es la última
-    o si la página no está en ORDEN_PAGINAS. "menu" es la lista (nombre, ruta) de contenido.py."""
+def pagina_vecina(ruta_actual, menu, paso):
+    """(nombre, ruta) de la página a "paso" posiciones (+1 siguiente, -1 anterior), o None."""
     if ruta_actual not in ORDEN_PAGINAS:
         return None
-    posicion = ORDEN_PAGINAS.index(ruta_actual)
-    if posicion + 1 >= len(ORDEN_PAGINAS):
+    posicion = ORDEN_PAGINAS.index(ruta_actual) + paso
+    if not 0 <= posicion < len(ORDEN_PAGINAS):
         return None
-    ruta = ORDEN_PAGINAS[posicion + 1]
+    ruta = ORDEN_PAGINAS[posicion]
     nombres = dict((r, n) for n, r in menu)
     nombres.setdefault("inicio", "Inicio")
     return nombres.get(ruta, ruta), ruta
+
+
+def pagina_siguiente(ruta_actual, menu):
+    """La página que sigue a la actual (o None si es la última)."""
+    return pagina_vecina(ruta_actual, menu, 1)
+
+
+def pagina_anterior(ruta_actual, menu):
+    """La página anterior a la actual (o None si es la primera)."""
+    return pagina_vecina(ruta_actual, menu, -1)

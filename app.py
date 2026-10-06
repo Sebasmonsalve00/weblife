@@ -195,6 +195,7 @@ def datos_para_plantillas():
         "valores_js": config_diseno.valores_js(),
         "efectos": config_diseno.EFECTOS,
         "siguiente": config_diseno.pagina_siguiente(request.endpoint, contenido.MENU),
+        "anterior": config_diseno.pagina_anterior(request.endpoint, contenido.MENU),
         "texto": contenido.todo(),
     }
 

@@ -26,15 +26,26 @@
   <style>@view-transition { navigation: auto; }</style>
   <script>
     // Si venimos de "seguir bajando", la página nueva entra desde abajo.
+    // Si venimos de "seguir subiendo", entra desde arriba y empieza al final.
     try {
-      if (sessionStorage.getItem("weblife-siguiente")) {
+      var direccion = sessionStorage.getItem("weblife-siguiente");
+      if (direccion) {
         sessionStorage.removeItem("weblife-siguiente");
-        document.documentElement.classList.add("transicion-siguiente");
+        var clase = direccion === "arriba" ? "transicion-anterior" : "transicion-siguiente";
+        var raiz = document.documentElement;
+        raiz.classList.add(clase);
+        var quitar = function () { raiz.classList.remove(clase); };
         window.addEventListener("pagereveal", function (e) {
-          var quitar = function () { document.documentElement.classList.remove("transicion-siguiente"); };
           if (e.viewTransition) e.viewTransition.finished.then(quitar, quitar); else quitar();
         });
-        setTimeout(function () { document.documentElement.classList.remove("transicion-siguiente"); }, 2000);
+        setTimeout(quitar, 2000);
+        if (direccion === "arriba") {
+          // Empezamos abajo del todo, como si siguieras subiendo por la misma página
+          if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+          var alFinal = function () { window.scrollTo(0, raiz.scrollHeight); };
+          document.addEventListener("DOMContentLoaded", alFinal);
+          window.addEventListener("load", alFinal);
+        }
       }
     } catch (e) {}
   </script>
@@ -138,6 +149,11 @@
   </footer>
   {% endblock %}
 
+  {% if efectos.pagina_siguiente and anterior and session.usuario_id %}
+  <!-- Aviso "Anterior": aparece arriba solo mientras sigues subiendo al principio de la página -->
+  <a id="anterior" class="anterior" href="{{ url_for(anterior[1]) }}" aria-hidden="true" tabindex="-1">↑ Anterior: <b>{{ anterior[0] }}</b></a>
+  {% endif %}
+
   {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
   <!-- Bloque "Siguiente": enlace a la página que sigue. Al seguir bajando se llena el círculo -->
   <a id="siguiente" class="siguiente" href="{{ url_for(siguiente[1]) }}">
@@ -163,7 +179,7 @@
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   <!-- Motor de scroll (titulares por palabra y secciones animadas) -->
   <script src="{{ url_for('static', filename='scroll-engine.js') }}" defer></script>
-  {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
+  {% if efectos.pagina_siguiente and (siguiente or anterior) and session.usuario_id %}
   <script src="{{ url_for('static', filename='pagina-siguiente.js') }}" defer></script>
   {% endif %}
 </body>
