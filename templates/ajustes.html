@@ -12,17 +12,19 @@
       {% for nombre, color in colores %}
         <label class="muestra">
           <input type="radio" name="color" value="{{ color }}" {{ "checked" if color == elegido }}>
-          <span class="muestra-circulo" style="background: {{ color }}"></span>
-          <span>{{ nombre }}</span>
+          <span class="muestra-icono" style="--muestra: {{ color }}"><span class="muestra-check" aria-hidden="true">✓</span></span>
+          <span class="muestra-nombre">{{ nombre }}</span>
         </label>
       {% endfor %}
       {# Otro color: el que quieras, con el selector del navegador #}
       {% set es_propio = elegido not in colores | map(attribute=1) | list %}
       <label class="muestra">
         <input type="radio" name="color" value="propio" {{ "checked" if es_propio }}>
-        <input type="color" name="color_propio" value="{{ elegido | lower }}" aria-label="Elegir otro color"
-               class="muestra-circulo selector-color">
-        <span>Otro</span>
+        <span class="muestra-icono muestra-otro {{ 'con-color' if es_propio }}" style="--muestra: {{ elegido }}">
+          <input type="color" name="color_propio" value="{{ elegido | lower }}" aria-label="Elegir otro color" class="selector-color">
+          <span class="muestra-check" aria-hidden="true">✓</span>
+        </span>
+        <span class="muestra-nombre">Otro</span>
       </label>
     </div>
   </fieldset>
@@ -57,6 +59,9 @@
   });
   propio.addEventListener("input", function () {
     propio.closest("label").querySelector("input[type=radio]").checked = true;
+    var icono = propio.closest(".muestra-icono");
+    icono.style.setProperty("--muestra", propio.value);
+    icono.classList.add("con-color");
     probar(propio.value);
   });
 })();
