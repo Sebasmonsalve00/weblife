@@ -88,8 +88,9 @@ TRANSICIONES = {
 }
 
 # Orden de páginas para el scroll continuo. Son los nombres de las rutas de app.py.
+# Inicio (la bienvenida) va aparte: solo se llega con el botón "weblife".
 # La última no lleva a ninguna. El nombre que se muestra sale del menú de contenido.py.
-ORDEN_PAGINAS = ["inicio", "horario", "tareas", "pendientes", "calendario_vista", "asistencia"]
+ORDEN_PAGINAS = ["horario", "tareas", "pendientes", "calendario_vista", "asistencia"]
 
 PAGINA_SIGUIENTE = {
     "anterior": True,   # al subir arriba del todo, la página anterior aparece encima

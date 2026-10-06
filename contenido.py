@@ -134,7 +134,7 @@ FOOTER = [
     {"titulo": "Clases", "enlaces": [("Horario", "horario"), ("Asistencia", "asistencia")]},
     {"titulo": "Tareas", "enlaces": [("Tareas", "tareas"), ("Calendario", "calendario_vista"),
                                      ("Pendientes", "pendientes")]},
-    {"titulo": "Accesos rápidos", "enlaces": [("Inicio", "inicio"), ("Nueva tarea", "tareas"),
+    {"titulo": "Accesos rápidos", "enlaces": [("Nueva tarea", "tareas"),
                                               ("Marcar asistencia", "horario"), ("Mi perfil", "perfil")]},
     {"titulo": "Hoy", "enlaces": [("Clases de hoy", "horario"), ("Lo pendiente", "pendientes"),
                                   ("Mes actual", "calendario_vista")]},

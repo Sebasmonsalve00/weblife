@@ -696,10 +696,32 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
    El enlace "Siguiente" queda entre las dos como separador. */
 .tramo + .tramo { border-top: 1px solid var(--borde); }
 
+/* ---------- Pantalla de carga de la bienvenida (Inicio) ---------- */
+/* La barra se llena, la pantalla se desvanece y entra el saludo */
+.carga {
+  position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px; background: var(--color-fondo);
+  animation: carga-sale 450ms var(--easing) 1100ms forwards;
+}
+.carga-logo { font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; animation: carga-logo 600ms var(--easing) both; }
+.carga-barra { width: 160px; height: 3px; border-radius: 3px; background: var(--borde); overflow: hidden; }
+.carga-barra i { display: block; height: 100%; background: var(--color-texto); transform-origin: left;
+                 animation: carga-llena 950ms cubic-bezier(0.65, 0, 0.35, 1) 150ms both; }
+@keyframes carga-logo { from { opacity: 0; transform: translateY(8px); } }
+@keyframes carga-llena { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes carga-sale { to { opacity: 0; visibility: hidden; } }
+/* El saludo entra cuando la pantalla de carga se va */
+.js .con-carga .hero-entrada > * { animation-delay: 1250ms; }
+.js .con-carga .hero-entrada > *:nth-child(2) { animation-delay: 1370ms; }
+.js .con-carga .hero-entrada > *:nth-child(3) { animation-delay: 1490ms; }
+.js .con-carga .hero-entrada > *:nth-child(4) { animation-delay: 1610ms; }
+html:not(.js) .carga { display: none; }
+
 /* Sin animaciones si la persona lo pidió en su sistema */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal, .js .hero-entrada > * { opacity: 1 !important; transform: none !important; }
+  .carga { display: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   .scroll-section { height: auto; }
   .scroll-sticky { position: static; height: auto; }
