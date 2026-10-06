@@ -12,7 +12,7 @@
       {% for nombre, color in colores %}
         <label class="muestra">
           <input type="radio" name="color" value="{{ color }}" {{ "checked" if color == elegido }}>
-          <span class="muestra-icono" style="--muestra: {{ color }}"><span class="muestra-check" aria-hidden="true">✓</span></span>
+          <span class="muestra-icono" style="--muestra: {{ color }}"><svg class="muestra-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M7 12.4l3.2 3.2L17 8.8"/></svg></span>
           <span class="muestra-nombre">{{ nombre }}</span>
         </label>
       {% endfor %}
@@ -22,7 +22,7 @@
         <input type="radio" name="color" value="propio" {{ "checked" if es_propio }}>
         <span class="muestra-icono muestra-otro {{ 'con-color' if es_propio }}" style="--muestra: {{ elegido }}">
           <input type="color" name="color_propio" value="{{ elegido | lower }}" aria-label="Elegir otro color" class="selector-color">
-          <span class="muestra-check" aria-hidden="true">✓</span>
+          <svg class="muestra-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11"/><path d="M7 12.4l3.2 3.2L17 8.8"/></svg>
         </span>
         <span class="muestra-nombre">Otro</span>
       </label>

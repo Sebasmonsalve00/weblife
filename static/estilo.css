@@ -487,15 +487,18 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   position: relative; width: 60px; height: 60px; border-radius: 27%;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 48%),
-    linear-gradient(180deg, var(--muestra), color-mix(in srgb, var(--muestra) 88%, #1D1D1F));
+    linear-gradient(180deg, color-mix(in srgb, var(--muestra) 88%, #1D1D1F), color-mix(in srgb, var(--muestra) 76%, #1D1D1F));
   box-shadow: inset 0 0 0 2px #1D1D1F, 0 1px 2px rgba(29, 29, 31, 0.10), 0 6px 14px rgba(29, 29, 31, 0.10);
   display: flex; align-items: center; justify-content: center;
   transition: transform 200ms var(--easing), box-shadow 200ms var(--easing);
 }
 .muestra:hover .muestra-icono { transform: translateY(-2px) scale(1.04); }
 .muestra:active .muestra-icono { transform: scale(0.94); }
-.muestra-check { color: var(--color-texto); font-size: 22px; font-weight: 700; opacity: 0; transform: scale(0.6);
-                 transition: opacity 200ms ease, transform 200ms var(--easing); }
+/* El check de Apple: círculo azul con la marca blanca, en la esquina del icono */
+.muestra-check { position: absolute; right: -7px; bottom: -7px; width: 24px; height: 24px; opacity: 0; transform: scale(0.6);
+                 filter: drop-shadow(0 1px 2px rgba(29, 29, 31, 0.25)); transition: opacity 200ms ease, transform 200ms var(--easing); }
+.muestra-check circle { fill: #007AFF; stroke: #FFFFFF; stroke-width: 1.6; }
+.muestra-check path { fill: none; stroke: #FFFFFF; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .muestra > input[type=radio]:checked + .muestra-icono {
   box-shadow: inset 0 0 0 2px #1D1D1F, 0 0 0 3px var(--color-fondo), 0 0 0 5px var(--color-texto), 0 6px 14px rgba(29, 29, 31, 0.12);
 }
@@ -510,7 +513,6 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
     linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 48%),
     linear-gradient(180deg, #4A4A4F, #2C2C2E);
 }
-.muestra-otro:not(.con-color) .muestra-check { color: #FFFFFF; }
 .selector-color { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; }
 .ajustes-botones { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
 .muestra-color { display: inline-block; width: 16px; height: 16px; border-radius: 27%; vertical-align: middle;
