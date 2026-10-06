@@ -21,6 +21,25 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
   <!-- Marcamos que hay JavaScript antes de dibujar, para que las animaciones no parpadeen -->
   <script>document.documentElement.classList.add("js");</script>
+  {% if efectos.transiciones_pagina %}
+  <!-- Transición suave entre páginas (los navegadores sin soporte navegan normal) -->
+  <style>@view-transition { navigation: auto; }</style>
+  <script>
+    // Si venimos de "seguir bajando", la página nueva entra desde abajo.
+    try {
+      if (sessionStorage.getItem("weblife-siguiente")) {
+        sessionStorage.removeItem("weblife-siguiente");
+        document.documentElement.classList.add("transicion-siguiente");
+        window.addEventListener("pagereveal", function (e) {
+          var quitar = function () { document.documentElement.classList.remove("transicion-siguiente"); };
+          if (e.viewTransition) e.viewTransition.finished.then(quitar, quitar); else quitar();
+        });
+        setTimeout(function () { document.documentElement.classList.remove("transicion-siguiente"); }, 2000);
+      }
+    } catch (e) {}
+  </script>
+  {% endif %}
+  {% if not efectos.microinteracciones %}<script>document.documentElement.classList.add("sin-micro");</script>{% endif %}
 </head>
 <body class="{% block clase_body %}{% endblock %}">
   <!-- Enlace para saltar el menú con el teclado (accesibilidad) -->
@@ -92,6 +111,9 @@
     {# Cada página rellena este bloque con su propio contenido #}
     {% block contenido %}{% endblock %}
   </main>
+  {# Cosas fijas en pantalla (como los avisos del calendario) van fuera de <main>,
+     para que no se muevan con el efecto de "seguir bajando" #}
+  {% block fuera_main %}{% endblock %}
 
   {% block pie %}
   <!-- ===== Footer: 4 columnas de enlaces ===== -->
@@ -116,14 +138,33 @@
   </footer>
   {% endblock %}
 
+  {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
+  <!-- Bloque "Siguiente": enlace a la página que sigue. Al seguir bajando se llena el círculo -->
+  <a id="siguiente" class="siguiente" href="{{ url_for(siguiente[1]) }}">
+    <span class="siguiente-texto">Siguiente: <b>{{ siguiente[0] }}</b></span>
+    <span class="siguiente-circulo" aria-hidden="true">
+      <svg viewBox="0 0 36 36"><circle class="pista" cx="18" cy="18" r="16"/><circle class="relleno" cx="18" cy="18" r="16"/></svg>
+      <span class="siguiente-flecha">↓</span>
+    </span>
+  </a>
+  {% endif %}
+
   <!-- Animaciones, menú móvil y validación de formularios -->
   <script>
     window.WEBLIFE = {
       escalonado: {{ valores_js.escalonado }},
       menuRetraso: {{ valores_js.menuRetraso }},
+      efectos: {{ valores_js.efectos | tojson }},
+      palabraInicial: {{ valores_js.palabraInicial }},
+      siguiente: {{ valores_js.siguiente | tojson }},
       mensajes: {{ {"obligatorio": texto.mensajes.campo_obligatorio, "numero": texto.mensajes.numero_invalido} | tojson }}
     };
   </script>
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  <!-- Motor de scroll (titulares por palabra y secciones animadas) -->
+  <script src="{{ url_for('static', filename='scroll-engine.js') }}" defer></script>
+  {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
+  <script src="{{ url_for('static', filename='pagina-siguiente.js') }}" defer></script>
+  {% endif %}
 </body>
 </html>

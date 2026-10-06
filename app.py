@@ -193,6 +193,8 @@ def datos_para_plantillas():
         "variables_css": config_diseno.variables_css(),
         "fuente": config_diseno.FUENTE,
         "valores_js": config_diseno.valores_js(),
+        "efectos": config_diseno.EFECTOS,
+        "siguiente": config_diseno.pagina_siguiente(request.endpoint, contenido.MENU),
         "texto": contenido.todo(),
     }
 

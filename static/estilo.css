@@ -249,7 +249,7 @@ button, .boton {
   line-height: 1.2;
 }
 button:hover, .boton:hover { transform: scale(1.03); }
-button:active, .boton:active { transform: scale(0.98); }
+button:active, .boton:active { transform: scale(0.97); }
 .boton-secundario { background: transparent; color: var(--color-texto); border-color: var(--borde-boton); }
 .boton-chico { padding: 9px 18px; font-size: 14px; }
 .boton-icono {
@@ -272,6 +272,12 @@ button:active, .boton:active { transform: scale(0.98); }
   transition: transform var(--t-boton) ease, box-shadow var(--t-boton) ease;
 }
 .tarjeta-interactiva:hover { transform: translateY(-6px); box-shadow: var(--sombra-hover); }
+/* Si una tarjeta tiene imagen, hace un zoom suave al pasar el ratón */
+.tarjeta img { transition: transform 600ms var(--easing); }
+.tarjeta-interactiva:hover img { transform: scale(1.04); }
+/* Microinteracciones apagadas desde config_diseno.py */
+.sin-micro button:hover, .sin-micro .boton:hover, .sin-micro button:active, .sin-micro .boton:active,
+.sin-micro .tarjeta-interactiva:hover { transform: none; }
 .tarjeta h3 { margin-bottom: 8px; }
 .tarjeta .descripcion {
   color: var(--texto-secundario);
@@ -465,6 +471,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .mes-navegacion { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .mes-navegacion h2 { margin: 0; min-width: 0; }
 /* Avisos fijos arriba a la izquierda (en móvil van dentro de la página) */
+.avisos-contenedor { padding-bottom: 64px; }
 .avisos { display: flex; flex-direction: column; gap: 12px; margin-top: 32px; }
 .aviso-caja {
   background: var(--color-fondo); border: 1px solid var(--borde); border-radius: var(--radio-input);
@@ -477,6 +484,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .cuenta { font-variant-numeric: tabular-nums; font-weight: 600; margin-top: 2px; }
 .aviso-examenes .cuenta { color: var(--color-texto); background: var(--acento-suave); border-radius: 8px; padding: 2px 8px; align-self: flex-start; }
 @media (min-width: 1024px) {
+  .avisos-contenedor { display: contents; padding: 0; }
   /* Empiezan arriba (debajo del menú) y crecen hacia abajo */
   .avisos { position: fixed; left: 16px; top: 80px; z-index: 30; width: 240px; margin: 0;
             max-height: calc(100vh - 96px); overflow-y: auto; }
@@ -602,10 +610,76 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .js .hero-entrada > *:nth-child(4) { animation-delay: 360ms; }
 @keyframes entrar { to { opacity: 1; transform: none; } }
 
+/* ---------- Motor de scroll: secciones animadas (scroll-engine.js) ---------- */
+/* Alto de la sección: style="--alto: var(--alto-larga)" (corta 200vh, media 300vh, larga 400vh) */
+.scroll-section { position: relative; height: var(--alto, var(--alto-media)); }
+.scroll-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+/* Sin JavaScript: altura natural y todo visible */
+html:not(.js) .scroll-section { height: auto; }
+html:not(.js) .scroll-sticky { position: static; height: auto; }
+html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; filter: none !important; }
+
+/* Titulares por palabra: cada palabra cambia de opacidad con el scroll */
+[data-revelar-palabras] .palabra { transition: none; }
+
+/* ---------- Transiciones entre páginas (View Transitions) ---------- */
+::view-transition-old(root) { animation: pagina-sale var(--t-pagina) var(--easing) both; }
+::view-transition-new(root) { animation: pagina-entra var(--t-pagina) var(--easing) both; }
+@keyframes pagina-sale { to { opacity: 0; transform: translateY(-12px); } }
+@keyframes pagina-entra { from { opacity: 0; transform: translateY(12px); } }
+/* Al "seguir bajando": la actual sale hacia arriba y la nueva entra desde abajo */
+.transicion-siguiente::view-transition-old(root) { animation: siguiente-sale var(--t-siguiente) var(--easing) both; }
+.transicion-siguiente::view-transition-new(root) { animation: siguiente-entra var(--t-siguiente) var(--easing) both; }
+@keyframes siguiente-sale { to { opacity: 0; transform: translateY(-80px); } }
+@keyframes siguiente-entra { from { opacity: 0; transform: translateY(80px); } }
+/* El menú y el footer no se animan */
+.nav { view-transition-name: menu; }
+.footer { view-transition-name: pie; }
+::view-transition-group(menu), ::view-transition-group(pie),
+::view-transition-new(menu), ::view-transition-new(pie) { animation: none; }
+::view-transition-old(menu), ::view-transition-old(pie) { display: none; }
+
+/* ---------- Bloque "Siguiente" (debajo del footer) ---------- */
+.siguiente {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 0 auto; padding: 28px 24px 40px; max-width: 420px;
+  color: var(--color-texto); text-decoration: none; font-size: 15px;
+}
+.siguiente-texto { color: var(--texto-secundario); }
+.siguiente-texto b { color: var(--color-texto); font-weight: 600; }
+.siguiente-circulo { position: relative; width: 40px; height: 40px; flex-shrink: 0; }
+.siguiente-circulo svg { width: 40px; height: 40px; transform: rotate(-90deg); }
+.siguiente-circulo circle { fill: none; stroke-width: 2.5; }
+.siguiente-circulo .pista { stroke: var(--borde-boton); }
+.siguiente-circulo .relleno {
+  stroke: var(--color-texto); stroke-linecap: round;
+  stroke-dasharray: 100.53; stroke-dashoffset: calc(100.53 * (1 - var(--siguiente, 0)));
+}
+.siguiente-flecha { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; }
+.siguiente:hover .siguiente-flecha { transform: translateY(2px); }
+/* Al acercarse al umbral: el contenido sube y se aclara, el bloque crece de 0.95 a 1 */
+.js .siguiente { transform: scale(calc(0.95 + 0.05 * var(--siguiente, 0))); }
+.js main, .js .footer {
+  transform: translateY(calc(var(--siguiente, 0) * var(--empuje) * -1));
+  opacity: calc(1 - 0.4 * var(--siguiente, 0));
+}
+.js .siguiente, .js .siguiente-circulo .relleno,
+.js main, .js .footer {
+  transition: transform var(--t-volver) var(--easing), opacity var(--t-volver) var(--easing),
+              stroke-dashoffset var(--t-volver) var(--easing);
+}
+/* Mientras el gesto sigue, sin transición: sigue al dedo o a la rueda */
+.siguiente-activo .siguiente, .siguiente-activo .siguiente-circulo .relleno,
+.siguiente-activo main, .siguiente-activo .footer { transition: none !important; }
+
 /* Sin animaciones si la persona lo pidió en su sistema */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal, .js .hero-entrada > * { opacity: 1 !important; transform: none !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  .scroll-section { height: auto; }
+  .scroll-sticky { position: static; height: auto; }
+  [data-anim] { opacity: 1 !important; transform: none !important; filter: none !important; }
 }
 
 /* Texto solo para lectores de pantalla (invisible en pantalla) */

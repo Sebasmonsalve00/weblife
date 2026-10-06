@@ -65,6 +65,42 @@ ANIMACION = {
     "flotar_manchas": 20000, # 20 segundos
 }
 
+# ---- Efectos de scroll e interacción (cada uno se puede apagar con False) ----
+EFECTOS = {
+    "motor_scroll": True,          # scroll-engine.js: secciones .scroll-section y atributos data-anim
+    "titulares_por_palabra": True, # titulares que se encienden palabra por palabra al bajar
+    "transiciones_pagina": True,   # fundido suave al cambiar de página (View Transitions)
+    "pagina_siguiente": True,      # al seguir bajando al final, pasa a la página siguiente
+    "microinteracciones": True,    # botones que crecen/se encogen, tarjetas que suben
+}
+
+# Secciones con scroll animado (para cuando se añadan): alto de cada tipo.
+SCROLL = {
+    "alturas": {"corta": "200vh", "media": "300vh", "larga": "400vh"},
+    "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+    # Titulares por palabra: empiezan al 15% de opacidad.
+    "opacidad_inicial_palabras": 0.15,
+}
+
+# Tiempos de las transiciones entre páginas (en milisegundos).
+TRANSICIONES = {
+    "pagina": 450,       # cambio normal de página
+    "siguiente": 600,    # cambio al seguir bajando
+}
+
+# Orden de páginas para "seguir bajando". Son los nombres de las rutas de app.py.
+# La última no lleva a ninguna. El nombre que se muestra sale del menú de contenido.py.
+ORDEN_PAGINAS = ["inicio", "horario", "tareas", "pendientes", "calendario_vista", "asistencia"]
+
+PAGINA_SIGUIENTE = {
+    "umbral_escritorio": 300,   # px de rueda/trackpad acumulados al final de la página
+    "umbral_movil": 120,        # px de dedo arrastrado hacia arriba
+    "espera_inercia": 400,      # ms al llegar al final antes de empezar a contar
+    "reinicio": 600,            # ms sin bajar para que el acumulado vuelva a 0
+    "volver": 400,              # ms que tarda todo en volver a su sitio si se cancela
+    "empuje": 40,               # px que sube el contenido al acercarse al umbral
+}
+
 # ---- 6. Layout ----
 CONTENEDOR = {
     "ancho_maximo": "1200px",
@@ -123,6 +159,15 @@ def variables_css():
         "--padding-movil": CONTENEDOR["padding_movil"],
         "--padding-escritorio": CONTENEDOR["padding_escritorio"],
         "--hero-altura": HERO_ALTURA,
+        "--easing": SCROLL["easing"],
+        "--t-pagina": f"{TRANSICIONES['pagina']}ms",
+        "--t-siguiente": f"{TRANSICIONES['siguiente']}ms",
+        "--t-volver": f"{PAGINA_SIGUIENTE['volver']}ms",
+        "--empuje": f"{PAGINA_SIGUIENTE['empuje']}px",
+        "--alto-corta": SCROLL["alturas"]["corta"],
+        "--alto-media": SCROLL["alturas"]["media"],
+        "--alto-larga": SCROLL["alturas"]["larga"],
+        "--palabra-inicial": SCROLL["opacidad_inicial_palabras"],
     }
     return "\n".join(f"  {nombre}: {valor};" for nombre, valor in variables.items())
 
@@ -132,4 +177,26 @@ def valores_js():
     return {
         "escalonado": ANIMACION["escalonado"],
         "menuRetraso": ANIMACION["menu_movil_retraso"],
+        "efectos": EFECTOS,
+        "palabraInicial": SCROLL["opacidad_inicial_palabras"],
+        "siguiente": {
+            "umbralEscritorio": PAGINA_SIGUIENTE["umbral_escritorio"],
+            "umbralMovil": PAGINA_SIGUIENTE["umbral_movil"],
+            "esperaInercia": PAGINA_SIGUIENTE["espera_inercia"],
+            "reinicio": PAGINA_SIGUIENTE["reinicio"],
+        },
     }
+
+
+def pagina_siguiente(ruta_actual, menu):
+    """Devuelve (nombre, ruta) de la página que sigue a la actual, o None si es la última
+    o si la página no está en ORDEN_PAGINAS. "menu" es la lista (nombre, ruta) de contenido.py."""
+    if ruta_actual not in ORDEN_PAGINAS:
+        return None
+    posicion = ORDEN_PAGINAS.index(ruta_actual)
+    if posicion + 1 >= len(ORDEN_PAGINAS):
+        return None
+    ruta = ORDEN_PAGINAS[posicion + 1]
+    nombres = dict((r, n) for n, r in menu)
+    nombres.setdefault("inicio", "Inicio")
+    return nombres.get(ruta, ruta), ruta

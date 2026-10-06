@@ -153,53 +153,6 @@
     </table>
   </div>
 </section>
-<!-- ===== Avisos fijos arriba a la izquierda: exámenes y entregas de menos de una semana ===== -->
-<aside class="avisos" aria-label="Avisos importantes">
-  <section class="aviso-caja aviso-examenes">
-    <h2>Próximos exámenes</h2>
-    {% for a in avisos.examenes %}
-      <div class="aviso-item">
-        <b>{{ a.titulo | replace("Examen: ", "") }}</b>
-        <small>{{ a.fecha }}{% if a.hora %} · {{ a.hora }}{% endif %}</small>
-        <span class="cuenta" data-objetivo="{{ a.objetivo }}"></span>
-      </div>
-    {% else %}
-      <p class="vacio">No tienes exámenes próximos.</p>
-    {% endfor %}
-  </section>
-  {% if avisos.urgentes %}
-  <section class="aviso-caja aviso-urgente">
-    <h2>Próxima semana</h2>
-    {% for a in avisos.urgentes %}
-      <div class="aviso-item">
-        <b>{{ a.titulo }}</b>
-        <small>{{ a.fecha }}{% if a.hora %} · {{ a.hora }}{% endif %}</small>
-        <span class="cuenta" data-objetivo="{{ a.objetivo }}"></span>
-      </div>
-    {% endfor %}
-  </section>
-  {% endif %}
-</aside>
-<!-- Cuenta regresiva: se actualiza cada segundo -->
-<script>
-(function () {
-  var cuentas = document.querySelectorAll(".cuenta[data-objetivo]");
-  function actualizar() {
-    var ahora = Date.now();
-    cuentas.forEach(function (el) {
-      var falta = Math.max(0, new Date(el.dataset.objetivo) - ahora);
-      var s = Math.floor(falta / 1000);
-      var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
-          m = Math.floor(s % 3600 / 60), seg = s % 60;
-      el.textContent = falta === 0 ? "¡Es ahora!" :
-        (d ? d + " d " : "") + h + " h " + m + " min " + seg + " s";
-    });
-  }
-  actualizar();
-  setInterval(actualizar, 1000);
-})();
-</script>
-
 <!-- Las opciones de "Curso" y "Convocatoria" cambian según lo elegido antes -->
 <script>
 (function () {
@@ -275,4 +228,55 @@
   });
 })();
 </script>
+{% endblock %}
+
+{% block fuera_main %}
+<div class="contenedor avisos-contenedor">
+<!-- ===== Avisos fijos arriba a la izquierda: exámenes y entregas de menos de una semana ===== -->
+<aside class="avisos" aria-label="Avisos importantes">
+  <section class="aviso-caja aviso-examenes">
+    <h2>Próximos exámenes</h2>
+    {% for a in avisos.examenes %}
+      <div class="aviso-item">
+        <b>{{ a.titulo | replace("Examen: ", "") }}</b>
+        <small>{{ a.fecha }}{% if a.hora %} · {{ a.hora }}{% endif %}</small>
+        <span class="cuenta" data-objetivo="{{ a.objetivo }}"></span>
+      </div>
+    {% else %}
+      <p class="vacio">No tienes exámenes próximos.</p>
+    {% endfor %}
+  </section>
+  {% if avisos.urgentes %}
+  <section class="aviso-caja aviso-urgente">
+    <h2>Próxima semana</h2>
+    {% for a in avisos.urgentes %}
+      <div class="aviso-item">
+        <b>{{ a.titulo }}</b>
+        <small>{{ a.fecha }}{% if a.hora %} · {{ a.hora }}{% endif %}</small>
+        <span class="cuenta" data-objetivo="{{ a.objetivo }}"></span>
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+</aside>
+<!-- Cuenta regresiva: se actualiza cada segundo -->
+<script>
+(function () {
+  var cuentas = document.querySelectorAll(".cuenta[data-objetivo]");
+  function actualizar() {
+    var ahora = Date.now();
+    cuentas.forEach(function (el) {
+      var falta = Math.max(0, new Date(el.dataset.objetivo) - ahora);
+      var s = Math.floor(falta / 1000);
+      var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600),
+          m = Math.floor(s % 3600 / 60), seg = s % 60;
+      el.textContent = falta === 0 ? "¡Es ahora!" :
+        (d ? d + " d " : "") + h + " h " + m + " min " + seg + " s";
+    });
+  }
+  actualizar();
+  setInterval(actualizar, 1000);
+})();
+</script>
+</div>
 {% endblock %}

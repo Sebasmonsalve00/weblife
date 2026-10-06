@@ -66,10 +66,10 @@
 
   // ---------- 3. Aparecer al hacer scroll ----------
   var elementos = document.querySelectorAll(".reveal");
-  // Retraso escalonado de 100ms entre hermanos dentro de un mismo grid
+  // Retraso escalonado de 100ms entre hermanos (elementos .reveal con el mismo padre)
   elementos.forEach(function (el) {
     var padre = el.parentElement;
-    if (padre && padre.classList.contains("grid-12")) {
+    if (padre) {
       var hermanos = Array.prototype.filter.call(padre.children, function (h) {
         return h.classList.contains("reveal");
       });
