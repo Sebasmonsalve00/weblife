@@ -196,6 +196,7 @@ def datos_para_plantillas():
         "efectos": config_diseno.EFECTOS,
         "siguiente": config_diseno.pagina_siguiente(request.endpoint, contenido.MENU),
         "anterior": config_diseno.pagina_anterior(request.endpoint, contenido.MENU),
+        "fondo": config_diseno.colores_fondo(request.endpoint),
         "texto": contenido.todo(),
     }
 

@@ -701,12 +701,49 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 /* Transición entre páginas: la actual se queda quieta (sticky, la colocación la
    calcula pagina-siguiente.js) y la siguiente sube por encima, como una hoja.
    Mientras sube, lo de la página de debajo se difumina y desaparece (--cubierto de 0 a 1). */
+.tramo { position: relative; isolation: isolate; background: var(--color-fondo); }
 .tramo.pegado { position: sticky; }
 .tramo + .tramo {
-  position: relative;
-  background: color-mix(in srgb, var(--color-fondo) 97%, transparent);
   border-radius: 32px 32px 0 0;
   box-shadow: 0 -12px 40px rgba(29, 29, 31, 0.08);
+}
+
+/* ---------- Fondo de burbujas ----------
+   Burbujas difuminadas juntas sobre el blanco de la paleta. Su color va del celeste
+   (arriba de la primera página) al casi blanco (abajo de la última): cada página
+   recibe su color de arriba y de abajo (--burbuja-arriba / --burbuja-abajo,
+   calculados en config_diseno.py), así el degradado sigue de una página a otra.
+   La forma de las burbujas es una máscara que se repite; el color, un degradado. */
+.tramo::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, var(--burbuja-arriba, transparent), var(--burbuja-abajo, transparent));
+  --b: rgba(0, 0, 0, 1);
+  -webkit-mask-image:
+    radial-gradient(circle at 12% 26%, var(--b) 0 70px, transparent 190px),
+    radial-gradient(circle at 24% 36%, var(--b) 0 45px, transparent 140px),
+    radial-gradient(circle at 6% 46%, var(--b) 0 35px, transparent 120px),
+    radial-gradient(circle at 80% 28%, var(--b) 0 90px, transparent 220px),
+    radial-gradient(circle at 92% 42%, var(--b) 0 40px, transparent 120px),
+    radial-gradient(circle at 68% 38%, var(--b) 0 30px, transparent 110px),
+    radial-gradient(circle at 40% 70%, var(--b) 0 80px, transparent 210px),
+    radial-gradient(circle at 54% 76%, var(--b) 0 45px, transparent 140px),
+    radial-gradient(circle at 28% 76%, var(--b) 0 30px, transparent 110px),
+    radial-gradient(circle at 88% 74%, var(--b) 0 55px, transparent 160px);
+  mask-image:
+    radial-gradient(circle at 12% 26%, var(--b) 0 70px, transparent 190px),
+    radial-gradient(circle at 24% 36%, var(--b) 0 45px, transparent 140px),
+    radial-gradient(circle at 6% 46%, var(--b) 0 35px, transparent 120px),
+    radial-gradient(circle at 80% 28%, var(--b) 0 90px, transparent 220px),
+    radial-gradient(circle at 92% 42%, var(--b) 0 40px, transparent 120px),
+    radial-gradient(circle at 68% 38%, var(--b) 0 30px, transparent 110px),
+    radial-gradient(circle at 40% 70%, var(--b) 0 80px, transparent 210px),
+    radial-gradient(circle at 54% 76%, var(--b) 0 45px, transparent 140px),
+    radial-gradient(circle at 28% 76%, var(--b) 0 30px, transparent 110px),
+    radial-gradient(circle at 88% 74%, var(--b) 0 55px, transparent 160px);
+  /* Todo el ancho, y se repite hacia abajo cada 1000px (las burbujas no tocan los bordes) */
+  -webkit-mask-size: 100% 1000px; mask-size: 100% 1000px;
+  -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y;
 }
 .tramo + .tramo.pegado { position: sticky; }
 /* (Los avisos fijos del calendario van en una caja con display: contents, así que

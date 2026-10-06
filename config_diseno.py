@@ -92,6 +92,33 @@ TRANSICIONES = {
 # La última no lleva a ninguna. El nombre que se muestra sale del menú de contenido.py.
 ORDEN_PAGINAS = ["horario", "tareas", "pendientes", "calendario_vista", "asistencia"]
 
+# Fondo de burbujas: del celeste (acento) de la primera página al blanco (fondo)
+# de la última. "hasta" = cuánto se acerca al blanco al final (1 sería blanco del todo).
+FONDO_BURBUJAS = {
+    "hasta": 0.8,        # en la última página aún queda un 20% de celeste
+    "opacidad": 0.75,    # opacidad de las burbujas
+}
+
+
+def _mezclar(hex_a, hex_b, cuanto):
+    """Color entre hex_a (cuanto=0) y hex_b (cuanto=1), en "r, g, b"."""
+    a = [int(hex_a[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(hex_b[i:i + 2], 16) for i in (1, 3, 5)]
+    return ", ".join(str(round(x + (y - x) * cuanto)) for x, y in zip(a, b))
+
+
+def colores_fondo(ruta):
+    """Colores de las burbujas arriba y abajo de una página, según su lugar en ORDEN_PAGINAS.
+    La primera empieza en celeste y la última termina casi blanca: un degradado continuo."""
+    total = len(ORDEN_PAGINAS)
+    posicion = ORDEN_PAGINAS.index(ruta) if ruta in ORDEN_PAGINAS else 0
+    color = lambda t: "rgba({}, {})".format(
+        _mezclar(COLORES["acento"], COLORES["fondo"], t * FONDO_BURBUJAS["hasta"]), FONDO_BURBUJAS["opacidad"])
+    if ruta not in ORDEN_PAGINAS:
+        return {"arriba": color(0), "abajo": color(0)}
+    return {"arriba": color(posicion / total), "abajo": color((posicion + 1) / total)}
+
+
 PAGINA_SIGUIENTE = {
     "anterior": True,   # al subir arriba del todo, la página anterior aparece encima
     "precarga": 1.5,    # cuántas pantallas antes del final se carga la página siguiente

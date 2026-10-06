@@ -86,7 +86,8 @@
 
   {# Cada página es un "tramo". Al seguir bajando, el tramo de la página siguiente
      se añade debajo (y al subir, el de la anterior encima): scroll continuo. #}
-  <div class="tramo actual {{ self.clase_body() | trim }}" data-url="{{ request.path }}" data-titulo="{{ self.titulo() | trim }}"
+  <div class="tramo actual {{ self.clase_body() | trim }}" data-url="{{ request.path }}"
+       style="--burbuja-arriba: {{ fondo.arriba }}; --burbuja-abajo: {{ fondo.abajo }};" data-titulo="{{ self.titulo() | trim }}"
        {% if efectos.pagina_siguiente and anterior and session.usuario_id and valores_js.siguiente.anterior %}data-anterior="{{ url_for(anterior[1]) }}"{% endif %}>
   <main id="contenido" class="contenedor tramo-cuerpo">
     <!-- Mensajes de éxito (por ejemplo "Tarea guardada.") en un panel difuminado -->
