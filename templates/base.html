@@ -126,6 +126,11 @@
      para que no se muevan con el efecto de "seguir bajando" #}
   {% block fuera_main %}{% endblock %}
 
+  {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
+  <!-- Enlace "Siguiente": la página que sigue. Al seguir bajando, la página se apaga y pasa a la siguiente -->
+  <a id="siguiente" class="siguiente" href="{{ url_for(siguiente[1]) }}">Siguiente: <b>{{ siguiente[0] }}</b></a>
+  {% endif %}
+
   {% block pie %}
   <!-- ===== Footer: 4 columnas de enlaces ===== -->
   <footer class="footer">
@@ -154,10 +159,6 @@
   <a id="anterior" class="anterior" href="{{ url_for(anterior[1]) }}" aria-hidden="true" tabindex="-1">Anterior: <b>{{ anterior[0] }}</b></a>
   {% endif %}
 
-  {% if efectos.pagina_siguiente and siguiente and session.usuario_id %}
-  <!-- Enlace "Siguiente": la página que sigue. Al seguir bajando, la página se apaga y pasa a la siguiente -->
-  <a id="siguiente" class="siguiente" href="{{ url_for(siguiente[1]) }}">Siguiente: <b>{{ siguiente[0] }}</b></a>
-  {% endif %}
 
   <!-- Animaciones, menú móvil y validación de formularios -->
   <script>

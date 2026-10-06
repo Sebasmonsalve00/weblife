@@ -642,9 +642,9 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 ::view-transition-group(menu), ::view-transition-new(menu) { animation: none; }
 ::view-transition-old(menu) { display: none; }
 
-/* ---------- Enlace "Siguiente" (debajo del footer, discreto) ---------- */
+/* ---------- Enlace "Siguiente" (encima del footer, discreto) ---------- */
 .siguiente {
-  display: block; text-align: center; padding: 20px 24px 32px;
+  display: block; text-align: center; padding: 8px 24px 32px;
   color: var(--texto-secundario); text-decoration: none; font-size: 14px;
 }
 .siguiente b { color: var(--color-texto); font-weight: 600; }
