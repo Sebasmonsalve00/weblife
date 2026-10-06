@@ -146,7 +146,7 @@
     </table>
   </div>
 </section>
-<!-- ===== Avisos fijos arriba a la izquierda: exámenes y entregas de menos de 48 horas ===== -->
+<!-- ===== Avisos fijos arriba a la izquierda: exámenes y entregas de menos de una semana ===== -->
 <aside class="avisos" aria-label="Avisos importantes">
   <section class="aviso-caja aviso-examenes">
     <h2>Próximos exámenes</h2>
@@ -162,7 +162,7 @@
   </section>
   {% if avisos.urgentes %}
   <section class="aviso-caja aviso-urgente">
-    <h2>Menos de 48 horas</h2>
+    <h2>Próxima semana</h2>
     {% for a in avisos.urgentes %}
       <div class="aviso-item">
         <b>{{ a.titulo }}</b>

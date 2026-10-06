@@ -576,7 +576,7 @@ def pendientes():
 def avisos_calendario():
     """Arma los dos avisos del calendario:
     - examenes: los próximos exámenes (eventos que dicen "examen"), con su fecha y hora.
-    - urgentes: tareas sin hacer y eventos que vencen en menos de 48 horas.
+    - urgentes: tareas sin hacer y eventos que vencen en menos de una semana.
     "objetivo" es el momento exacto ("2026-12-07T12:00") que usa la cuenta regresiva."""
     ahora = datetime.now()
     hoy = date.today().isoformat()
@@ -593,15 +593,15 @@ def avisos_calendario():
                  "objetivo": objetivo.isoformat(timespec="minutes")}
         if "examen" in evento["titulo"].lower():
             examenes_proximos.append(aviso)
-        elif objetivo - ahora <= timedelta(hours=48):
+        elif objetivo - ahora <= timedelta(days=7):
             urgentes.append(aviso)
 
-    en_2_dias = (date.today() + timedelta(days=2)).isoformat()
+    en_7_dias = (date.today() + timedelta(days=7)).isoformat()
     for tarea in consultar("SELECT * FROM tareas WHERE usuario_id = ? AND hecha = 0 "
-                           "AND fecha_entrega BETWEEN ? AND ?", (yo(), hoy, en_2_dias)):
+                           "AND fecha_entrega BETWEEN ? AND ?", (yo(), hoy, en_7_dias)):
         # Una tarea se entrega como tarde al final de su día.
         objetivo = datetime.fromisoformat(f"{tarea['fecha_entrega']}T23:59")
-        if ahora <= objetivo and objetivo - ahora <= timedelta(hours=48):
+        if ahora <= objetivo and objetivo - ahora <= timedelta(days=7):
             urgentes.append({"titulo": tarea["titulo"], "fecha": tarea["fecha_entrega"], "hora": None,
                              "objetivo": objetivo.isoformat(timespec="minutes")})
 
