@@ -695,7 +695,30 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 .siguiente:hover b { text-decoration: underline; }
 /* Scroll continuo: cada página es un tramo y la siguiente aparece debajo.
    El enlace "Siguiente" queda entre las dos como separador. */
-.tramo + .tramo { border-top: 1px solid var(--borde); }
+/* Transición entre páginas: la actual se queda quieta (sticky, la colocación la
+   calcula pagina-siguiente.js) y la siguiente sube por encima, como una hoja.
+   Mientras sube, lo de la página de debajo se difumina y desaparece (--cubierto de 0 a 1). */
+.tramo.pegado { position: sticky; }
+.tramo + .tramo {
+  position: relative;
+  background: color-mix(in srgb, var(--color-fondo) 97%, transparent);
+  border-radius: 32px 32px 0 0;
+  box-shadow: 0 -12px 40px rgba(29, 29, 31, 0.08);
+}
+.tramo + .tramo.pegado { position: sticky; }
+/* (Los avisos fijos del calendario van en una caja con display: contents, así que
+   no les afecta: tienen su propio desvanecido) */
+.tramo > * {
+  opacity: calc(1 - var(--cubierto, 0));
+  filter: blur(calc(var(--cubierto, 0) * 10px));
+  transform: scale(calc(1 - var(--cubierto, 0) * 0.04));
+  transform-origin: 50% 100%;
+}
+/* Sin efecto mientras no la tapa nada (filter y transform cambian cómo se colocan las cosas fijas) */
+.tramo:not(.cubriendo) > * { filter: none; transform: none; }
+.tramo.tapado { visibility: hidden; }
+/* El footer pasa por encima de la última página */
+.footer { position: relative; z-index: 1; }
 
 /* ---------- Pantalla de carga de la bienvenida (Inicio) ---------- */
 /* La barra se llena, la pantalla se desvanece y entra el saludo */
@@ -723,6 +746,8 @@ html:not(.js) .carga { display: none; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal, .js .hero-entrada > * { opacity: 1 !important; transform: none !important; }
   .carga { display: none; }
+  .tramo.pegado { position: relative; top: auto !important; }
+  .tramo > * { opacity: 1 !important; filter: none !important; transform: none !important; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   .scroll-section { height: auto; }
   .scroll-sticky { position: static; height: auto; }

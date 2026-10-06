@@ -87,6 +87,8 @@
       cargadas[url] = true;
       ultimo.after(tramo);
       activar(tramo);
+      vigilar(tramo);
+      ajustarPegado();
     }).catch(function () {
       enlace.dataset.fallo = "1";   // si falla, el enlace sigue funcionando como siempre
     }).then(function () { cargando.abajo = false; revisar(); });
@@ -107,6 +109,8 @@
       var antes = arriba.getBoundingClientRect().top;
       arriba.before(tramo);
       activar(tramo);
+      vigilar(tramo);
+      ajustarPegado();
       window.scrollBy(0, arriba.getBoundingClientRect().top - antes);
     }).catch(function () {}).then(function () { cargando.arriba = false; });
   }
@@ -149,8 +153,41 @@
       var caja = t.getBoundingClientRect();
       if (caja.top <= linea && caja.bottom > linea) marcarActual(t);
     });
+    taparAnteriores(alto);
     difuminarAvisos(alto);
   }
+
+  // ---------- Transición: la página se queda quieta y la siguiente sube por encima ----------
+  // Cada página (menos la última) es "sticky": al llegar a su final se queda fija abajo,
+  // y la siguiente sube tapándola. Mientras sube, lo de debajo se difumina y desaparece.
+  function siguienteTramo(t) {
+    var otro = t.nextElementSibling;
+    return otro && otro.classList.contains("tramo") ? otro : null;
+  }
+  function ajustarPegado() {
+    var alto = window.innerHeight;
+    document.querySelectorAll(".tramo").forEach(function (t) {
+      var pega = !!siguienteTramo(t);
+      t.classList.toggle("pegado", pega);
+      // Se queda fija cuando su borde de abajo toca el de la pantalla
+      t.style.top = pega ? Math.min(0, alto - t.offsetHeight) + "px" : "";
+    });
+  }
+  // --cubierto: 0 = la siguiente aún no asoma, 1 = la siguiente ya llena la pantalla
+  function taparAnteriores(alto) {
+    document.querySelectorAll(".tramo").forEach(function (t) {
+      var debajo = siguienteTramo(t);
+      var cubierto = debajo ? limitar(1 - debajo.getBoundingClientRect().top / alto) : 0;
+      t.style.setProperty("--cubierto", cubierto.toFixed(3));
+      t.classList.toggle("cubriendo", cubierto > 0);
+      t.classList.toggle("tapado", cubierto >= 1);
+    });
+  }
+  // Si una página cambia de alto (se abre un panel, carga algo), recalculamos
+  var vigilaAlto = "ResizeObserver" in window ? new ResizeObserver(function () { ajustarPegado(); pedir(); }) : null;
+  function vigilar(t) { if (vigilaAlto) vigilaAlto.observe(t); }
+  document.querySelectorAll(".tramo").forEach(vigilar);
+  window.addEventListener("resize", ajustarPegado);
 
   // Los avisos fijos del calendario se desvanecen (y se desenfocan) siguiendo el scroll:
   // empiezan a irse cuando la página siguiente asoma por el 70% de la pantalla y
@@ -159,10 +196,14 @@
   function limitar(n) { return Math.max(0, Math.min(1, n)); }
   function difuminarAvisos(alto) {
     document.querySelectorAll(".tramo .avisos").forEach(function (avisos) {
-      var caja = avisos.closest(".tramo").getBoundingClientRect();
+      var suyo = avisos.closest(".tramo");
+      var caja = suyo.getBoundingClientRect();
+      // Su página se queda quieta al final: lo que cuenta es dónde va la siguiente
+      var debajo = siguienteTramo(suyo);
+      var abajo = debajo ? debajo.getBoundingClientRect().top : caja.bottom;
       var tramo = EMPIEZA - TERMINA;
       var entra = limitar((EMPIEZA - caja.top / alto) / tramo);      // al llegar desde arriba
-      var sale = limitar((caja.bottom / alto - TERMINA) / tramo);    // al irse hacia abajo
+      var sale = limitar((abajo / alto - TERMINA) / tramo);          // al irse hacia abajo
       var visible = Math.min(entra, sale);
       avisos.style.setProperty("--avisos-visible", visible.toFixed(3));
       avisos.classList.toggle("avisos-fuera", visible === 0);   // del todo ido: no se puede pulsar
@@ -199,5 +240,6 @@
   if (ajustes.anterior !== false && primero.dataset.anterior) {
     (window.requestIdleCallback || setTimeout)(function () { traer(primero.dataset.anterior); });
   }
+  ajustarPegado();
   revisar();
 })();
