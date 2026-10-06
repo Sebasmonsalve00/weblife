@@ -149,6 +149,24 @@
       var caja = t.getBoundingClientRect();
       if (caja.top <= linea && caja.bottom > linea) marcarActual(t);
     });
+    difuminarAvisos(alto);
+  }
+
+  // Los avisos fijos del calendario se desvanecen (y se desenfocan) siguiendo el scroll:
+  // empiezan a irse cuando la página siguiente asoma por el 70% de la pantalla y
+  // desaparecen del todo cuando llega al 37%. Al subir, vuelven igual.
+  var EMPIEZA = 0.70, TERMINA = 0.37;
+  function limitar(n) { return Math.max(0, Math.min(1, n)); }
+  function difuminarAvisos(alto) {
+    document.querySelectorAll(".tramo .avisos").forEach(function (avisos) {
+      var caja = avisos.closest(".tramo").getBoundingClientRect();
+      var tramo = EMPIEZA - TERMINA;
+      var entra = limitar((EMPIEZA - caja.top / alto) / tramo);      // al llegar desde arriba
+      var sale = limitar((caja.bottom / alto - TERMINA) / tramo);    // al irse hacia abajo
+      var visible = Math.min(entra, sale);
+      avisos.style.setProperty("--avisos-visible", visible.toFixed(3));
+      avisos.classList.toggle("avisos-fuera", visible === 0);   // del todo ido: no se puede pulsar
+    });
   }
   function pedir() { if (!pendiente) { pendiente = true; requestAnimationFrame(revisar); } }
   window.addEventListener("scroll", pedir, { passive: true });

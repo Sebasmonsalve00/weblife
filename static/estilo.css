@@ -497,9 +497,10 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   .avisos { position: fixed; left: 16px; top: 80px; z-index: 30; width: 240px; margin: 0;
             max-height: calc(100vh - 96px); overflow-y: auto; }
   .aviso-caja { max-height: 32vh; }
-  /* Con el scroll continuo, los avisos solo se ven mientras estás en el calendario */
-  .avisos { transition: opacity 300ms var(--easing), visibility 300ms; }
-  .tramo:not(.actual) .avisos { opacity: 0; visibility: hidden; }
+  /* Con el scroll continuo, los avisos se desvanecen y desenfocan al pasar a otra página
+     (--avisos-visible va de 1 a 0 siguiendo el scroll, lo calcula pagina-siguiente.js) */
+  .avisos { opacity: var(--avisos-visible, 1); filter: blur(calc((1 - var(--avisos-visible, 1)) * 12px)); }
+  .avisos.avisos-fuera { visibility: hidden; }
 }
 /* Si la pantalla no es muy ancha, corremos el contenido para que los avisos no lo tapen */
 @media (min-width: 1024px) and (max-width: 1759px) {
