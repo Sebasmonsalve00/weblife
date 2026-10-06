@@ -16,22 +16,55 @@
           <span class="muestra-nombre">{{ nombre }}</span>
         </label>
       {% endfor %}
-      {# Otro color: el que quieras, con el selector del navegador #}
+      {# Otro color: abre nuestro propio selector (estilo Apple) #}
       {% set es_propio = elegido not in colores | map(attribute=1) | list %}
-      <label class="muestra">
+      <label class="muestra" data-abrir-selector>
         <input type="radio" name="color" value="propio" {{ "checked" if es_propio }}>
-        <span class="muestra-icono muestra-otro {{ 'con-color' if es_propio }}" style="--muestra: {{ elegido }}">
-          <input type="color" name="color_propio" value="{{ elegido | lower }}" aria-label="Elegir otro color" class="selector-color">
-          
-        </span>
+        <span class="muestra-icono muestra-otro {{ 'con-color' if es_propio }}" style="--muestra: {{ elegido }}"></span>
         <span class="muestra-nombre">Otro</span>
       </label>
+      <input type="hidden" name="color_propio" value="{{ elegido }}">
     </div>
   </fieldset>
   <div class="ajustes-botones">
     <button class="boton boton-primario">Guardar color</button>
   </div>
 </form>
+
+{# Selector de color propio: espectro o deslizadores, como en el iPhone #}
+<dialog class="dia-vista selector" id="selector-color" aria-label="Elegir otro color">
+  <div class="dia-vista-cabecera">
+    <span class="selector-hueco"></span>
+    <h2>Color</h2>
+    <button type="button" class="boton-icono" data-selector-cerrar aria-label="Cerrar">✕</button>
+  </div>
+  <div class="segmentos" role="tablist">
+    <button type="button" role="tab" class="segmento activo" data-vista="espectro" aria-selected="true">Espectro</button>
+    <button type="button" role="tab" class="segmento" data-vista="deslizadores" aria-selected="false">Deslizadores</button>
+  </div>
+  <div class="selector-vista" data-panel="espectro">
+    <div class="espectro" tabindex="0" aria-label="Espectro de colores">
+      <span class="espectro-punto"></span>
+    </div>
+  </div>
+  <div class="selector-vista" data-panel="deslizadores" hidden>
+    {% for canal, nombre in [("r", "Rojo"), ("g", "Verde"), ("b", "Azul")] %}
+      <label class="deslizador">
+        <span class="deslizador-nombre">{{ nombre }}</span>
+        <input type="range" min="0" max="255" step="1" data-canal="{{ canal }}" aria-label="{{ nombre }}">
+        <output class="deslizador-valor" data-valor="{{ canal }}">0</output>
+      </label>
+    {% endfor %}
+  </div>
+  <div class="selector-pie">
+    <span class="muestra-icono selector-vista-previa"></span>
+    <label class="selector-hex">
+      <span class="etiqueta-campo">Hex</span>
+      <input type="text" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Código del color">
+    </label>
+    <button type="button" class="boton boton-primario" data-selector-listo>Listo</button>
+  </div>
+</dialog>
 
 <p class="reveal">{{ enlace_flecha("Volver a Mi perfil", url_for('perfil')) }}</p>
 
@@ -53,16 +86,129 @@
       tramo.style.setProperty("--burbuja-abajo", rgba({{ opacidad_burbujas }}));
     });
   }
-  var propio = document.querySelector(".selector-color");
+  var propio = document.querySelector("input[name=color_propio]");
+  var radioPropio = document.querySelector(".ajustes-color input[value=propio]");
+  var iconoPropio = document.querySelector(".muestra-otro");
+  var anterior = document.querySelector(".ajustes-color input[name=color]:checked");
   document.querySelectorAll(".ajustes-color input[name=color]").forEach(function (radio) {
-    radio.addEventListener("change", function () { probar(radio.value === "propio" ? propio.value : radio.value); });
+    radio.addEventListener("change", function () {
+      if (radio.value !== "propio") { anterior = radio; probar(radio.value); }
+    });
   });
-  propio.addEventListener("input", function () {
-    propio.closest("label").querySelector("input[type=radio]").checked = true;
-    var icono = propio.closest(".muestra-icono");
-    icono.style.setProperty("--muestra", propio.value);
-    icono.classList.add("con-color");
-    probar(propio.value);
+
+  // ---------- Selector propio ----------
+  var dialogo = document.getElementById("selector-color");
+  var espectro = dialogo.querySelector(".espectro");
+  var punto = dialogo.querySelector(".espectro-punto");
+  var previa = dialogo.querySelector(".selector-vista-previa");
+  var hex = dialogo.querySelector(".selector-hex input");
+  var barras = dialogo.querySelectorAll("input[type=range]");
+  var actual = propio.value.toUpperCase();
+
+  function aHex(r, g, b) {
+    return "#" + [r, g, b].map(function (n) { return Math.round(n).toString(16).padStart(2, "0"); }).join("").toUpperCase();
+  }
+  function aRgb(c) { return [1, 3, 5].map(function (i) { return parseInt(c.slice(i, i + 2), 16); }); }
+  // Espectro: de izquierda a derecha el tono, de arriba (claro) a abajo (oscuro) la luz
+  var LUZ_ARRIBA = 0.96, LUZ_ABAJO = 0.12;
+  function hslAHex(h, s, l) {
+    var f = function (n) {
+      var k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+      return 255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)));
+    };
+    return aHex(f(0), f(8), f(4));
+  }
+  function hexAHsl(c) {
+    var v = aRgb(c).map(function (n) { return n / 255; });
+    var max = Math.max.apply(null, v), min = Math.min.apply(null, v), l = (max + min) / 2, h = 0, d = max - min;
+    if (d) {
+      if (max === v[0]) h = ((v[1] - v[2]) / d) % 6;
+      else if (max === v[1]) h = (v[2] - v[0]) / d + 2;
+      else h = (v[0] - v[1]) / d + 4;
+      h = (h * 60 + 360) % 360;
+    }
+    return [h, l];
+  }
+
+  // Pone el color en todo el selector (menos en lo que lo está cambiando) y lo prueba en la web
+  function poner(color, desde) {
+    actual = color;
+    previa.style.setProperty("--muestra", color);
+    if (desde !== "hex") hex.value = color;
+    var rgb = aRgb(color);
+    barras.forEach(function (barra, i) {
+      if (desde !== "barras") barra.value = rgb[i];
+      // Cada barra muestra cómo quedaría el color de un extremo al otro
+      var ini = rgb.slice(), fin = rgb.slice(); ini[i] = 0; fin[i] = 255;
+      barra.style.setProperty("--pista", "linear-gradient(90deg, " + aHex.apply(null, ini) + ", " + aHex.apply(null, fin) + ")");
+      dialogo.querySelector("[data-valor=" + barra.dataset.canal + "]").textContent = rgb[i];
+    });
+    if (desde !== "espectro") {
+      var hl = hexAHsl(color);
+      punto.style.left = (hl[0] / 360 * 100) + "%";
+      punto.style.top = (Math.max(0, Math.min(1, (LUZ_ARRIBA - hl[1]) / (LUZ_ARRIBA - LUZ_ABAJO))) * 100) + "%";
+    }
+    punto.style.background = color;
+    probar(color);
+  }
+
+  // Arrastrar por el espectro (ratón o dedo)
+  function desdeEspectro(e) {
+    var caja = espectro.getBoundingClientRect();
+    var x = Math.max(0, Math.min(1, (e.clientX - caja.left) / caja.width));
+    var y = Math.max(0, Math.min(1, (e.clientY - caja.top) / caja.height));
+    punto.style.left = x * 100 + "%"; punto.style.top = y * 100 + "%";
+    poner(hslAHex(x * 359, 1, LUZ_ARRIBA - y * (LUZ_ARRIBA - LUZ_ABAJO)), "espectro");
+  }
+  espectro.addEventListener("pointerdown", function (e) {
+    espectro.setPointerCapture(e.pointerId); espectro.classList.add("arrastrando"); desdeEspectro(e);
+  });
+  espectro.addEventListener("pointermove", function (e) { if (espectro.hasPointerCapture(e.pointerId)) desdeEspectro(e); });
+  espectro.addEventListener("pointerup", function () { espectro.classList.remove("arrastrando"); });
+  barras.forEach(function (barra) {
+    barra.addEventListener("input", function () {
+      poner(aHex(barras[0].value, barras[1].value, barras[2].value), "barras");
+    });
+  });
+  hex.addEventListener("input", function () {
+    var v = hex.value.trim().toUpperCase();
+    if (v[0] !== "#") v = "#" + v;
+    if (/^#[0-9A-F]{6}$/.test(v)) poner(v, "hex");
+  });
+  hex.addEventListener("blur", function () { hex.value = actual; });
+
+  // Espectro / Deslizadores
+  dialogo.querySelectorAll(".segmento").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      dialogo.querySelectorAll(".segmento").forEach(function (b) {
+        var es = b === boton;
+        b.classList.toggle("activo", es); b.setAttribute("aria-selected", es);
+      });
+      dialogo.querySelectorAll("[data-panel]").forEach(function (panel) { panel.hidden = panel.dataset.panel !== boton.dataset.vista; });
+    });
+  });
+
+  // Abrir con "Otro"; "Listo" lo deja elegido; cerrar sin más vuelve al de antes
+  var aceptado = false;
+  document.querySelector("[data-abrir-selector]").addEventListener("click", function (e) {
+    e.preventDefault();
+    aceptado = false;
+    dialogo.showModal();
+    poner(propio.value.toUpperCase());
+  });
+  dialogo.querySelector("[data-selector-listo]").addEventListener("click", function () {
+    aceptado = true;
+    propio.value = actual;
+    radioPropio.checked = true;
+    anterior = radioPropio;
+    iconoPropio.style.setProperty("--muestra", actual);
+    iconoPropio.classList.add("con-color");
+    dialogo.close();
+  });
+  dialogo.querySelector("[data-selector-cerrar]").addEventListener("click", function () { dialogo.close(); });
+  dialogo.addEventListener("click", function (e) { if (e.target === dialogo) dialogo.close(); });
+  dialogo.addEventListener("close", function () {
+    if (!aceptado && anterior) probar(anterior.value === "propio" ? propio.value : anterior.value);
   });
 })();
 </script>
