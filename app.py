@@ -995,7 +995,14 @@ def asistencia():
         WHERE clases.usuario_id = ?
         ORDER BY asistencias.fecha DESC, clases.hora_inicio DESC LIMIT 30
     """, (yo(),))
-    return render_template("asistencia.html", resumen=resumen_asistencia(), historial=historial)
+    # Tareas que ya completaste (las más recientes por fecha de entrega primero)
+    hechas = consultar("SELECT * FROM tareas WHERE hecha = 1 AND usuario_id = ? ORDER BY fecha_entrega DESC",
+                       (yo(),))
+    hechas_por_materia = {}
+    for tarea in hechas:
+        hechas_por_materia[tarea["materia"]] = hechas_por_materia.get(tarea["materia"], 0) + 1
+    return render_template("asistencia.html", resumen=resumen_asistencia(), historial=historial,
+                           hechas=hechas, hechas_por_materia=hechas_por_materia)
 
 
 # ------------------------------------------------------------

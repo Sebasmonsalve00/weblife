@@ -19,6 +19,11 @@
         <div style="width: {{ resumen.porcentaje }}%"></div>
       </div>
     </article>
+    <article class="tarjeta reveal md-6 lg-4">
+      <h2 class="titulo-tarjeta">Tareas completadas</h2>
+      <p class="numero">{{ hechas | length }}</p>
+      <p class="descripcion">Entregas que ya marcaste como hechas.</p>
+    </article>
   </div>
 
   <!-- Una fila por materia -->
@@ -27,7 +32,7 @@
     <table class="tabla">
       <thead><tr>
         <th scope="col">Materia</th><th scope="col">Horas asistidas</th><th scope="col">Clases a las que fui</th>
-        <th scope="col">Horas faltadas</th><th scope="col">Actividades de asistencia</th><th scope="col">Asistencia</th>
+        <th scope="col">Horas faltadas</th><th scope="col">Actividades de asistencia</th><th scope="col">Tareas hechas</th><th scope="col">Asistencia</th>
       </tr></thead>
       <tbody>
       {% for m in resumen.materias %}
@@ -37,6 +42,7 @@
           <td>{{ m.clases_fui }}</td>
           <td>{{ m.horas_falte }}{% if m.clases_falte %} <small>({{ m.clases_falte }} {{ "clase" if m.clases_falte == 1 else "clases" }})</small>{% endif %}</td>
           <td>{{ m.actividades }}</td>
+          <td>{{ hechas_por_materia.get(m.nombre, 0) }}</td>
           <td>
             <div class="barra barra-tabla" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ m.porcentaje }}" aria-label="Asistencia en {{ m.nombre }}">
               <div style="width: {{ m.porcentaje }}%"></div>
@@ -65,7 +71,24 @@
       </tbody>
     </table>
   </div>
-{% else %}
+{% endif %}
+
+<!-- Tareas que ya completaste -->
+{% if hechas %}
+  <h2 class="titulo-seccion reveal" data-revelar-palabras>Tareas completadas</h2>
+  <div class="tabla-contenedor reveal">
+    <table class="tabla">
+      <thead><tr><th scope="col">Tarea</th><th scope="col">Materia</th><th scope="col">Entrega</th></tr></thead>
+      <tbody>
+      {% for tarea in hechas %}
+        <tr><td>✓ {{ tarea.titulo }}</td><td>{{ tarea.materia or "Sin materia" }}</td><td>{{ tarea.fecha_entrega }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% if not resumen.hay_datos %}
   <div class="tarjeta reveal">
     <p>Todavía no has marcado ninguna clase. En el horario, pulsa <b>Fui</b> o <b>No fui</b> en cada clase y aquí aparecerán tus horas.</p>
     {{ enlace_flecha("Ir al horario", url_for('horario')) }}
