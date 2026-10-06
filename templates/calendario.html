@@ -128,7 +128,7 @@
             {% if dia == 0 %}
               <td class="fuera"></td>
             {% else %}
-              <td class="{{ 'hoy' if (anio, mes, dia) == (hoy.year, hoy.month, hoy.day) }}">
+              <td class="{{ 'hoy' if (anio, mes, dia) == (hoy.year, hoy.month, hoy.day) }}" data-zona="dia-{{ anio }}-{{ mes }}-{{ dia }}">
                 <button type="button" class="num" data-dia="{{ dia }}" aria-label="Ver el {{ dia }} de {{ nombre_mes }} hora a hora">{{ dia }}</button>
                 {% for cosa in cosas_por_dia.get(dia, []) %}
                   <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }}">

@@ -149,6 +149,8 @@
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
   <!-- Motor de scroll (titulares por palabra y secciones animadas) -->
   <script src="{{ url_for('static', filename='scroll-engine.js') }}" defer></script>
+  <!-- Al marcar o borrar algo, se actualiza solo esa casilla (sin recargar la página) -->
+  <script src="{{ url_for('static', filename='zonas.js') }}" defer></script>
   {% if efectos.pagina_siguiente and session.usuario_id %}
   <script src="{{ url_for('static', filename='pagina-siguiente.js') }}" defer></script>
   {% endif %}

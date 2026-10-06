@@ -744,6 +744,16 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 .js .con-carga .hero-entrada > *:nth-child(4) { animation-delay: 1610ms; }
 html:not(.js) .carga { display: none; }
 
+/* ---------- Actualizar solo una casilla (zonas.js) ---------- */
+[data-zona] { transition: opacity 200ms ease; }
+[data-zona].actualizando { opacity: 0.5; pointer-events: none; }
+.aviso-flotante {
+  position: fixed; left: 50%; bottom: 24px; z-index: 70; padding: 10px 18px; border-radius: 999px;
+  font-size: 14px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  transition: opacity 250ms var(--easing), transform 250ms var(--easing);
+}
+.aviso-flotante.visible { opacity: 1; transform: translate(-50%, 0); }
+
 /* Sin animaciones si la persona lo pidió en su sistema */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

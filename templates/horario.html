@@ -21,7 +21,7 @@
 
   {% for item in panel %}
     {% set clase = item.clase %}
-    <div class="panel-clase {{ 'fui' if item.asistio == 1 }} {{ 'no-fui' if item.asistio == 0 }}">
+    <div class="panel-clase {{ 'fui' if item.asistio == 1 }} {{ 'no-fui' if item.asistio == 0 }}" data-zona="clase-{{ clase.id }}-{{ dia_panel }}">
       <b>{{ clase.nombre }}</b>
       <small>{{ clase.hora_inicio }}–{{ clase.hora_fin }}{% if clase.sala %} · Aula {{ clase.sala }}{% endif %}</small>
 
