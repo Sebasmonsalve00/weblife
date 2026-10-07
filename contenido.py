@@ -190,6 +190,7 @@ REGISTRAR = {
 # ---- Mensajes cuando algo se guarda (aparecen en un panel arriba) ----
 MENSAJES = {
     "clase": "Clase agregada al horario.",
+    "actividad_extra": "Actividad agregada al horario.",
     "tarea": "Tarea guardada.",
     "meta": "Meta guardada.",
     "actividad": "Actividad de asistencia guardada.",

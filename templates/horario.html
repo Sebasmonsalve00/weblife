@@ -111,8 +111,8 @@
 <!-- Formulario para agregar una clase -->
 <form method="post" class="formulario form-clase grid-12 reveal">
   <div class="campo md-6 lg-4">
-    <label for="h-nombre">Materia</label>
-    <input id="h-nombre" name="nombre" placeholder="ej: Cálculo" required>
+    <label for="h-nombre">Materia o actividad</label>
+    <input id="h-nombre" name="nombre" placeholder="ej: Cálculo o Gimnasio" required>
   </div>
   <div class="campo md-6 lg-4">
     <label for="h-dia">Día</label>
@@ -123,7 +123,7 @@
     </select>
   </div>
   <div class="campo md-6 lg-4">
-    <label for="h-aula">Aula</label>
+    <label for="h-aula">Aula o lugar</label>
     <input id="h-aula" name="sala" placeholder="ej: 2.14">
   </div>
   <div class="campo md-6 lg-4">
@@ -135,7 +135,11 @@
     <input id="h-hasta" type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required>
   </div>
   <div class="campo md-6 lg-4">
-    <button class="boton-enviar">Agregar clase</button>
+    <!-- Dos botones iguales, uno al lado del otro: clase (cuenta para la asistencia) o actividad aparte -->
+    <div class="botones-pareja">
+      <button class="boton-enviar" title="Agregar clase" aria-label="Agregar clase">+ Clase</button>
+      <button class="boton-enviar boton-enviar-secundario" name="tipo" value="actividad" title="Agregar actividad aparte" aria-label="Agregar actividad aparte">+ Actividad</button>
+    </div>
   </div>
 </form>
 {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
@@ -157,11 +161,13 @@
     {% for d in dias_visibles %}
       <div class="grilla-columna" style="height: {{ alto_total }}px; background-size: 100% {{ pixeles_hora }}px">
         {% for item in por_dia[d] %}
-          <div class="bloque" style="top: {{ item.arriba }}px; height: {{ item.alto }}px">
+          {% set es_actividad = item.clase.tipo == "actividad" %}
+          <div class="bloque {{ 'bloque-actividad' if es_actividad }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px">
             <b>{{ item.clase.nombre }}</b>
             <span>{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}</span>
-            {% if item.clase.sala %}<span>Aula {{ item.clase.sala }}</span>{% endif %}
-            {{ boton_borrar(url_for('borrar_clase', id=item.clase.id), "Borrar clase: " ~ item.clase.nombre ~ " del " ~ dias[d], "¿Borrar esta clase del horario?") }}
+            {% if item.clase.sala %}<span>{{ item.clase.sala if es_actividad else "Aula " ~ item.clase.sala }}</span>{% endif %}
+            {% set que = "actividad" if es_actividad else "clase" %}
+            {{ boton_borrar(url_for('borrar_clase', id=item.clase.id), "Borrar " ~ que ~ ": " ~ item.clase.nombre ~ " del " ~ dias[d], "¿Borrar esta " ~ que ~ " del horario?") }}
           </div>
         {% endfor %}
       </div>

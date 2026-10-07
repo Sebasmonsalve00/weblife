@@ -149,6 +149,12 @@ def crear_tablas():
         if columna not in columnas:
             conexion.execute(f"ALTER TABLE usuarios ADD COLUMN {columna} TEXT")
 
+    # "tipo" en clases: vacío = clase de verdad, "actividad" = otra cosa que pones en el
+    # horario (gimnasio, trabajo...). Las actividades no cuentan para la asistencia.
+    columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(clases)")]
+    if "tipo" not in columnas:
+        conexion.execute("ALTER TABLE clases ADD COLUMN tipo TEXT")
+
     # Las tablas creadas antes no tenían "fecha_creacion" en tareas: la agregamos.
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(tareas)")]
     if "fecha_creacion" not in columnas:
@@ -499,11 +505,13 @@ def horario():
         if a_minutos(fin) <= a_minutos(inicio):
             error = "La hora de término tiene que ser después de la hora de inicio."
         else:
+            # El botón "Agregar actividad" manda tipo=actividad; "Agregar clase" no manda nada.
+            tipo = "actividad" if request.form.get("tipo") == "actividad" else None
             modificar(
-                "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala, usuario_id) VALUES (?, ?, ?, ?, ?, ?)",
-                (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"], yo()),
+                "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala, usuario_id, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"], yo(), tipo),
             )
-            flash(contenido.MENSAJES["clase"])  # mensaje de éxito en el panel difuminado
+            flash(contenido.MENSAJES["actividad_extra" if tipo else "clase"])  # mensaje de éxito en el panel difuminado
             return redirect(url_for("horario"))
 
     # Todas las clases ordenadas por día y luego por hora.
@@ -523,7 +531,8 @@ def horario():
                              "WHERE actividades.fecha = ? AND clases.usuario_id = ?", (texto_panel, yo()))}
     panel = []
     for clase in clases:
-        if clase["dia"] == dia_panel.weekday():
+        # Las actividades aparte no llevan asistencia ni tareas: no salen en el panel
+        if clase["dia"] == dia_panel.weekday() and clase["tipo"] != "actividad":
             pendientes_materia = consultar(
                 "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega",
                 (clase["nombre"], yo()))
@@ -554,6 +563,8 @@ def horario():
     # Horas a la semana de cada materia (sumando todas sus clases).
     minutos_por_materia = {}
     for clase in clases:
+        if clase["tipo"] == "actividad":
+            continue
         duracion = a_minutos(clase["hora_fin"]) - a_minutos(clase["hora_inicio"])
         minutos_por_materia[clase["nombre"]] = minutos_por_materia.get(clase["nombre"], 0) + duracion
     resumen = []
@@ -658,7 +669,8 @@ def tareas():
     todas = consultar("SELECT * FROM tareas WHERE usuario_id = ? ORDER BY hecha, fecha_entrega", (yo(),))
     # Las materias salen de las clases del horario (sin repetir y en orden alfabético).
     materias = [fila["nombre"] for fila in
-                consultar("SELECT DISTINCT nombre FROM clases WHERE usuario_id = ? ORDER BY nombre", (yo(),))]
+                consultar("SELECT DISTINCT nombre FROM clases WHERE usuario_id = ? "
+                          "AND (tipo IS NULL OR tipo != 'actividad') ORDER BY nombre", (yo(),))]
     # En Deporte las metas son de la semana: proponemos el domingo de esta semana.
     hoy = date.today()
     if mi_modo() == "deporte":
@@ -854,7 +866,8 @@ def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales):
     for semana in semanas:
         for dia_semana, dia in enumerate(semana):
             for clase in clases_por_dia.get(dia_semana, []) if dia else []:
-                anotar(dia, clase["nombre"], "clase", clase["hora_inicio"], clase["hora_fin"], clase["sala"] or "")
+                anotar(dia, clase["nombre"], "actividad" if clase["tipo"] == "actividad" else "clase",
+                       clase["hora_inicio"], clase["hora_fin"], clase["sala"] or "")
     for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (prefijo + "%", yo())):
         anotar(int(tarea["fecha_entrega"][8:10]), tarea["titulo"], "tarea-hecha" if tarea["hecha"] else "tarea",
                detalle=tarea["materia"] or "")

@@ -357,6 +357,10 @@ input:focus, select:focus, textarea:focus {
 .mensaje-campo { font-size: 0.8125rem; color: var(--texto-secundario); min-height: 0; }
 .campo.invalido input { border-color: var(--color-texto); }
 .formulario .boton-enviar { height: 52px; width: 100%; }
+/* Dos botones del mismo tamaño, uno al lado del otro */
+.botones-pareja { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.formulario .botones-pareja .boton-enviar { width: 100%; padding: 0 10px; white-space: nowrap; }
+.boton-enviar-secundario { background: transparent; color: var(--color-texto); border: 1px solid var(--borde-boton); }
 @media (min-width: 640px) { .formulario .boton-enviar { width: auto; } }
 .nota { font-size: 0.8125rem; color: var(--texto-secundario); margin: -8px 0 24px; }
 
@@ -487,6 +491,8 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   display: flex; flex-direction: column; line-height: 1.3;
 }
 .bloque span { color: var(--texto-secundario); }
+/* Actividad aparte (no es clase): gris cristal en vez del color de la web */
+.bloque.bloque-actividad { background: rgba(118, 118, 128, 0.12); border-color: var(--borde-boton); }
 .bloque form { position: absolute; top: 4px; right: 4px; }
 .bloque .boton-icono { width: 22px; height: 22px; font-size: 0.6875rem; }
 
@@ -643,6 +649,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .dia-item.tarea-hecha { background: var(--acento-degradado); text-decoration: line-through; opacity: 0.6; }
 .dia-bloque.evento, .dia-item.evento { background: var(--color-fondo); border: 1px solid var(--borde-boton); }
 .dia-bloque.examen, .dia-item.examen { background: var(--color-texto); color: var(--color-fondo); }
+.dia-bloque.actividad, .dia-item.actividad { background: rgba(118, 118, 128, 0.12); border: 1px solid var(--borde-boton); }
 .punto.clase { background: var(--acento-suave); border: 1px solid var(--color-acento); }
 
 /* Botón pequeño "+ Fechas de examen" y su panel desplegable */
