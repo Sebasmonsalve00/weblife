@@ -163,7 +163,11 @@
       <div class="grilla-columna" style="height: {{ alto_total }}px; background-size: 100% {{ pixeles_hora }}px">
         {% for item in por_dia[d] %}
           {% set es_actividad = item.clase.tipo == "actividad" %}
-          <div class="bloque {{ 'bloque-actividad' if es_actividad }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px">
+          <div class="bloque {{ 'bloque-actividad' if es_actividad }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px"
+               role="button" tabindex="0" aria-label="Editar {{ item.clase.nombre }}"
+               data-editar="{{ url_for('editar_clase', id=item.clase.id) }}" data-nombre="{{ item.clase.nombre }}"
+               data-dia="{{ item.clase.dia }}" data-sala="{{ item.clase.sala or '' }}" data-tipo="{{ item.clase.tipo or 'clase' }}"
+               data-desde="{{ item.clase.hora_inicio }}" data-hasta="{{ item.clase.hora_fin }}">
             <b>{{ item.clase.nombre }}</b>
             <span>{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}</span>
             {% if item.clase.sala %}<span>{{ item.clase.sala if es_actividad else "Aula " ~ item.clase.sala }}</span>{% endif %}
@@ -175,6 +179,70 @@
     {% endfor %}
   </div>
 </div>
+
+<!-- Editar una clase o actividad: se abre al tocar su bloque en la grilla -->
+<dialog class="dia-vista editar-clase" aria-label="Editar">
+  <form method="post" data-actualiza="horario-grilla horario-panel horario-materias">
+    <div class="dia-vista-cabecera">
+      <span class="selector-hueco"></span>
+      <h2>Editar</h2>
+      <button type="button" class="boton-icono" data-editar-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <div class="segmentos" role="group" aria-label="Qué es">
+      <label class="segmento"><input type="radio" name="tipo" value="clase"> Clase</label>
+      <label class="segmento"><input type="radio" name="tipo" value="actividad"> Actividad</label>
+    </div>
+    <div class="editar-campos">
+      <div class="campo editar-ancho"><label for="e-nombre">Nombre</label><input id="e-nombre" name="nombre" required></div>
+      <div class="campo"><label for="e-dia">Día</label>
+        <select id="e-dia" name="dia">{% for nombre in dias %}<option value="{{ loop.index0 }}">{{ nombre }}</option>{% endfor %}</select></div>
+      <div class="campo"><label for="e-sala">Aula o lugar</label><input id="e-sala" name="sala"></div>
+      <div class="campo"><label for="e-desde">Desde</label><input id="e-desde" type="time" name="hora_inicio" min="08:00" max="20:00" required></div>
+      <div class="campo"><label for="e-hasta">Hasta</label><input id="e-hasta" type="time" name="hora_fin" min="08:00" max="20:00" required></div>
+    </div>
+    <button class="boton boton-primario editar-guardar">Guardar cambios</button>
+  </form>
+</dialog>
+<script>
+(function () {
+  // Tocar un bloque del horario abre "Editar" con sus datos ya puestos
+  if (window.__editarClase) return;
+  window.__editarClase = true;
+  function abrir(bloque) {
+    var dialogo = bloque.closest(".tramo").querySelector(".editar-clase");
+    if (!dialogo) return;
+    var form = dialogo.querySelector("form"), d = bloque.dataset;
+    form.action = d.editar;
+    form.nombre.value = d.nombre; form.dia.value = d.dia; form.sala.value = d.sala;
+    form.hora_inicio.value = d.desde; form.hora_fin.value = d.hasta;
+    form.querySelector("input[name=tipo][value=" + d.tipo + "]").checked = true;
+    marcarSegmento(form);
+    dialogo.showModal();
+  }
+  function marcarSegmento(form) {
+    form.querySelectorAll(".segmento").forEach(function (s) { s.classList.toggle("activo", s.querySelector("input").checked); });
+  }
+  document.addEventListener("click", function (e) {
+    var bloque = e.target.closest && e.target.closest(".bloque[data-editar]");
+    if (bloque && !e.target.closest("form")) { abrir(bloque); return; }
+    var cerrar = e.target.closest && e.target.closest("[data-editar-cerrar]");
+    if (cerrar) { cerrar.closest("dialog").close(); return; }
+    if (e.target.classList && e.target.classList.contains("editar-clase")) e.target.close();   // clic fuera
+  });
+  document.addEventListener("keydown", function (e) {
+    var bloque = e.target.closest && e.target.closest(".bloque[data-editar]");
+    if (bloque && (e.key === "Enter" || e.key === " ") && e.target === bloque) { e.preventDefault(); abrir(bloque); }
+  });
+  document.addEventListener("change", function (e) {
+    if (e.target.name === "tipo" && e.target.closest(".editar-clase")) marcarSegmento(e.target.form);
+  });
+  // Cuando se guardó (zonas.js avisa), cerramos la ventana
+  document.addEventListener("zonas:hecho", function (e) {
+    var dialogo = e.target.closest && e.target.closest(".editar-clase");
+    if (dialogo) dialogo.close();
+  });
+})();
+</script>
 
 <!-- Resumen: cada materia con sus horas a la semana -->
 <section class="seccion reveal">

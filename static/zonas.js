@@ -111,6 +111,7 @@
         });
         // El formulario se queda donde está; vaciamos los campos marcados para escribir otro
         if (!zona) form.querySelectorAll("[data-limpiar]").forEach(function (campo) { campo.value = ""; });
+        form.dispatchEvent(new CustomEvent("zonas:hecho", { bubbles: true }));
       })
       .catch(function () {
         tocadas.forEach(function (z) { z.classList.remove("actualizando"); });

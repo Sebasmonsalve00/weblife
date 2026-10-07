@@ -497,7 +497,7 @@ def resumen_del_dia(clases_del_dia, nombre_dia, es_hoy):
 
 @app.route("/universidad/horario", methods=["GET", "POST"])
 def horario():
-    error = None
+    error = session.pop("error_horario", None)   # si falló al editar una clase
     # Si se envió el formulario (POST), guardamos la clase nueva.
     if request.method == "POST":
         inicio = request.form["hora_inicio"]
@@ -587,6 +587,26 @@ def horario():
         dia_siguiente=(dia_panel + timedelta(days=1)).isoformat(),
         entrega_sugerida=(dia_panel + timedelta(days=7)).isoformat(),
     )
+
+
+@app.route("/universidad/horario/editar/<int:id>", methods=["POST"])
+def editar_clase(id):
+    """Cambia una clase o actividad del horario: nombre, día, horas, lugar y si es clase o actividad."""
+    if not es_mi_clase(id):
+        return redirect(url_for("horario"))
+    inicio = request.form["hora_inicio"]
+    fin = request.form["hora_fin"]
+    if a_minutos(fin) <= a_minutos(inicio):
+        # El horario lo enseña como error (ver horario())
+        session["error_horario"] = "La hora de término tiene que ser después de la hora de inicio."
+    else:
+        tipo = "actividad" if request.form.get("tipo") == "actividad" else None
+        modificar("UPDATE clases SET nombre = ?, dia = ?, hora_inicio = ?, hora_fin = ?, sala = ?, tipo = ? "
+                  "WHERE id = ? AND usuario_id = ?",
+                  (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form.get("sala", ""),
+                   tipo, id, yo()))
+        flash(contenido.MENSAJES["clase_editada"])
+    return redirect(request.referrer or url_for("horario"))
 
 
 @app.route("/universidad/horario/borrar/<int:id>", methods=["POST"])

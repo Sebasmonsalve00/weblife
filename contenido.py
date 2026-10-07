@@ -191,6 +191,7 @@ REGISTRAR = {
 MENSAJES = {
     "clase": "Clase agregada al horario.",
     "actividad_extra": "Actividad agregada al horario.",
+    "clase_editada": "Cambios guardados.",
     "tarea": "Tarea guardada.",
     "meta": "Meta guardada.",
     "actividad": "Actividad de asistencia guardada.",

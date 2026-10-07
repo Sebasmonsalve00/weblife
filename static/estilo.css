@@ -492,6 +492,16 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 }
 .bloque span { color: var(--texto-secundario); }
 /* Actividad aparte (no es clase): gris cristal en vez del color de la web */
+.bloque[data-editar] { cursor: pointer; transition: transform 150ms var(--easing), box-shadow 150ms var(--easing); }
+.bloque[data-editar]:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(29, 29, 31, 0.10); z-index: 2; }
+.bloque[data-editar]:focus-visible { outline: 2px solid var(--color-texto); outline-offset: 2px; }
+/* Ventana "Editar" */
+.editar-clase { width: min(480px, calc(100vw - 32px)); }
+.editar-clase .segmento { display: flex; align-items: center; justify-content: center; }
+.editar-clase .segmento input { position: absolute; opacity: 0; pointer-events: none; }
+.editar-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.editar-ancho { grid-column: 1 / -1; }
+.editar-guardar { width: 100%; height: 52px; }
 .bloque.bloque-actividad { background: rgba(118, 118, 128, 0.12); border-color: var(--borde-boton); }
 .bloque form { position: absolute; top: 4px; right: 4px; }
 .bloque .boton-icono { width: 22px; height: 22px; font-size: 0.6875rem; }
