@@ -164,12 +164,11 @@
         {% for item in por_dia[d] %}
           {% set es_actividad = item.clase.tipo == "actividad" %}
           <div class="bloque {{ 'bloque-actividad' if es_actividad }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px"
-               role="button" tabindex="0" aria-label="Editar {{ item.clase.nombre }}"
+               role="button" tabindex="0" aria-label="Editar {{ item.clase.nombre }} ({{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }})" title="{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}"
                data-editar="{{ url_for('editar_clase', id=item.clase.id) }}" data-nombre="{{ item.clase.nombre }}"
                data-dia="{{ item.clase.dia }}" data-sala="{{ item.clase.sala or '' }}" data-tipo="{{ item.clase.tipo or 'clase' }}"
                data-desde="{{ item.clase.hora_inicio }}" data-hasta="{{ item.clase.hora_fin }}">
             <b>{{ item.clase.nombre }}</b>
-            <span>{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}</span>
             {% if item.clase.sala %}<span>{{ item.clase.sala if es_actividad else "Aula " ~ item.clase.sala }}</span>{% endif %}
             {% set que = "actividad" if es_actividad else "clase" %}
             {{ boton_borrar(url_for('borrar_clase', id=item.clase.id), "Borrar " ~ que ~ ": " ~ item.clase.nombre ~ " del " ~ dias[d], "¿Borrar esta " ~ que ~ " del horario?") }}
