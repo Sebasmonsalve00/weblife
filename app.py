@@ -145,7 +145,7 @@ def crear_tablas():
 
     # Las cuentas creadas antes no tenían nombre y apellido: agregamos esas columnas.
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(usuarios)")]
-    for columna in ("nombre_real", "apellido", "examenes_sel", "color_acento"):
+    for columna in ("nombre_real", "apellido", "examenes_sel", "color_acento", "modo"):
         if columna not in columnas:
             conexion.execute(f"ALTER TABLE usuarios ADD COLUMN {columna} TEXT")
 
@@ -205,10 +205,11 @@ def datos_para_plantillas():
         "fuente": config_diseno.FUENTE,
         "valores_js": config_diseno.valores_js(),
         "efectos": config_diseno.EFECTOS,
-        "siguiente": config_diseno.pagina_siguiente(request.endpoint, contenido.MENU),
-        "anterior": config_diseno.pagina_anterior(request.endpoint, contenido.MENU),
+        "siguiente": config_diseno.pagina_siguiente(request.endpoint, contenido.menu(mi_modo())),
+        "anterior": config_diseno.pagina_anterior(request.endpoint, contenido.menu(mi_modo())),
         "fondo": config_diseno.colores_fondo(request.endpoint, acento),
-        "texto": contenido.todo(),
+        "texto": contenido.todo(mi_modo()),
+        "modo": mi_modo(),
     }
 
 
@@ -216,9 +217,29 @@ def datos_para_plantillas():
 #  Inicio de sesión
 # ------------------------------------------------------------
 
-def yo():
-    """El número (id) del usuario que inició sesión."""
+def mi_cuenta():
+    """El número (id) de la cuenta que inició sesión (para leer o cambiar la cuenta en sí)."""
     return session["usuario_id"]
+
+
+MODOS = ("universidad", "deporte")
+
+
+def mi_modo():
+    """Qué calendario estás usando: "universidad" (el de siempre) o "deporte"."""
+    if not session.get("usuario_id"):
+        return "universidad"
+    if session.get("modo") not in MODOS:
+        fila = consultar("SELECT modo FROM usuarios WHERE id = ?", (mi_cuenta(),))
+        session["modo"] = fila[0]["modo"] if fila and fila[0]["modo"] in MODOS else "universidad"
+    return session["modo"]
+
+
+def yo():
+    """El dueño de los datos que ves (clases, tareas, eventos...).
+    En Universidad es tu número de cuenta. En Deporte es ese número en negativo:
+    así los datos de Deporte se guardan aparte y no se mezclan con los de Universidad."""
+    return -mi_cuenta() if mi_modo() == "deporte" else mi_cuenta()
 
 
 def es_mi_clase(id):
@@ -306,7 +327,7 @@ def cuenta():
         actual = request.form.get("clave_actual", "")
         nueva = request.form.get("clave_nueva", "")
         repetir = request.form.get("clave_repetir", "")
-        fila = consultar("SELECT clave_hash FROM usuarios WHERE id = ?", (yo(),))[0]
+        fila = consultar("SELECT clave_hash FROM usuarios WHERE id = ?", (mi_cuenta(),))[0]
         if not check_password_hash(fila["clave_hash"], actual):
             error_clave = "La contraseña actual no es correcta."
         elif len(nueva) < 8:
@@ -314,7 +335,7 @@ def cuenta():
         elif nueva != repetir:
             error_clave = "Las dos contraseñas nuevas no coinciden."
         else:
-            modificar("UPDATE usuarios SET clave_hash = ? WHERE id = ?", (generate_password_hash(nueva), yo()))
+            modificar("UPDATE usuarios SET clave_hash = ? WHERE id = ?", (generate_password_hash(nueva), mi_cuenta()))
             flash(contenido.MENSAJES["clave"])
             return redirect(url_for("perfil"))
     elif request.method == "POST":
@@ -326,15 +347,26 @@ def cuenta():
             session["nombre_real"] = nombre_real
             flash(contenido.MENSAJES["cuenta"])
             return redirect(url_for("perfil"))
-    usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (yo(),))[0]
+    usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (mi_cuenta(),))[0]
     return render_template("cuenta.html", usuario=usuario, error_clave=error_clave)
 
 
 @app.route("/perfil")
 def perfil():
     """Mi perfil: tus datos y dos botones (Mis datos y Mis avances)."""
-    usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (yo(),))[0]
+    usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (mi_cuenta(),))[0]
     return render_template("perfil.html", usuario=usuario)
+
+
+@app.route("/perfil/modo", methods=["POST"])
+def cambiar_modo():
+    """Cambia de calendario: Universidad o Deporte. Cada uno tiene sus propios datos."""
+    modo = request.form.get("modo")
+    if modo in MODOS:
+        modificar("UPDATE usuarios SET modo = ? WHERE id = ?", (modo, mi_cuenta()))
+        session["modo"] = modo
+        flash(contenido.MENSAJES["modo_" + modo])
+    return redirect(url_for("ajustes"))
 
 
 @app.route("/perfil/ajustes", methods=["GET", "POST"])
@@ -349,7 +381,7 @@ def ajustes():
                 flash(contenido.MENSAJES["color_invalido"])
                 return redirect(url_for("ajustes"))
             color = color.upper()
-        modificar("UPDATE usuarios SET color_acento = ? WHERE id = ?", (color, yo()))
+        modificar("UPDATE usuarios SET color_acento = ? WHERE id = ?", (color, mi_cuenta()))
         flash(contenido.MENSAJES["color"])
         return redirect(url_for("ajustes"))
     return render_template("ajustes.html", colores=config_diseno.COLORES_ACENTO,
@@ -839,7 +871,9 @@ def examenes_elegidos():
     """Los exámenes de la carrera, curso y convocatoria que eligió el usuario (o [] si no eligió).
     Devuelve (lista, (carrera, curso, convocatoria)). No se guardan como eventos:
     se leen de examenes.py cada vez, así que solo se ven mientras la opción está elegida."""
-    fila = consultar("SELECT examenes_sel FROM usuarios WHERE id = ?", (yo(),))
+    if mi_modo() == "deporte":   # los exámenes oficiales son solo de Universidad
+        return [], None
+    fila = consultar("SELECT examenes_sel FROM usuarios WHERE id = ?", (mi_cuenta(),))
     texto = fila[0]["examenes_sel"] if fila else None
     if not texto:
         return [], None
@@ -874,7 +908,7 @@ def borrar_examen_automatico():
 def elegir_examenes():
     """Guarda qué calendario de exámenes quieres ver, o lo quita si pulsas "Quitar"."""
     if request.form.get("accion") == "quitar":
-        modificar("UPDATE usuarios SET examenes_sel = NULL WHERE id = ?", (yo(),))
+        modificar("UPDATE usuarios SET examenes_sel = NULL WHERE id = ?", (mi_cuenta(),))
         return redirect(url_for("calendario_vista"))
     if request.form.get("accion") == "mostrar_ocultos":
         modificar("DELETE FROM examenes_ocultos WHERE usuario_id = ?", (yo(),))
@@ -884,7 +918,7 @@ def elegir_examenes():
     lista = examenes.examenes(*eleccion)
     if not lista:
         return redirect(url_for("calendario_vista"))
-    modificar("UPDATE usuarios SET examenes_sel = ? WHERE id = ?", ("|".join(eleccion), yo()))
+    modificar("UPDATE usuarios SET examenes_sel = ? WHERE id = ?", ("|".join(eleccion), mi_cuenta()))
 
     # Antes los exámenes se copiaban como eventos: borramos esas copias para que no salgan dobles.
     for calendario in examenes.CALENDARIOS.values():

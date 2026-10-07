@@ -18,6 +18,21 @@ MENU = [
     ("Asistencia", "asistencia"),
 ]
 
+# En Deporte, el menú cambia el nombre de la primera página
+MENU_DEPORTE = [
+    ("Entrenos", "horario"),
+    ("Tareas", "tareas"),
+    ("Pendientes", "pendientes"),
+    ("Calendario", "calendario_vista"),
+    ("Asistencia", "asistencia"),
+]
+
+
+def menu(modo="universidad"):
+    """El menú del calendario que estás usando."""
+    return MENU_DEPORTE if modo == "deporte" else MENU
+
+
 # Botón en píldora a la derecha del menú
 BOTON_MENU = {"texto": "Mi perfil", "ruta": "perfil"}
 TEXTO_SALIR = "Salir"
@@ -49,6 +64,35 @@ PAGINAS = {
         "etiqueta": "Universidad",
         "titulo": "Asistencia",
         "subtitulo": "Las horas de clase a las que has ido en cada materia, según lo que marcas en el horario.",
+    },
+}
+
+# ---- Encabezados en Deporte (mismas páginas, con sus propios datos) ----
+PAGINAS_DEPORTE = {
+    "horario": {
+        "etiqueta": "Deporte",
+        "titulo": "Horario de entrenos",
+        "subtitulo": "Tus entrenamientos de 8:00 a 20:00, si fuiste y lo que te toca hacer.",
+    },
+    "tareas": {
+        "etiqueta": "Deporte",
+        "titulo": "Tareas",
+        "subtitulo": "Lo que tienes que hacer para tus deportes, con sus fechas.",
+    },
+    "pendientes": {
+        "etiqueta": "Deporte",
+        "titulo": "Pendientes",
+        "subtitulo": "Lo que falta por hacer, ordenado por fecha.",
+    },
+    "calendario": {
+        "etiqueta": "Deporte",
+        "titulo": "Calendario",
+        "subtitulo": "Tus partidos, competiciones y tareas del mes.",
+    },
+    "asistencia": {
+        "etiqueta": "Deporte",
+        "titulo": "Asistencia",
+        "subtitulo": "Las horas de entreno a las que has ido en cada deporte, según lo que marcas en el horario.",
     },
 }
 
@@ -89,7 +133,7 @@ PERFIL = {
     "avances_titulo": "Mis avances",
     "avances_texto": "Mira tu asistencia y las tareas que has cumplido.",
     "ajustes_titulo": "Ajustes",
-    "ajustes_texto": "Elige el color de la web: sustituye al azul en botones, marcas y burbujas.",
+    "ajustes_texto": "Cambia de calendario (Universidad o Deporte) y elige el color de la web.",
 }
 
 # ---- Página "Mis avances" ----
@@ -125,6 +169,8 @@ MENSAJES = {
     "actividad": "Actividad de asistencia guardada.",
     "color": "Color guardado.",
     "color_invalido": "Ese color no es válido.",
+    "modo_universidad": "Ahora usas el calendario de Universidad.",
+    "modo_deporte": "Ahora usas el calendario de Deporte. Sus datos van aparte de los de Universidad.",
     "actividad_tarea": "Actividad guardada y tarea marcada como hecha.",
     "cuenta": "Nombre guardado.",
     "clave": "Contraseña cambiada.",
@@ -150,14 +196,14 @@ NOTA_EXAMENES = ("Si hace falta una o más materias, revisar con su horario ofic
                  "de la universidad para añadirlas manualmente.")
 
 
-def todo():
+def todo(modo="universidad"):
     """Junta todos los textos en un diccionario para las plantillas."""
     return {
         "nombre_sitio": NOMBRE_SITIO,
-        "menu": MENU,
+        "menu": menu(modo),
         "boton_menu": BOTON_MENU,
         "texto_salir": TEXTO_SALIR,
-        "paginas": PAGINAS,
+        "paginas": PAGINAS_DEPORTE if modo == "deporte" else PAGINAS,
         "inicio": INICIO,
         "entrar": ENTRAR,
         "registrar": REGISTRAR,

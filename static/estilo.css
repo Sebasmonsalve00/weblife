@@ -571,6 +571,9 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .selector-hex { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .selector-hex input { height: 44px; font-variant-numeric: tabular-nums; text-transform: uppercase; }
 .selector-pie .boton { flex: none; }
+.ajustes-nota { color: var(--texto-secundario); margin: 0 0 16px; }
+.segmentos-grandes { max-width: 420px; margin-bottom: 0; }
+.segmentos-grandes .segmento { height: 40px; font-size: 0.9375rem; }
 .ajustes-botones { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
 .muestra-color { display: inline-block; width: 16px; height: 16px; border-radius: 27%; vertical-align: middle;
                  margin-left: 6px; border: 1px solid var(--borde-boton); }

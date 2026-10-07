@@ -30,6 +30,7 @@
     <h2 class="titulo-seccion" id="mes-titulo" aria-live="polite">{{ nombre_mes }} {{ anio }}</h2>
     <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}" aria-label="Mes siguiente" id="mes-siguiente" data-cambiar-mes>→</a>
 
+    {% if modo != "deporte" %}{# Los exámenes oficiales son solo de Universidad #}
     <div class="examenes-botones">
     <!-- Opción pequeña: cargar las fechas oficiales de examen (se abre al hacer clic) -->
     <details class="examenes-mini">
@@ -113,6 +114,7 @@
       </div>
     </details>
     </div>
+    {% endif %}
   </div>
   <p class="leyenda" id="mes-leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span>{% if eleccion or manuales %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
 
@@ -270,6 +272,7 @@
   });
 })();
 </script>
+{% if modo != "deporte" %}
 <!-- Las opciones de "Curso" y "Convocatoria" cambian según lo elegido antes -->
 <script>
 (function () {
@@ -345,6 +348,7 @@
   });
 })();
 </script>
+{% endif %}
 <!-- Cambiar de mes sin recargar la página: solo se cambia el calendario -->
 <script>
 (function () {
@@ -402,6 +406,7 @@
 <div class="contenedor avisos-contenedor">
 <!-- ===== Avisos fijos arriba a la izquierda: exámenes y entregas de menos de una semana ===== -->
 <aside class="avisos" aria-label="Avisos importantes">
+  {% if modo != "deporte" %}
   <section class="aviso-caja aviso-examenes">
     <h2>Próximos exámenes</h2>
     {% for a in avisos.examenes %}
@@ -414,6 +419,7 @@
       <p class="vacio">No tienes exámenes próximos.</p>
     {% endfor %}
   </section>
+  {% endif %}
   {% if avisos.urgentes %}
   <section class="aviso-caja aviso-urgente">
     <h2>Próxima semana</h2>
