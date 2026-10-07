@@ -152,6 +152,8 @@
   <script src="{{ url_for('static', filename='scroll-engine.js') }}" defer></script>
   <!-- Al marcar o borrar algo, se actualiza solo esa casilla (sin recargar la página) -->
   <script src="{{ url_for('static', filename='zonas.js') }}" defer></script>
+  <!-- Calendario y horas con el estilo de la web (en vez de los del navegador) -->
+  <script src="{{ url_for('static', filename='selectores.js') }}" defer></script>
   {% if efectos.pagina_siguiente and session.usuario_id %}
   <script src="{{ url_for('static', filename='pagina-siguiente.js') }}" defer></script>
   {% endif %}

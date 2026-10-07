@@ -933,3 +933,69 @@ html:not(.js) .carga { display: none; }
 /* Texto solo para lectores de pantalla (invisible en pantalla) */
 .saltar-lector { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .nota + .subtitulo-chico { margin-top: 48px; }
+
+/* ---------- Elegir fecha y hora (selectores.js) ----------
+   El campo se ve como los demás; al tocarlo sale una tarjeta de cristal
+   con el mes o con las horas, con la letra y las formas de la web. */
+.selector-campo { position: relative; display: block; min-width: 0; }
+.selector-original { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.selector-boton {
+  width: 100%; height: 52px; padding: 0 14px 0 16px; justify-content: space-between;
+  border-radius: var(--radio-input); border: 1px solid var(--borde); background: var(--superficie);
+  color: var(--color-texto); font-size: 1rem; font-weight: 400; text-align: left;
+  transition: border-color var(--t-boton) ease, box-shadow var(--t-boton) ease;
+}
+.selector-boton:hover, .selector-boton:active { transform: none; }
+.selector-boton:focus-visible, .selector-boton[aria-expanded="true"] {
+  outline: none; border-color: var(--color-acento); box-shadow: 0 0 0 4px var(--acento-degradado);
+}
+.selector-boton.vacio .selector-texto { color: var(--texto-secundario); }
+.selector-boton.invalido { border-color: var(--color-texto); }
+.selector-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.selector-icono { display: inline-flex; color: var(--texto-secundario); flex: none; }
+.selector-icono svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.selector-hex .selector-boton, .editar-campos .selector-boton { height: 52px; }
+
+.selector-flotante {
+  position: fixed; z-index: 90; margin: 0; inset: auto; padding: 16px; width: 304px;
+  border-radius: 22px; color: var(--color-texto);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--brillo-cristal, 0 0 transparent), 0 18px 48px rgba(29, 29, 31, 0.16), 0 2px 6px rgba(29, 29, 31, 0.06);
+  --brillo-cristal: inset 0 1px 1px rgba(255, 255, 255, 0.9), inset 0 -1px 1px rgba(255, 255, 255, 0.35);
+  animation: selector-entra 180ms var(--easing);
+}
+.selector-flotante[hidden] { display: none; }
+@keyframes selector-entra { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+.selector-cabecera { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.selector-cabecera b { flex: 1; font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.01em; padding-left: 4px; }
+.selector-cabecera .boton-icono { font-size: 1.125rem; }
+.selector-dias { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; justify-items: center; }
+.selector-dia-nombre { font-size: 0.75rem; font-weight: 600; color: var(--texto-secundario); padding: 4px 0 6px; }
+.selector-dia {
+  width: 36px; height: 36px; padding: 0; border-radius: 50%; border: none;
+  background: transparent; color: var(--color-texto); font-size: 0.9375rem; font-weight: 400;
+  transition: background 150ms ease, color 150ms ease;
+}
+.selector-dia:hover { background: rgba(118, 118, 128, 0.12); transform: none; }
+.selector-dia.hoy { color: #007AFF; font-weight: 600; }
+.selector-dia.elegido { background: #007AFF; color: #FFFFFF; font-weight: 600; }
+.selector-dia:disabled { opacity: 0.3; cursor: default; }
+.selector-dia:focus-visible, .selector-opcion:focus-visible { outline: 2px solid var(--color-texto); outline-offset: 1px; }
+.selector-pie-fecha { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+/* Horas: dos columnas que se desplazan */
+.selector-horas { width: 220px; }
+.selector-columnas { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 4px; }
+.selector-columna { height: 228px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;
+                    scrollbar-width: none; scroll-behavior: smooth; padding: 2px;
+                    /* Se desvanece arriba y abajo, como la rueda del iPhone */
+                    -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent);
+                    mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent); }
+.selector-columna::-webkit-scrollbar { display: none; }
+.selector-dos-puntos { font-weight: 600; color: var(--texto-secundario); padding-top: 7px; }
+.selector-opcion {
+  flex: none; height: 36px; padding: 0; border-radius: 10px; border: none;
+  background: transparent; color: var(--color-texto); font-size: 1rem; font-variant-numeric: tabular-nums;
+}
+.selector-opcion:hover { background: rgba(118, 118, 128, 0.12); transform: none; }
+.selector-opcion.elegido { background: #007AFF; color: #FFFFFF; font-weight: 600; }
+.selector-opcion:disabled { opacity: 0.3; cursor: default; }
