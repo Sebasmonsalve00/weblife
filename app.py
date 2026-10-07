@@ -155,6 +155,32 @@ def crear_tablas():
     if "tipo" not in columnas:
         conexion.execute("ALTER TABLE clases ADD COLUMN tipo TEXT")
 
+    # Comidas de Deporte: lo que comiste cada día con sus macros (en gramos) y calorías
+    conexion.execute("""
+        CREATE TABLE IF NOT EXISTS comidas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            fecha TEXT NOT NULL,          -- "2026-10-07"
+            nombre TEXT NOT NULL,         -- "Desayuno", "Batido"...
+            kcal REAL NOT NULL DEFAULT 0,
+            proteinas REAL NOT NULL DEFAULT 0,
+            carbohidratos REAL NOT NULL DEFAULT 0,
+            grasas REAL NOT NULL DEFAULT 0
+        )""")
+
+    # Datos de Deporte de cada cuenta: objetivo de calorías, reparto de macros (%)
+    # y lo último que pusiste en la calculadora de IMC.
+    conexion.execute("""
+        CREATE TABLE IF NOT EXISTS perfil_deporte (
+            usuario_id INTEGER PRIMARY KEY,
+            kcal_objetivo REAL,
+            pct_proteinas REAL,
+            pct_carbohidratos REAL,
+            pct_grasas REAL,
+            peso REAL,                    -- kg
+            altura REAL                   -- cm
+        )""")
+
     # "categoria" en clases y eventos: en Deporte, el tipo de entreno que elegiste
     # (cardio, fuerza, comida...). Ver contenido.TIPOS_DEPORTE.
     for tabla in ("clases", "eventos"):
@@ -555,7 +581,8 @@ def horario():
     panel = []
     for clase in clases:
         # Las actividades aparte no llevan asistencia ni tareas: no salen en el panel
-        if clase["dia"] == dia_panel.weekday() and clase["tipo"] != "actividad":
+        # (En Deporte todo sale: ahí se marca si completaste cada entreno, comida...)
+        if clase["dia"] == dia_panel.weekday() and (clase["tipo"] != "actividad" or mi_modo() == "deporte"):
             pendientes_materia = consultar(
                 "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega",
                 (clase["nombre"], yo()))
@@ -566,6 +593,9 @@ def horario():
     # ---- Texto de arriba: de qué hora a qué hora tienes clase ese día y tus horas huecas ----
     subtitulo_dia = resumen_del_dia(
         [item["clase"] for item in panel], DIAS_SEMANA[dia_panel.weekday()], dia_panel == date.today())
+    if mi_modo() == "deporte":
+        subtitulo_dia = [linea.replace("tienes clases", "tienes nada programado").replace("tienes clase", "tienes entreno")
+                         for linea in subtitulo_dia]
 
     # Calculamos dónde va cada clase en la grilla:
     # "arriba" = cuántos píxeles desde las 8:00, "alto" = cuánto dura.
@@ -1111,8 +1141,176 @@ def resumen_asistencia():
     }
 
 
+def numero_del_form(nombre):
+    """Lee un número del formulario (vacío = 0). Nunca negativo."""
+    try:
+        return max(0.0, float(request.form.get(nombre, "").replace(",", ".") or 0))
+    except ValueError:
+        return 0.0
+
+
+@app.route("/deporte/comida", methods=["POST"])
+def registrar_comida():
+    """Guarda una comida con sus calorías y macros (solo en Deporte)."""
+    fecha = request.form.get("fecha", "")
+    try:
+        date.fromisoformat(fecha)
+    except ValueError:
+        fecha = date.today().isoformat()
+    nombre = request.form.get("nombre", "").strip()[:60]
+    if mi_modo() == "deporte" and nombre:
+        modificar("INSERT INTO comidas (usuario_id, fecha, nombre, kcal, proteinas, carbohidratos, grasas) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                  (mi_cuenta(), fecha, nombre, numero_del_form("kcal"), numero_del_form("proteinas"),
+                   numero_del_form("carbohidratos"), numero_del_form("grasas")))
+        flash(contenido.MENSAJES["comida"])
+    return redirect(url_for("asistencia", fecha=fecha))
+
+
+@app.route("/deporte/comida/borrar/<int:id>", methods=["POST"])
+def borrar_comida(id):
+    fila = consultar("SELECT fecha FROM comidas WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
+    modificar("DELETE FROM comidas WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
+    return redirect(url_for("asistencia", fecha=fila[0]["fecha"] if fila else None))
+
+
+def guardar_perfil_deporte(**datos):
+    """Guarda algunos datos del perfil de Deporte (crea la fila si no existe)."""
+    modificar("INSERT OR IGNORE INTO perfil_deporte (usuario_id) VALUES (?)", (mi_cuenta(),))
+    columnas = ", ".join(f"{columna} = ?" for columna in datos)
+    modificar(f"UPDATE perfil_deporte SET {columnas} WHERE usuario_id = ?", (*datos.values(), mi_cuenta()))
+
+
+@app.route("/deporte/objetivo", methods=["POST"])
+def guardar_objetivo():
+    """Guarda las calorías que necesitas y qué % va a proteínas, carbohidratos y grasas."""
+    if mi_modo() == "deporte":
+        pct = [numero_del_form("pct_proteinas"), numero_del_form("pct_carbohidratos"), numero_del_form("pct_grasas")]
+        suma = sum(pct)
+        if suma == 0:
+            pct = [30, 40, 30]                 # reparto de ejemplo si lo dejas todo vacío
+        elif round(suma) != 100:
+            pct = [p * 100 / suma for p in pct]  # que siempre sume 100 %
+            flash(contenido.MENSAJES["porcentajes_ajustados"])
+        guardar_perfil_deporte(kcal_objetivo=numero_del_form("kcal_objetivo"), pct_proteinas=round(pct[0], 1),
+                               pct_carbohidratos=round(pct[1], 1), pct_grasas=round(pct[2], 1))
+        flash(contenido.MENSAJES["objetivo"])
+    return redirect(url_for("asistencia", fecha=request.form.get("fecha") or None) + "#objetivo")
+
+
+@app.route("/deporte/imc", methods=["POST"])
+def calcular_imc():
+    """Guarda tu peso y altura; la página calcula el IMC con ellos."""
+    if mi_modo() == "deporte":
+        altura = numero_del_form("altura")
+        if 0 < altura < 3:        # si la pusiste en metros (1,75), la pasamos a centímetros
+            altura *= 100
+        guardar_perfil_deporte(peso=numero_del_form("peso"), altura=altura)
+    return redirect(url_for("asistencia", fecha=request.form.get("fecha") or None) + "#imc")
+
+
+def gramos_objetivo(perfil):
+    """Gramos de cada macro: proteínas y carbohidratos tienen 4 kcal por gramo; las grasas, 9."""
+    if not perfil or not perfil["kcal_objetivo"]:
+        return None
+    kcal = perfil["kcal_objetivo"]
+    return {"kcal": round(kcal),
+            "proteinas": round(kcal * (perfil["pct_proteinas"] or 0) / 100 / 4),
+            "carbohidratos": round(kcal * (perfil["pct_carbohidratos"] or 0) / 100 / 4),
+            "grasas": round(kcal * (perfil["pct_grasas"] or 0) / 100 / 9)}
+
+
+def imc_de(perfil):
+    """IMC = peso (kg) / estatura (m)². Devuelve el número y qué significa (tabla de la OMS)."""
+    if not perfil or not perfil["peso"] or not perfil["altura"]:
+        return None
+    imc = perfil["peso"] / (perfil["altura"] / 100) ** 2
+    if imc < 18.5:
+        categoria = "Bajo peso"
+    elif imc < 25:
+        categoria = "Peso normal"
+    elif imc < 30:
+        categoria = "Sobrepeso"
+    else:
+        categoria = "Obesidad"
+    return {"valor": round(imc, 1), "categoria": categoria}
+
+
+def sumar_macros(comidas):
+    """Total de calorías y macros de una lista de comidas (redondeado)."""
+    total = {"kcal": 0, "proteinas": 0, "carbohidratos": 0, "grasas": 0}
+    for comida in comidas:
+        for clave in total:
+            total[clave] += comida[clave] or 0
+    return {clave: round(valor) for clave, valor in total.items()}
+
+
+def alimentacion_e_info():
+    """Página de Deporte: registro de comidas (macros y calorías) y resumen de la semana."""
+    # Día del registro de comidas (por defecto, hoy) y semana del resumen (de lunes a domingo)
+    try:
+        dia = date.fromisoformat(request.args.get("fecha", ""))
+    except ValueError:
+        dia = date.today()
+    lunes = dia - timedelta(days=dia.weekday())
+    domingo = lunes + timedelta(days=6)
+    dias = [lunes + timedelta(days=n) for n in range(7)]
+
+    comidas_dia = consultar("SELECT * FROM comidas WHERE usuario_id = ? AND fecha = ? ORDER BY id",
+                            (mi_cuenta(), dia.isoformat()))
+    comidas_semana = consultar("SELECT * FROM comidas WHERE usuario_id = ? AND fecha BETWEEN ? AND ?",
+                               (mi_cuenta(), lunes.isoformat(), domingo.isoformat()))
+
+    # Lo programado en el horario (se repite cada semana) y lo que marcaste como completado
+    clases = consultar("SELECT * FROM clases WHERE usuario_id = ? ORDER BY hora_inicio", (yo(),))
+    marcas = {(fila["clase_id"], fila["fecha"]): fila["asistio"] for fila in consultar(
+        "SELECT asistencias.* FROM asistencias JOIN clases ON clases.id = asistencias.clase_id "
+        "WHERE clases.usuario_id = ? AND asistencias.fecha BETWEEN ? AND ?",
+        (yo(), lunes.isoformat(), domingo.isoformat()))}
+    eventos = consultar("SELECT * FROM eventos WHERE usuario_id = ? AND fecha BETWEEN ? AND ? ORDER BY fecha, hora",
+                        (yo(), lunes.isoformat(), domingo.isoformat()))
+    metas = consultar("SELECT * FROM tareas WHERE usuario_id = ? AND fecha_entrega BETWEEN ? AND ?",
+                      (yo(), lunes.isoformat(), domingo.isoformat()))
+
+    por_tipo = {}      # nombre del tipo -> {"programados", "completados"}
+    filas = []         # una por día
+    for fecha in dias:
+        texto = fecha.isoformat()
+        del_dia = [c for c in clases if c["dia"] == fecha.weekday()]
+        hechos = [c for c in del_dia if marcas.get((c["id"], texto)) == 1]
+        for clase in del_dia:
+            tipo = contenido.NOMBRE_TIPO_DEPORTE.get(clase["categoria"] or "", "Sin tipo")
+            cuenta = por_tipo.setdefault(tipo, {"programados": 0, "completados": 0})
+            cuenta["programados"] += 1
+            cuenta["completados"] += marcas.get((clase["id"], texto)) == 1
+        filas.append({
+            "fecha": fecha, "nombre": DIAS_SEMANA[fecha.weekday()], "es_hoy": fecha == date.today(),
+            "programados": len(del_dia), "completados": len(hechos),
+            "eventos": [con_categoria(e["titulo"], e["categoria"]) for e in eventos if e["fecha"] == texto],
+            "macros": sumar_macros([c for c in comidas_semana if c["fecha"] == texto]),
+        })
+
+    programados = sum(f["programados"] for f in filas)
+    completados = sum(f["completados"] for f in filas)
+    dias_con_comidas = [f for f in filas if f["macros"]["kcal"] or f["macros"]["proteinas"]]
+    media_kcal = round(sum(f["macros"]["kcal"] for f in dias_con_comidas) / len(dias_con_comidas)) if dias_con_comidas else 0
+    filas_perfil = consultar("SELECT * FROM perfil_deporte WHERE usuario_id = ?", (mi_cuenta(),))
+    perfil = filas_perfil[0] if filas_perfil else None
+    return render_template(
+        "deporte_info.html", perfil=perfil, objetivo=gramos_objetivo(perfil), imc=imc_de(perfil), dia=dia, hoy=date.today(), comidas=comidas_dia, total_dia=sumar_macros(comidas_dia),
+        lunes=lunes, domingo=domingo, filas=filas, por_tipo=sorted(por_tipo.items()),
+        programados=programados, completados=completados,
+        porcentaje=round(100 * completados / programados) if programados else 0,
+        metas_total=len(metas), metas_hechas=sum(1 for m in metas if m["hecha"]),
+        media_kcal=media_kcal, semana_anterior=(lunes - timedelta(days=7)).isoformat(),
+        semana_siguiente=(lunes + timedelta(days=7)).isoformat())
+
+
 @app.route("/universidad/asistencia")
 def asistencia():
+    # En Deporte esta página es "Alimentación e info"
+    if mi_modo() == "deporte":
+        return alimentacion_e_info()
     # Últimas 30 marcas, para ver el detalle día a día.
     historial = consultar("""
         SELECT asistencias.fecha, asistencias.asistio, clases.nombre, clases.hora_inicio, clases.hora_fin,

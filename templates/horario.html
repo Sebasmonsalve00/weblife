@@ -23,11 +23,15 @@
     {% set clase = item.clase %}
     <div class="panel-clase {{ 'fui' if item.asistio == 1 }} {{ 'no-fui' if item.asistio == 0 }}" data-zona="clase-{{ clase.id }}-{{ dia_panel }}">
       <b>{{ clase.nombre }}</b>
+      {% if modo == "deporte" %}
+      <small>{{ clase.hora_inicio }}–{{ clase.hora_fin }}{% if clase.categoria %} · {{ texto.nombre_tipo_deporte.get(clase.categoria, "") }}{% endif %}{% if clase.sala %} · {{ clase.sala }}{% endif %}</small>
+      {% else %}
       <small>{{ clase.hora_inicio }}–{{ clase.hora_fin }}{% if clase.sala %} · Aula {{ clase.sala }}{% endif %}</small>
+      {% endif %}
 
-      <!-- ¿Fuiste a clase? -->
-      <div class="asistencia" role="group" aria-label="Asistencia a {{ clase.nombre }}">
-        {% for valor, etiqueta in [(1, "✓ Fui"), (0, "✕ No fui")] %}
+      <!-- ¿Fuiste a clase? (en Deporte: ¿lo completaste?) -->
+      <div class="asistencia" role="group" aria-label="{{ '¿Completaste ' if modo == 'deporte' else 'Asistencia a ' }}{{ clase.nombre }}">
+        {% for valor, etiqueta in ([(1, "✓ Completado"), (0, "✕ No completado")] if modo == "deporte" else [(1, "✓ Fui"), (0, "✕ No fui")]) %}
           <form method="post" action="{{ url_for('marcar_asistencia', id=clase.id) }}" class="en-linea">
             <input type="hidden" name="fecha" value="{{ dia_panel }}">
             <input type="hidden" name="asistio" value="{{ valor }}">
@@ -36,6 +40,7 @@
         {% endfor %}
       </div>
 
+      {% if modo != "deporte" %}
       <!-- ¿Hubo actividad de asistencia (quiz, lista, taller...)? Se abre al hacer clic -->
       {% set act = item.actividad %}
       {% if act %}
@@ -69,6 +74,7 @@
           <button>Guardar actividad</button>
         </form>
       </details>
+      {% endif %}
 
       <!-- ¿Dejaron tarea? Se abre al hacer clic -->
       <details>
@@ -101,7 +107,7 @@
       {% endif %}
     </div>
   {% else %}
-    <p class="vacio centro">No tienes clases este día.</p>
+    <p class="vacio centro">{{ "No tienes nada programado este día." if modo == "deporte" else "No tienes clases este día." }}</p>
   {% endfor %}
 </aside>
 
@@ -178,7 +184,7 @@
                data-desde="{{ item.clase.hora_inicio }}" data-hasta="{{ item.clase.hora_fin }}" data-categoria="{{ item.clase.categoria or '' }}">
             <b>{{ item.clase.nombre }}</b>
             {% if modo == "deporte" and item.clase.categoria %}<span class="bloque-tipo">{{ texto.nombre_tipo_deporte.get(item.clase.categoria, "") }}</span>{% endif %}
-            {% if item.clase.sala %}<span>{{ item.clase.sala if es_actividad else "Aula " ~ item.clase.sala }}</span>{% endif %}
+            {% if item.clase.sala %}<span>{{ item.clase.sala if es_actividad or modo == "deporte" else "Aula " ~ item.clase.sala }}</span>{% endif %}
             {% set que = "actividad" if es_actividad else "clase" %}
             {{ boton_borrar(url_for('borrar_clase', id=item.clase.id), "Borrar " ~ que ~ ": " ~ item.clase.nombre ~ " del " ~ dias[d], "¿Borrar esta " ~ que ~ " del horario?") }}
           </div>
