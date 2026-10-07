@@ -18,6 +18,14 @@
     <label for="c-hora">Hora (opcional)</label>
     <input id="c-hora" type="time" name="hora">
   </div>
+  {% if modo == "deporte" %}
+  <div class="campo md-6 lg-6">
+    <label for="c-categoria">Tipo</label>
+    <select id="c-categoria" name="categoria">
+      {% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
   <div class="campo">
     <button class="boton-enviar">Agregar evento</button>
   </div>
