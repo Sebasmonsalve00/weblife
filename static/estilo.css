@@ -1105,3 +1105,5 @@ html:not(.js) .carga { display: none; }
 /* Con un alimento elegido solo se ve la cantidad: que ocupe todo el ancho */
 #form-alimento[data-modo="elegido"] .ventana-campos { grid-template-columns: 1fr; }
 .al-volver { margin-bottom: 12px; }
+/* Un alimento tuyo guardado como "una porción" no pide gramos */
+#form-alimento[data-modo="elegido"][data-porcion="1"] .al-cantidad { display: none; }
