@@ -123,6 +123,13 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   }
 }
 
+/* Cristal sin difuminar (EFECTOS["cristal_difuminado"] = False en config_diseno.py):
+   el mismo blanco translúcido, sin el coste de difuminar al hacer scroll */
+.sin-cristal :is(.vidrio, .tarjeta, .formulario, .tabla-contenedor, .nav, .menu-movil, .lista li,
+  .grilla-contenedor, .panel-dia, .resumen-materias, .calendario-contenedor) {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+
 /* ---------- Borde de cristal (como las notificaciones del iPhone) ----------
    Las islas mantienen su relleno, pero el borde brilla: más claro arriba a la
    izquierda y abajo a la derecha, como luz sobre un cristal, con un leve brillo
@@ -152,8 +159,9 @@ h3 { font-size: 1.125rem; font-weight: 600; }
 .mancha {
   position: absolute;
   border-radius: 50%;
-  background: var(--acento-manchas);
-  filter: blur(var(--blur-manchas));
+  /* Un degradado redondo en vez de filter: blur (se ve igual y no hay que
+     volver a difuminar la mancha en cada fotograma mientras flota) */
+  background: radial-gradient(circle closest-side, var(--acento-manchas), transparent);
   animation: flotar var(--t-flotar) ease-in-out infinite alternate;
 }
 .mancha-1 { width: 560px; height: 560px; top: -160px; left: -180px; }

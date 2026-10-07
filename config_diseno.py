@@ -92,6 +92,10 @@ EFECTOS = {
     "transiciones_pagina": True,   # fundido suave al cambiar de página (View Transitions)
     "pagina_siguiente": True,      # scroll continuo: la página siguiente aparece debajo al bajar
     "microinteracciones": True,    # botones que crecen/se encogen, tarjetas que suben
+    # Difuminar lo que hay detrás de cada tarjeta (backdrop-filter). Es lo que más
+    # frena la web al hacer scroll, y detrás solo hay burbujas ya borrosas, así que
+    # apagado casi no se nota (las tarjetas siguen con su blanco translúcido).
+    "cristal_difuminado": False,
 }
 
 # Secciones con scroll animado (para cuando se añadan): alto de cada tipo.
