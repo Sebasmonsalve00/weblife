@@ -8,7 +8,7 @@
 <div class="grid-12">
 
 <!-- ===== Panel lateral: clases del día, asistencia y tareas rápidas ===== -->
-<aside class="panel-dia lg-4 reveal" aria-label="Clases del día">
+<aside class="panel-dia lg-4 reveal" aria-label="Clases del día" data-zona="horario-panel">
   <div class="panel-titulo">
     <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_anterior) }}" aria-label="Día anterior">←</a>
     <div>
@@ -109,10 +109,11 @@
 <div class="lg-8 horario-principal">
 
 <!-- Formulario para agregar una clase -->
-<form method="post" class="formulario form-clase grid-12 reveal">
+<!-- Al agregar, solo se actualizan la grilla, el panel y "Mis materias" (zonas.js) -->
+<form method="post" class="formulario form-clase grid-12 reveal" data-actualiza="horario-grilla horario-panel horario-materias">
   <div class="campo md-6 lg-4">
     <label for="h-nombre">Materia o actividad</label>
-    <input id="h-nombre" name="nombre" placeholder="ej: Cálculo o Gimnasio" required>
+    <input id="h-nombre" name="nombre" placeholder="ej: Cálculo o Gimnasio" required data-limpiar>
   </div>
   <div class="campo md-6 lg-4">
     <label for="h-dia">Día</label>
@@ -124,7 +125,7 @@
   </div>
   <div class="campo md-6 lg-4">
     <label for="h-aula">Aula o lugar</label>
-    <input id="h-aula" name="sala" placeholder="ej: 2.14">
+    <input id="h-aula" name="sala" placeholder="ej: 2.14" data-limpiar>
   </div>
   <div class="campo md-6 lg-4">
     <label for="h-desde">Desde</label>
@@ -145,7 +146,7 @@
 {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
 
 <!-- Grilla: una columna por día, una fila por hora de 8:00 a 20:00 -->
-<div class="grilla-contenedor reveal">
+<div class="grilla-contenedor reveal" data-zona="horario-grilla" data-zona-tambien="horario-panel horario-materias">
   <div class="grilla" style="grid-template-columns: 56px repeat({{ dias_visibles|length }}, minmax(110px, 1fr));">
     <div></div>
     {% for d in dias_visibles %}<div class="grilla-dia">{{ dias[d] }}</div>{% endfor %}
@@ -178,7 +179,7 @@
 <!-- Resumen: cada materia con sus horas a la semana -->
 <section class="seccion reveal">
   <h2 class="titulo-seccion" data-revelar-palabras>Mis materias</h2>
-  <ul class="resumen-materias">
+  <ul class="resumen-materias" data-zona="horario-materias">
     {% for materia in resumen %}
       <li><span>{{ materia.nombre }}</span><b>{{ materia.texto }} / semana</b></li>
     {% else %}

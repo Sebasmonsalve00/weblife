@@ -6,6 +6,8 @@
 //  Al enviar un formulario que está dentro de una zona, lo mandamos sin
 //  recargar, pedimos la página otra vez y cambiamos solo esa zona.
 //  Si la zona ya no existe (por ejemplo, borraste la tarea), se quita.
+//  Un formulario fuera de una zona puede decir qué zonas cambia con
+//  data-actualiza (así "Agregar clase" solo actualiza el horario).
 //  Si algo falla, el formulario se envía normal, como siempre.
 // ============================================================
 
@@ -15,7 +17,7 @@
 
   // Mensaje pequeño abajo (por ejemplo "Tarea guardada.")
   var aviso = null, temporizador = null;
-  function mostrarAviso(texto) {
+  function mostrarAviso(texto, esError) {
     if (!texto) return;
     if (!aviso) {
       aviso = document.createElement("div");
@@ -23,7 +25,7 @@
       aviso.setAttribute("role", "status");
       document.body.appendChild(aviso);
     }
-    aviso.textContent = "✓ " + texto;
+    aviso.textContent = (esError ? "" : "✓ ") + texto;
     aviso.classList.add("visible");
     clearTimeout(temporizador);
     temporizador = setTimeout(function () { aviso.classList.remove("visible"); }, 2500);
@@ -51,18 +53,26 @@
     });
   }
 
+  function nombresDe(texto) { return (texto || "").split(/\s+/).filter(Boolean); }
+
   document.addEventListener("submit", function (e) {
     var form = e.target;
     if (e.defaultPrevented || (form.method || "").toLowerCase() !== "post") return;
+    // Qué zonas cambian: la zona donde está el formulario (y las que ella diga en
+    // data-zona-tambien), o las que diga el propio formulario en data-actualiza
+    // (por ejemplo, "Agregar clase" actualiza solo el horario).
     var zona = form.closest("[data-zona]");
-    if (!zona) return;   // fuera de una zona: se envía normal
+    var nombres = nombresDe(form.dataset.actualiza);
+    if (zona) nombres = [zona.dataset.zona].concat(nombresDe(zona.dataset.zonaTambien), nombres);
+    if (!nombres.length) return;   // fuera de una zona: se envía normal
     e.preventDefault();
 
     var datos = new FormData(form);
     if (e.submitter && e.submitter.name) datos.append(e.submitter.name, e.submitter.value);
-    var pagina = urlDeLaPagina(zona);
-    var nombre = zona.dataset.zona;
-    zona.classList.add("actualizando");
+    var pagina = urlDeLaPagina(zona || form);
+    var tocadas = [];
+    nombres.forEach(function (n) { tocadas = tocadas.concat(zonasLlamadas(document, n)); });
+    tocadas.forEach(function (z) { z.classList.add("actualizando"); });
 
     fetch(form.action, { method: "POST", body: datos, credentials: "same-origin", referrer: pagina })
       .then(function (r) {
@@ -74,24 +84,42 @@
       })
       .then(function (html) {
         var nueva = new DOMParser().parseFromString(html, "text/html");
+        // Si la página devolvió un error (por ejemplo, horas al revés), lo mostramos y no tocamos nada
+        var error = nueva.querySelector(".aviso-error");
+        if (error && !zona) {
+          tocadas.forEach(function (z) { z.classList.remove("actualizando"); });
+          mostrarAviso(error.textContent.trim(), true);
+          return;
+        }
         var mensaje = nueva.querySelector(".aviso-exito p");
         mostrarAviso(mensaje && mensaje.textContent.replace(/^✓\s*/, ""));
-        var modelo = buscarZona(nueva, nombre);
-        // La zona tocada y sus copias en otras páginas del scroll continuo
-        var copias = zonasLlamadas(document, nombre);
-        if (copias.indexOf(zona) === -1) copias.push(zona);
-        copias.forEach(function (vieja) {
-          if (!modelo) { vieja.remove(); return; }   // ya no existe (borrada o ya no toca aquí)
-          var reemplazo = document.importNode(modelo, true);
-          // Lo que aparece con animación, aquí ya se ve
-          reemplazo.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("visible"); });
-          if (reemplazo.classList.contains("reveal")) reemplazo.classList.add("visible");
-          vieja.replaceWith(reemplazo);
-          if (window.Weblife) window.Weblife.preparar(reemplazo);
+        nombres.forEach(function (nombre) {
+          var modelo = buscarZona(nueva, nombre);
+          // La zona y sus copias en otras páginas del scroll continuo
+          var copias = zonasLlamadas(document, nombre);
+          if (zona && nombre === zona.dataset.zona && copias.indexOf(zona) === -1) copias.push(zona);
+          copias.forEach(function (vieja) {
+            if (!document.contains(vieja)) return;
+            if (!modelo) { vieja.remove(); return; }   // ya no existe (borrada o ya no toca aquí)
+            var reemplazo = document.importNode(modelo, true);
+            // Lo que aparece con animación, aquí ya se ve
+            reemplazo.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("visible"); });
+            if (reemplazo.classList.contains("reveal")) reemplazo.classList.add("visible");
+            vieja.replaceWith(reemplazo);
+            if (window.Weblife) window.Weblife.preparar(reemplazo);
+          });
         });
+        // El formulario se queda donde está; vaciamos los campos marcados para escribir otro
+        if (!zona) form.querySelectorAll("[data-limpiar]").forEach(function (campo) { campo.value = ""; });
       })
       .catch(function () {
-        zona.classList.remove("actualizando");
+        tocadas.forEach(function (z) { z.classList.remove("actualizando"); });
+        // form.submit() no manda el botón pulsado (ej: "Agregar actividad"): lo añadimos a mano
+        if (e.submitter && e.submitter.name) {
+          var oculto = document.createElement("input");
+          oculto.type = "hidden"; oculto.name = e.submitter.name; oculto.value = e.submitter.value;
+          form.appendChild(oculto);
+        }
         form.submit();   // si algo falla, como siempre
       });
   });
