@@ -102,9 +102,11 @@
 {% endfor %}
 </div>
 
-<!-- Pop-up grande para añadir un alimento con toda su información -->
+<!-- Pop-up grande para añadir un alimento: lo buscas en la tabla de alimentos
+     (CIQUAL) y solo pones los gramos; si no está, lo añades a mano con toda su información -->
 <dialog class="dia-vista ventana ventana-grande" id="dlg-alimento" aria-labelledby="dlg-alimento-titulo">
-  <form method="post" action="{{ url_for('registrar_comida') }}">
+  <form method="post" action="{{ url_for('registrar_comida') }}" id="form-alimento" data-modo="buscar"
+        data-alimentos="{{ url_for('static', filename='alimentos.json') }}">
     <div class="dia-vista-cabecera">
       <span class="selector-hueco"></span>
       <h2 id="dlg-alimento-titulo">Añadir alimento</h2>
@@ -116,16 +118,34 @@
         <label class="segmento"><input type="radio" name="tipo" value="{{ clave }}"{% if loop.first %} checked{% endif %}> {{ nombre }}</label>
       {% endfor %}
     </div>
-    <div class="ventana-campos">
-      <div class="campo ventana-ancho">
+    <!-- Paso 1: buscar el alimento -->
+    <div class="buscador al-solo-buscar">
+      <label for="al-buscar" class="etiqueta-campo">Busca el alimento</label>
+      <input id="al-buscar" type="search" placeholder="ej: arroz cocido, pechuga de pollo, yogur" autocomplete="off"
+             aria-controls="al-resultados" aria-describedby="al-estado">
+      <ul id="al-resultados" class="buscador-resultados" aria-label="Alimentos encontrados"></ul>
+      <p class="nota-mini" id="al-estado" aria-live="polite">Escribe para buscar entre más de 3.400 alimentos.</p>
+      <button type="button" class="boton boton-secundario boton-chico" id="al-a-mano">No lo encuentro: añadir a mano</button>
+    </div>
+    <!-- Paso 2: el alimento elegido (sus valores por 100 g) -->
+    <div class="alimento-elegido al-solo-elegido">
+      <div>
+        <b id="al-elegido-nombre"></b>
+        <p class="nota-mini" id="al-elegido-info"></p>
+      </div>
+      <button type="button" class="boton boton-secundario boton-chico" id="al-otro">Elegir otro</button>
+    </div>
+    <button type="button" class="boton boton-secundario boton-chico al-solo-manual al-volver" id="al-volver">← Buscar en la lista</button>
+    <div class="ventana-campos al-oculto-buscar">
+      <div class="campo ventana-ancho al-solo-manual">
         <label for="al-nombre">Alimento</label>
         <input id="al-nombre" name="nombre" placeholder="ej: Avena, Pechuga de pollo, Yogur griego" maxlength="60" required>
       </div>
       <div class="campo">
         <label for="al-cantidad">Cantidad (g)</label>
-        <input id="al-cantidad" type="number" name="cantidad" min="0" step="any" inputmode="decimal" placeholder="ej: 80">
+        <input id="al-cantidad" type="number" name="cantidad" min="0" step="any" inputmode="decimal" placeholder="ej: 80" value="100">
       </div>
-      <div class="campo">
+      <div class="campo al-solo-manual">
         <span class="etiqueta-campo">Los valores son</span>
         <div class="segmentos" role="group" aria-label="Los valores son">
           <label class="segmento"><input type="radio" name="por_100" value="" checked> De lo que comí</label>
@@ -136,14 +156,15 @@
                                           ("Carbohidratos", "carbohidratos", "g"), ("de los cuales azúcares", "azucares", "g"),
                                           ("Grasas", "grasas", "g"), ("de las cuales saturadas", "saturadas", "g"),
                                           ("Fibra", "fibra", "g"), ("Sal", "sal", "g")] %}
-      <div class="campo">
+      <div class="campo al-solo-manual">
         <label for="al-{{ nombre }}">{{ etiqueta }} ({{ unidad }})</label>
         <input id="al-{{ nombre }}" type="number" name="{{ nombre }}" min="0" step="any" inputmode="decimal" placeholder="0">
       </div>
       {% endfor %}
     </div>
-    <p class="nota-objetivo ventana-resumen" id="al-resumen" aria-live="polite"></p>
-    <button class="boton boton-primario ventana-guardar">Añadir alimento</button>
+    <p class="nota-objetivo ventana-resumen al-oculto-buscar" id="al-resumen" aria-live="polite"></p>
+    <button class="boton boton-primario ventana-guardar al-oculto-buscar">Añadir alimento</button>
+    <p class="nota-mini fuente-datos">Datos de los alimentos: tabla CIQUAL 2025 (ANSES), por 100 g.</p>
   </form>
 </dialog>
 
@@ -159,6 +180,7 @@
           ventana.querySelector("h2").textContent = "Añadir a " + boton.dataset.nombre;
         }
         ventana.showModal();
+        ventana.dispatchEvent(new Event("abierta"));
       });
     });
     document.querySelectorAll("dialog.ventana").forEach(function (ventana) {
@@ -188,19 +210,136 @@
     form.addEventListener("input", recalcular);
     recalcular();
 
-    // Alimento: si los valores son "por 100 g", enseña cuánto suma lo que comiste
-    var alimento = document.querySelector("#dlg-alimento form");
+    // ---------- Añadir alimento: buscador en la tabla CIQUAL ----------
+    var alimento = document.getElementById("form-alimento");
+    var ventanaAlimento = document.getElementById("dlg-alimento");
+    var buscar = document.getElementById("al-buscar");
+    var resultados = document.getElementById("al-resultados");
+    var estado = document.getElementById("al-estado");
     var alResumen = document.getElementById("al-resumen");
+    var NUTRIENTES = ["kcal", "proteinas", "carbohidratos", "azucares", "grasas", "saturadas", "fibra", "sal"];
+    var tabla = null;    // se descarga la primera vez que abres el pop-up
+
+    // "Árroz Cocído" -> "arroz cocido" (sin tildes ni mayúsculas, para comparar)
+    function normal(texto) {
+      return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+    function cargarTabla() {
+      if (tabla) return Promise.resolve(tabla);
+      estado.textContent = "Cargando alimentos…";
+      return fetch(alimento.dataset.alimentos).then(function (r) { return r.json(); }).then(function (datos) {
+        tabla = datos;
+        datos.alimentos.forEach(function (fila) { fila.busqueda = normal(fila[0]); });
+        estado.textContent = "Escribe para buscar entre " + datos.alimentos.length.toLocaleString("es") + " alimentos.";
+        return tabla;
+      }).catch(function () {
+        estado.textContent = "No se pudo cargar la lista de alimentos. Puedes añadirlo a mano.";
+      });
+    }
+
+    // Modo del pop-up: "buscar" (lista), "elegido" (solo pones los gramos) o "manual" (todo a mano)
+    function cambiarModo(modo) {
+      alimento.dataset.modo = modo;
+      alimento.nombre.required = modo !== "buscar";
+      resumirAlimento();
+    }
+    function ponerPor100(si) {
+      alimento.querySelector('input[name="por_100"][value="' + (si ? "1" : "") + '"]').checked = true;
+    }
+
+    function mostrarResultados() {
+      resultados.innerHTML = "";
+      var palabras = normal(buscar.value).split(/\s+/).filter(Boolean);
+      if (!tabla || !palabras.length) { if (tabla) estado.textContent = "Escribe para buscar entre " + tabla.alimentos.length.toLocaleString("es") + " alimentos."; return; }
+      // Tienen que aparecer todas las palabras; primero los que empiezan por lo que escribiste y los nombres más cortos
+      var encontrados = tabla.alimentos.filter(function (fila) {
+        return palabras.every(function (p) { return fila.busqueda.indexOf(p) !== -1; });
+      }).sort(function (a, b) {
+        var pa = a.busqueda.indexOf(palabras[0]) === 0 ? 0 : 1, pb = b.busqueda.indexOf(palabras[0]) === 0 ? 0 : 1;
+        return pa - pb || a[0].length - b[0].length;
+      });
+      estado.textContent = encontrados.length ? encontrados.length + " encontrados" + (encontrados.length > 40 ? " (se ven los 40 primeros)." : ".")
+                                              : "No está en la lista. Prueba con otra palabra o añádelo a mano.";
+      encontrados.slice(0, 40).forEach(function (fila) {
+        var li = document.createElement("li");
+        var boton = document.createElement("button");
+        boton.type = "button";
+        boton.className = "buscador-opcion";
+        var nombre = document.createElement("span");
+        nombre.textContent = fila[0];
+        var info = document.createElement("small");
+        info.textContent = tabla.grupos[fila[1]] + (fila[2] != null ? " · " + Math.round(fila[2]) + " kcal / 100 g" : "");
+        boton.append(nombre, info);
+        boton.addEventListener("click", function () { elegir(fila); });
+        li.appendChild(boton);
+        resultados.appendChild(li);
+      });
+    }
+
+    // Al elegir uno: rellenamos el formulario con sus valores por 100 g y solo falta la cantidad
+    function elegir(fila) {
+      alimento.nombre.value = fila[0].slice(0, 60);
+      NUTRIENTES.forEach(function (campo, i) {
+        var valor = fila[i + 2];
+        alimento[campo].value = valor == null ? "" : valor;   // sin dato = vacío (cuenta como 0)
+      });
+      ponerPor100(true);
+      document.getElementById("al-elegido-nombre").textContent = fila[0];
+      var por100 = function (i, u) { return fila[i] == null ? "—" : (Math.round(fila[i] * 10) / 10) + u; };
+      document.getElementById("al-elegido-info").textContent = "Por 100 g: " + por100(2, " kcal") + " · P " + por100(3, " g") +
+        " · C " + por100(4, " g") + " · G " + por100(6, " g");
+      cambiarModo("elegido");
+      alimento.cantidad.focus();
+      alimento.cantidad.select();
+    }
+
+    function empezar() {
+      buscar.value = "";
+      resultados.innerHTML = "";
+      alimento.nombre.value = "";
+      NUTRIENTES.forEach(function (campo) { alimento[campo].value = ""; });
+      alimento.cantidad.value = "100";
+      cambiarModo("buscar");
+      cargarTabla().then(mostrarResultados);
+      buscar.focus();
+    }
+    ventanaAlimento.addEventListener("abierta", empezar);
+    buscar.addEventListener("input", mostrarResultados);
+    // Enter en el buscador elige el primero (y no envía el formulario)
+    buscar.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      var primero = resultados.querySelector("button");
+      if (primero) primero.click();
+    });
+    document.getElementById("al-otro").addEventListener("click", function () {
+      cambiarModo("buscar");
+      buscar.focus();
+    });
+    document.getElementById("al-volver").addEventListener("click", function () {
+      cambiarModo("buscar");
+      buscar.focus();
+    });
+    document.getElementById("al-a-mano").addEventListener("click", function () {
+      alimento.nombre.value = buscar.value.slice(0, 60);
+      NUTRIENTES.forEach(function (campo) { alimento[campo].value = ""; });
+      alimento.cantidad.value = "";
+      ponerPor100(false);
+      cambiarModo("manual");
+      alimento.nombre.focus();
+    });
+
+    // Cuánto suma lo que comiste cuando los valores son "por 100 g"
     function resumirAlimento() {
       var gramos = parseFloat(alimento.cantidad.value) || 0;
       var por100 = alimento.querySelector('input[name="por_100"]:checked').value;
-      if (!por100) { alResumen.textContent = ""; return; }
+      if (!por100 || alimento.dataset.modo === "buscar") { alResumen.textContent = ""; return; }
       if (!gramos) { alResumen.textContent = "Pon la cantidad en gramos para calcular lo que comiste."; return; }
       var f = gramos / 100, v = function (n) { return Math.round((parseFloat(alimento[n].value) || 0) * f * 10) / 10; };
       alResumen.textContent = "En " + gramos + " g: " + Math.round(v("kcal")) + " kcal · P " + v("proteinas") +
         " g · C " + v("carbohidratos") + " g · G " + v("grasas") + " g";
     }
-    alimento.addEventListener("input", resumirAlimento);
+    alimento.addEventListener("input", function (e) { if (e.target !== buscar) resumirAlimento(); });
     alimento.addEventListener("change", resumirAlimento);
   })();
 </script>
