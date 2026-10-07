@@ -212,6 +212,39 @@
       avisos.classList.toggle("avisos-fuera", visible === 0);   // del todo ido: no se puede pulsar
     });
   }
+  // ---------- Encajar: el cambio de página nunca se queda a medias ----------
+  // Cuando dejas de hacer scroll con una página a medio subir, terminamos el
+  // movimiento: si bajabas, la siguiente entra entera; si subías, vuelve a irse.
+  var bajando = true, dedoPuesto = false, esperaEncaje = null;
+  function encajar() {
+    esperaEncaje = null;
+    if (dedoPuesto) return;   // con el dedo aún en la pantalla, esperamos a que lo suelte
+    var alto = window.innerHeight;
+    document.querySelectorAll(".tramo").forEach(function (t) {
+      var debajo = siguienteTramo(t);
+      if (!debajo) return;
+      var arriba = debajo.getBoundingClientRect().top;   // dónde va el borde de la siguiente
+      if (arriba <= 1 || arriba >= alto - 1) return;     // no está a medias
+      var sinMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollBy({ top: bajando ? arriba : arriba - alto, behavior: sinMovimiento ? "auto" : "smooth" });
+    });
+  }
+  function esperarEncaje() {
+    if (ajustes.encajar === false) return;
+    clearTimeout(esperaEncaje);
+    esperaEncaje = setTimeout(encajar, 160);   // 160 ms sin scroll = has soltado
+  }
+  window.addEventListener("scroll", function () {
+    var y = window.scrollY;
+    if (y !== ultimoEncajeY) bajando = y > ultimoEncajeY;
+    ultimoEncajeY = y;
+    esperarEncaje();
+  }, { passive: true });
+  var ultimoEncajeY = window.scrollY;
+  window.addEventListener("touchstart", function () { dedoPuesto = true; }, { passive: true });
+  window.addEventListener("touchend", function () { dedoPuesto = false; esperarEncaje(); }, { passive: true });
+  window.addEventListener("touchcancel", function () { dedoPuesto = false; esperarEncaje(); }, { passive: true });
+
   function pedir() { if (!pendiente) { pendiente = true; requestAnimationFrame(revisar); } }
   window.addEventListener("scroll", pedir, { passive: true });
   window.addEventListener("resize", pedir);
