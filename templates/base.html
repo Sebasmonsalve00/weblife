@@ -25,6 +25,7 @@
   <!-- Transición suave entre páginas (los navegadores sin soporte navegan normal) -->
   <style>@view-transition { navigation: auto; }</style>
   {% endif %}
+  {% if not efectos.cristal_difuminado %}<script>document.documentElement.classList.add("sin-cristal");</script>{% endif %}
   {% if not efectos.microinteracciones %}<script>document.documentElement.classList.add("sin-micro");</script>{% endif %}
 </head>
 <body class="{% block clase_body %}{% endblock %}">
