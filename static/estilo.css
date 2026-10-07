@@ -218,8 +218,11 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   .nav-acciones { display: flex; }
 }
 
-/* Logo + interruptor Universidad / Deporte, juntos a la izquierda */
-.nav-marca { display: flex; align-items: center; gap: 12px; }
+/* Interruptor Universidad / Deporte: centrado en el hueco entre el logo y el menú.
+   En escritorio, .nav-hueco ocupa lo mismo al otro lado para que el menú no se mueva. */
+.nav-modo { flex: 1; display: flex; justify-content: center; }
+.nav-hueco { display: none; }
+@media (min-width: 1024px) { .nav-hueco { display: block; flex: 1; } }
 /* Interruptor: píldora gris (como los segmentos) con una bolita blanca que se desliza */
 .interruptor-modo {
   position: relative; display: inline-grid; grid-template-columns: 1fr 1fr;
