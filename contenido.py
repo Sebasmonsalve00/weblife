@@ -24,7 +24,7 @@ MENU_DEPORTE = [
     ("Metas", "tareas"),
     ("Pendientes", "pendientes"),
     ("Calendario", "calendario_vista"),
-    ("Asistencia", "asistencia"),
+    ("Alimentación e info", "asistencia"),
 ]
 
 
@@ -91,8 +91,8 @@ PAGINAS_DEPORTE = {
     },
     "asistencia": {
         "etiqueta": "Deporte",
-        "titulo": "Asistencia",
-        "subtitulo": "Las horas de entreno a las que has ido en cada deporte, según lo que marcas en el horario.",
+        "titulo": "Alimentación e info",
+        "subtitulo": "Registra tus comidas con sus macros y calorías, y mira cómo va tu semana.",
     },
 }
 
@@ -216,6 +216,7 @@ MENSAJES = {
     "cuenta": "Nombre guardado.",
     "clave": "Contraseña cambiada.",
     "evento": "Evento agregado al calendario.",
+    "comida": "Comida registrada.",
     "examen": "Examen agregado al calendario.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",

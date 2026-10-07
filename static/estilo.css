@@ -1010,3 +1010,10 @@ html:not(.js) .carga { display: none; }
 .selector-opcion:hover { background: rgba(118, 118, 128, 0.12); transform: none; }
 .selector-opcion.elegido { background: #007AFF; color: #FFFFFF; font-weight: 600; }
 .selector-opcion:disabled { opacity: 0.3; cursor: default; }
+
+/* ---------- Alimentación e info (Deporte) ---------- */
+/* En el móvil, las 4 cifras del día (calorías y macros) van de dos en dos y más compactas */
+@media (max-width: 639px) {
+  .tarjeta-macro { grid-column: span 6 !important; padding: 16px 20px; }
+  .tarjeta-macro .numero { font-size: 1.75rem; margin: 0; }
+}

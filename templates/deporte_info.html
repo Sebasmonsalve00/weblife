@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% from "_componentes.html" import encabezado, boton_borrar %}
+{% block titulo %}{{ texto.paginas.asistencia.titulo }}{% endblock %}
+{% block contenido %}
+{# Página de Deporte "Alimentación e info": registro de comidas y resumen de la semana #}
+{{ encabezado(texto.paginas.asistencia) }}
+
+<!-- ===== Registrar una comida: calorías y macros ===== -->
+<h2 class="titulo-seccion reveal">Registrar comida</h2>
+<form method="post" action="{{ url_for('registrar_comida') }}" class="formulario grid-12 reveal">
+  <div class="campo md-6 lg-4">
+    <label for="co-nombre">Comida</label>
+    <input id="co-nombre" name="nombre" placeholder="ej: Desayuno, Batido de proteína" maxlength="60" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="co-fecha">Día</label>
+    <input id="co-fecha" type="date" name="fecha" value="{{ dia.isoformat() }}" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="co-kcal">Calorías (kcal)</label>
+    <input id="co-kcal" type="number" name="kcal" min="0" step="any" inputmode="decimal" placeholder="0">
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="co-prot">Proteínas (g)</label>
+    <input id="co-prot" type="number" name="proteinas" min="0" step="any" inputmode="decimal" placeholder="0">
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="co-carb">Carbohidratos (g)</label>
+    <input id="co-carb" type="number" name="carbohidratos" min="0" step="any" inputmode="decimal" placeholder="0">
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="co-gras">Grasas (g)</label>
+    <input id="co-gras" type="number" name="grasas" min="0" step="any" inputmode="decimal" placeholder="0">
+  </div>
+  <div class="campo md-6 lg-3">
+    <button class="boton-enviar">Guardar comida</button>
+  </div>
+</form>
+
+<!-- Lo que comiste el día elegido, con el total -->
+<h2 class="titulo-seccion reveal">{{ "Hoy" if dia == hoy else "El " ~ dia.isoformat() }}</h2>
+<div class="grid-12">
+  {% for etiqueta, clave, unidad in [("Calorías", "kcal", "kcal"), ("Proteínas", "proteinas", "g"), ("Carbohidratos", "carbohidratos", "g"), ("Grasas", "grasas", "g")] %}
+    <article class="tarjeta tarjeta-macro reveal md-6 lg-3">
+      <h3 class="titulo-tarjeta">{{ etiqueta }}</h3>
+      <p class="numero">{{ total_dia[clave] }} <small>{{ unidad }}</small></p>
+    </article>
+  {% endfor %}
+</div>
+{% if comidas %}
+  <div class="tabla-contenedor reveal">
+    <table class="tabla">
+      <thead><tr><th scope="col">Comida</th><th scope="col">kcal</th><th scope="col">Proteínas</th><th scope="col">Carbohidratos</th><th scope="col">Grasas</th><th scope="col"><span class="saltar-lector">Borrar</span></th></tr></thead>
+      <tbody>
+      {% for c in comidas %}
+        <tr>
+          <td>{{ c.nombre }}</td><td>{{ c.kcal | round | int }}</td><td>{{ c.proteinas | round | int }} g</td>
+          <td>{{ c.carbohidratos | round | int }} g</td><td>{{ c.grasas | round | int }} g</td>
+          <td>{{ boton_borrar(url_for('borrar_comida', id=c.id), "Borrar comida: " ~ c.nombre) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="vacio reveal">Todavía no has registrado comidas este día.</p>
+{% endif %}
+
+<!-- ===== Cómo va la semana ===== -->
+<div class="panel-titulo reveal">
+  <a class="boton boton-redondo" href="{{ url_for('asistencia', fecha=semana_anterior) }}" aria-label="Semana anterior">←</a>
+  <h2 class="titulo-seccion">Tu semana <small>({{ lunes.day }}/{{ lunes.month }} – {{ domingo.day }}/{{ domingo.month }})</small></h2>
+  <a class="boton boton-redondo" href="{{ url_for('asistencia', fecha=semana_siguiente) }}" aria-label="Semana siguiente">→</a>
+</div>
+
+<div class="grid-12">
+  <article class="tarjeta reveal md-6 lg-4">
+    <h3 class="titulo-tarjeta">Lo programado, completado</h3>
+    <p class="numero">{{ completados }} / {{ programados }}</p>
+    <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ porcentaje }}" aria-label="Completado esta semana">
+      <div style="width: {{ porcentaje }}%"></div>
+    </div>
+    <p class="descripcion">{{ porcentaje }}% de lo que tienes en el horario, según lo que marcas.</p>
+  </article>
+  <article class="tarjeta reveal md-6 lg-4">
+    <h3 class="titulo-tarjeta">Metas cumplidas</h3>
+    <p class="numero">{{ metas_hechas }} / {{ metas_total }}</p>
+    <p class="descripcion">Metas con fecha en esta semana.</p>
+  </article>
+  <article class="tarjeta reveal md-6 lg-4">
+    <h3 class="titulo-tarjeta">Calorías al día</h3>
+    <p class="numero">{{ media_kcal }} <small>kcal</small></p>
+    <p class="descripcion">Media de los días en que registraste comidas.</p>
+  </article>
+</div>
+
+{% if por_tipo %}
+<!-- Por tipo: entrenamientos, comidas, cardio... -->
+<div class="tabla-contenedor reveal">
+  <table class="tabla">
+    <thead><tr><th scope="col">Tipo</th><th scope="col">Completados</th><th scope="col">Progreso</th></tr></thead>
+    <tbody>
+    {% for nombre, cuenta in por_tipo %}
+      {% set pct = (100 * cuenta.completados / cuenta.programados) | round | int if cuenta.programados else 0 %}
+      <tr>
+        <td>{{ nombre }}</td>
+        <td><b>{{ cuenta.completados }}</b> de {{ cuenta.programados }}</td>
+        <td>
+          <div class="barra barra-tabla" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}" aria-label="{{ nombre }}"><div style="width: {{ pct }}%"></div></div>
+          {{ pct }}%
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Día a día -->
+<div class="tabla-contenedor reveal">
+  <table class="tabla">
+    <thead><tr><th scope="col">Día</th><th scope="col">Horario completado</th><th scope="col">Calendario</th><th scope="col">kcal</th><th scope="col">P / C / G</th></tr></thead>
+    <tbody>
+    {% for f in filas %}
+      <tr>
+        <td>{% if f.es_hoy %}<b>{{ f.nombre }} {{ f.fecha.day }}</b>{% else %}<a href="{{ url_for('asistencia', fecha=f.fecha.isoformat()) }}">{{ f.nombre }} {{ f.fecha.day }}</a>{% endif %}</td>
+        <td>{% if f.programados %}{{ f.completados }} de {{ f.programados }}{% else %}—{% endif %}</td>
+        <td>{{ f.eventos | join(", ") if f.eventos else "—" }}</td>
+        <td>{{ f.macros.kcal or "—" }}</td>
+        <td>{% if f.macros.kcal or f.macros.proteinas %}{{ f.macros.proteinas }} / {{ f.macros.carbohidratos }} / {{ f.macros.grasas }} g{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
