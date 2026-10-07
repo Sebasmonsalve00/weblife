@@ -146,6 +146,9 @@ def colores_fondo(ruta, acento=None):
 PAGINA_SIGUIENTE = {
     "anterior": True,   # al subir arriba del todo, la página anterior aparece encima
     "precarga": 1.5,    # cuántas pantallas antes del final se carga la página siguiente
+    # Al soltar el scroll a mitad del cambio de página, la página termina de entrar
+    # (o vuelve atrás si ibas hacia arriba): nunca se queda a medias
+    "encajar": True,
 }
 
 # ---- 6. Layout ----
@@ -227,6 +230,7 @@ def valores_js():
         "siguiente": {
             "anterior": PAGINA_SIGUIENTE["anterior"],
             "precarga": PAGINA_SIGUIENTE["precarga"],
+            "encajar": PAGINA_SIGUIENTE["encajar"],
         },
     }
 
