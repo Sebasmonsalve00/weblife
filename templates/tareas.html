@@ -12,12 +12,18 @@
   <div class="campo md-6 lg-3">
     <!-- Las materias vienen del Horario semanal -->
     <label for="t-materia">{{ texto.p.materia }}</label>
+    {% if modo == "deporte" %}
+      {# En Deporte la actividad es libre: escribes la que quieras (sugiere tus entrenos) #}
+      <input id="t-materia" name="materia" placeholder="ej: Correr, Gimnasio, Natación" list="t-actividades" autocomplete="off">
+      <datalist id="t-actividades">{% for materia in materias %}<option value="{{ materia }}">{% endfor %}</datalist>
+    {% else %}
     <select id="t-materia" name="materia">
       <option value="">{{ texto.p.sin_materia }}</option>
       {% for materia in materias %}
         <option>{{ materia }}</option>
       {% endfor %}
     </select>
+    {% endif %}
   </div>
   <div class="campo md-6 lg-3">
     <label for="t-fecha">{{ texto.p.fecha }}</label>
@@ -27,7 +33,7 @@
     <button class="boton-enviar">{{ texto.p.boton }}</button>
   </div>
 </form>
-{% if not materias %}
+{% if not materias and modo != "deporte" %}
   <p class="nota">{{ texto.p.sin_materias }} <a href="{{ url_for('horario') }}">{{ texto.menu[0][0] }}</a>.</p>
 {% endif %}
 

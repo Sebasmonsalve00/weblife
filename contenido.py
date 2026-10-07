@@ -111,7 +111,7 @@ PALABRAS = {
     },
     "deporte": {
         "tarea": "meta", "Tarea": "Meta", "tareas": "metas", "Tareas": "Metas",
-        "materia": "Deporte", "sin_materia": "Sin deporte", "clase": "entreno",
+        "materia": "Actividad", "sin_materia": "Sin actividad", "clase": "entreno",
         "pregunta": "¿Qué meta quieres alcanzar?", "ejemplo": "ej: Correr 15 km en la semana",
         "fecha": "Para el día (esta semana)", "entrega": "Para el", "boton": "Agregar meta",
         "vacio": "Todavía no hay metas.", "completadas": "Metas cumplidas", "hechas": "Metas cumplidas",
