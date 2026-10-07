@@ -2,39 +2,173 @@
 {% from "_componentes.html" import encabezado, boton_borrar %}
 {% block titulo %}{{ texto.paginas.asistencia.titulo }}{% endblock %}
 {% block contenido %}
-{# Página de Deporte "Alimentación e info": registro de comidas y resumen de la semana #}
+{# Página de Deporte "Alimentación e info": objetivo, comidas del día, IMC y resumen de la semana #}
 {{ encabezado(texto.paginas.asistencia) }}
 
-<!-- ===== Tu objetivo: calorías que necesitas y reparto en % de los macros ===== -->
+<!-- ===== Tu objetivo: se ve aquí y se cambia en un pop-up ===== -->
 <h2 id="objetivo" class="titulo-seccion reveal">Tu objetivo diario</h2>
+<article class="tarjeta objetivo-resumen reveal">
+  {% if objetivo %}
+    <div class="objetivo-cifras">
+      <div><p class="numero">{{ objetivo.kcal }} <small>kcal</small></p><p class="nota-objetivo">al día</p></div>
+      {% for etiqueta, clave in [("Proteínas", "proteinas"), ("Carbohidratos", "carbohidratos"), ("Grasas", "grasas")] %}
+        <div><p class="numero">{{ objetivo[clave] }} <small>g</small></p>
+             <p class="nota-objetivo">{{ etiqueta }} · {{ perfil["pct_" ~ clave] | round(1) | replace('.0', '') }} %</p></div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="nota-objetivo">Todavía no has puesto cuántas calorías necesitas. Ponlas y reparte en % las proteínas, los carbohidratos y las grasas: te digo los gramos de cada uno.</p>
+  {% endif %}
+  <button type="button" class="boton boton-secundario boton-chico" data-abrir="dlg-objetivo">{{ "Cambiar objetivo" if objetivo else "Poner mi objetivo" }}</button>
+</article>
+
 {% set pct = {"proteinas": perfil.pct_proteinas if perfil and perfil.pct_proteinas is not none else 30,
               "carbohidratos": perfil.pct_carbohidratos if perfil and perfil.pct_carbohidratos is not none else 40,
               "grasas": perfil.pct_grasas if perfil and perfil.pct_grasas is not none else 30} %}
-<form method="post" action="{{ url_for('guardar_objetivo') }}" class="formulario grid-12 reveal" id="form-objetivo">
-  <input type="hidden" name="fecha" value="{{ dia.isoformat() }}">
-  <div class="campo md-6 lg-3">
-    <label for="ob-kcal">Calorías que necesitas (kcal)</label>
-    <input id="ob-kcal" type="number" name="kcal_objetivo" min="0" step="any" inputmode="decimal"
-           value="{{ (perfil.kcal_objetivo | round | int) if perfil and perfil.kcal_objetivo else '' }}" placeholder="ej: 2200" required>
-  </div>
-  {% for etiqueta, clave, kcal_gramo in [("Proteínas", "proteinas", 4), ("Carbohidratos", "carbohidratos", 4), ("Grasas", "grasas", 9)] %}
-  <div class="campo md-6 lg-3">
-    <label for="ob-{{ clave }}">{{ etiqueta }} (%)</label>
-    <input id="ob-{{ clave }}" type="number" name="pct_{{ clave }}" min="0" max="100" step="any" inputmode="decimal"
-           value="{{ pct[clave] | round(1) | replace('.0', '') }}" data-kcal-gramo="{{ kcal_gramo }}">
-  </div>
+<dialog class="dia-vista ventana" id="dlg-objetivo" aria-labelledby="dlg-objetivo-titulo">
+  <form method="post" action="{{ url_for('guardar_objetivo') }}" id="form-objetivo">
+    <div class="dia-vista-cabecera">
+      <span class="selector-hueco"></span>
+      <h2 id="dlg-objetivo-titulo">Tu objetivo diario</h2>
+      <button type="button" class="boton-icono" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <input type="hidden" name="fecha" value="{{ dia.isoformat() }}">
+    <div class="ventana-campos">
+      <div class="campo ventana-ancho">
+        <label for="ob-kcal">Calorías que necesitas (kcal)</label>
+        <input id="ob-kcal" type="number" name="kcal_objetivo" min="0" step="any" inputmode="decimal"
+               value="{{ (perfil.kcal_objetivo | round | int) if perfil and perfil.kcal_objetivo else '' }}" placeholder="ej: 2200" required>
+      </div>
+      {% for etiqueta, clave, kcal_gramo in [("Proteínas", "proteinas", 4), ("Carbohidratos", "carbohidratos", 4), ("Grasas", "grasas", 9)] %}
+      <div class="campo">
+        <label for="ob-{{ clave }}">{{ etiqueta }} (%)</label>
+        <input id="ob-{{ clave }}" type="number" name="pct_{{ clave }}" min="0" max="100" step="any" inputmode="decimal"
+               value="{{ pct[clave] | round(1) | replace('.0', '') }}" data-kcal-gramo="{{ kcal_gramo }}">
+      </div>
+      {% endfor %}
+    </div>
+    <p class="nota-objetivo ventana-resumen" id="ob-resumen" aria-live="polite"></p>
+    <button class="boton boton-primario ventana-guardar">Guardar objetivo</button>
+  </form>
+</dialog>
+
+<!-- ===== Lo que comes: un día, separado por comidas ===== -->
+<div class="panel-titulo reveal" id="comidas">
+  <a class="boton boton-redondo" href="{{ url_for('asistencia', fecha=dia_anterior) }}#comidas" aria-label="Día anterior">←</a>
+  <h2 class="titulo-seccion">{{ "Hoy" if dia == hoy else "El " ~ dia.day ~ "/" ~ dia.month }}</h2>
+  <a class="boton boton-redondo" href="{{ url_for('asistencia', fecha=dia_siguiente) }}#comidas" aria-label="Día siguiente">→</a>
+</div>
+<div class="grid-12">
+  {% for etiqueta, clave, unidad in [("Calorías", "kcal", "kcal"), ("Proteínas", "proteinas", "g"), ("Carbohidratos", "carbohidratos", "g"), ("Grasas", "grasas", "g")] %}
+    <article class="tarjeta tarjeta-macro reveal md-6 lg-3">
+      <h3 class="titulo-tarjeta">{{ etiqueta }}</h3>
+      <p class="numero">{{ total_dia[clave] }}{% if objetivo %} <small>/ {{ objetivo[clave] }}</small>{% endif %} <small>{{ unidad }}</small></p>
+      {% if objetivo and objetivo[clave] %}
+        {% set avance = (100 * total_dia[clave] / objetivo[clave]) | round | int %}
+        <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ [avance, 100] | min }}" aria-label="{{ etiqueta }} del objetivo">
+          <div style="width: {{ [avance, 100] | min }}%"></div>
+        </div>
+      {% endif %}
+    </article>
   {% endfor %}
-  <p class="nota-objetivo" id="ob-resumen" aria-live="polite">
-    {% if objetivo %}Necesitas {{ objetivo.proteinas }} g de proteínas, {{ objetivo.carbohidratos }} g de carbohidratos y {{ objetivo.grasas }} g de grasas al día.{% else %}Pon tus calorías y el % de cada macro; te digo cuántos gramos necesitas.{% endif %}
-  </p>
-  <div class="campo md-6 lg-3">
-    <button class="boton-enviar">Guardar objetivo</button>
-  </div>
-</form>
+</div>
+
+<div class="grid-12">
+{% for seccion in secciones %}
+  <section class="tarjeta comida-seccion reveal lg-6" aria-labelledby="comida-{{ seccion.clave }}">
+    <div class="comida-cabecera">
+      <h3 id="comida-{{ seccion.clave }}" class="titulo-tarjeta">{{ seccion.nombre }}</h3>
+      <span class="nota-objetivo">{{ seccion.total.kcal }} kcal</span>
+    </div>
+    {% if seccion.alimentos %}
+      <ul class="comida-lista">
+      {% for c in seccion.alimentos %}
+        <li>
+          <div>
+            <b>{{ c.nombre }}</b>{% if c.cantidad %} <span class="nota-objetivo">· {{ c.cantidad | round | int }} g</span>{% endif %}
+            <p class="nota-mini">{{ c.kcal | round | int }} kcal · P {{ c.proteinas | round(1) | replace('.0', '') }} g · C {{ c.carbohidratos | round(1) | replace('.0', '') }} g · G {{ c.grasas | round(1) | replace('.0', '') }} g</p>
+          </div>
+          {{ boton_borrar(url_for('borrar_comida', id=c.id), "Borrar: " ~ c.nombre) }}
+        </li>
+      {% endfor %}
+      </ul>
+      <p class="nota-mini comida-total">Total: P {{ seccion.total.proteinas }} g · C {{ seccion.total.carbohidratos }} g · G {{ seccion.total.grasas }} g</p>
+    {% else %}
+      <p class="nota-objetivo">Nada todavía.</p>
+    {% endif %}
+    <button type="button" class="boton boton-secundario boton-chico" data-abrir="dlg-alimento"
+            data-tipo="{{ seccion.clave }}" data-nombre="{{ seccion.nombre }}">+ Añadir alimentos</button>
+  </section>
+{% endfor %}
+</div>
+
+<!-- Pop-up grande para añadir un alimento con toda su información -->
+<dialog class="dia-vista ventana ventana-grande" id="dlg-alimento" aria-labelledby="dlg-alimento-titulo">
+  <form method="post" action="{{ url_for('registrar_comida') }}">
+    <div class="dia-vista-cabecera">
+      <span class="selector-hueco"></span>
+      <h2 id="dlg-alimento-titulo">Añadir alimento</h2>
+      <button type="button" class="boton-icono" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <input type="hidden" name="fecha" value="{{ dia.isoformat() }}">
+    <div class="segmentos" role="group" aria-label="Comida">
+      {% for clave, nombre in texto.tipos_comida %}
+        <label class="segmento"><input type="radio" name="tipo" value="{{ clave }}"{% if loop.first %} checked{% endif %}> {{ nombre }}</label>
+      {% endfor %}
+    </div>
+    <div class="ventana-campos">
+      <div class="campo ventana-ancho">
+        <label for="al-nombre">Alimento</label>
+        <input id="al-nombre" name="nombre" placeholder="ej: Avena, Pechuga de pollo, Yogur griego" maxlength="60" required>
+      </div>
+      <div class="campo">
+        <label for="al-cantidad">Cantidad (g)</label>
+        <input id="al-cantidad" type="number" name="cantidad" min="0" step="any" inputmode="decimal" placeholder="ej: 80">
+      </div>
+      <div class="campo">
+        <span class="etiqueta-campo">Los valores son</span>
+        <div class="segmentos" role="group" aria-label="Los valores son">
+          <label class="segmento"><input type="radio" name="por_100" value="" checked> De lo que comí</label>
+          <label class="segmento"><input type="radio" name="por_100" value="1"> Por 100 g</label>
+        </div>
+      </div>
+      {% for etiqueta, nombre, unidad in [("Calorías", "kcal", "kcal"), ("Proteínas", "proteinas", "g"),
+                                          ("Carbohidratos", "carbohidratos", "g"), ("de los cuales azúcares", "azucares", "g"),
+                                          ("Grasas", "grasas", "g"), ("de las cuales saturadas", "saturadas", "g"),
+                                          ("Fibra", "fibra", "g"), ("Sal", "sal", "g")] %}
+      <div class="campo">
+        <label for="al-{{ nombre }}">{{ etiqueta }} ({{ unidad }})</label>
+        <input id="al-{{ nombre }}" type="number" name="{{ nombre }}" min="0" step="any" inputmode="decimal" placeholder="0">
+      </div>
+      {% endfor %}
+    </div>
+    <p class="nota-objetivo ventana-resumen" id="al-resumen" aria-live="polite"></p>
+    <button class="boton boton-primario ventana-guardar">Añadir alimento</button>
+  </form>
+</dialog>
+
 <script>
-  // Mientras cambias los números, recalcula los gramos (sin guardar todavía).
-  // Proteínas y carbohidratos: 4 kcal por gramo. Grasas: 9 kcal por gramo.
   (function () {
+    // Abrir y cerrar los pop-ups (botón ✕, tecla Esc o clic fuera)
+    document.querySelectorAll("[data-abrir]").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        var ventana = document.getElementById(boton.dataset.abrir);
+        if (boton.dataset.tipo) {   // "+ Añadir alimentos" de una comida: la dejamos elegida
+          var opcion = ventana.querySelector('input[name="tipo"][value="' + boton.dataset.tipo + '"]');
+          if (opcion) opcion.checked = true;
+          ventana.querySelector("h2").textContent = "Añadir a " + boton.dataset.nombre;
+        }
+        ventana.showModal();
+      });
+    });
+    document.querySelectorAll("dialog.ventana").forEach(function (ventana) {
+      ventana.addEventListener("click", function (e) {
+        if (e.target === ventana || e.target.closest("[data-cerrar]")) ventana.close();
+      });
+    });
+
+    // Objetivo: mientras cambias los números, recalcula los gramos (sin guardar todavía).
+    // Proteínas y carbohidratos: 4 kcal por gramo. Grasas: 9 kcal por gramo.
     var form = document.getElementById("form-objetivo");
     var resumen = document.getElementById("ob-resumen");
     function recalcular() {
@@ -52,75 +186,24 @@
         (Math.round(suma) !== 100 ? " Ojo: los porcentajes suman " + Math.round(suma) + " % (deberían sumar 100 %)." : "");
     }
     form.addEventListener("input", recalcular);
+    recalcular();
+
+    // Alimento: si los valores son "por 100 g", enseña cuánto suma lo que comiste
+    var alimento = document.querySelector("#dlg-alimento form");
+    var alResumen = document.getElementById("al-resumen");
+    function resumirAlimento() {
+      var gramos = parseFloat(alimento.cantidad.value) || 0;
+      var por100 = alimento.querySelector('input[name="por_100"]:checked').value;
+      if (!por100) { alResumen.textContent = ""; return; }
+      if (!gramos) { alResumen.textContent = "Pon la cantidad en gramos para calcular lo que comiste."; return; }
+      var f = gramos / 100, v = function (n) { return Math.round((parseFloat(alimento[n].value) || 0) * f * 10) / 10; };
+      alResumen.textContent = "En " + gramos + " g: " + Math.round(v("kcal")) + " kcal · P " + v("proteinas") +
+        " g · C " + v("carbohidratos") + " g · G " + v("grasas") + " g";
+    }
+    alimento.addEventListener("input", resumirAlimento);
+    alimento.addEventListener("change", resumirAlimento);
   })();
 </script>
-
-<!-- ===== Registrar una comida: calorías y macros ===== -->
-<h2 class="titulo-seccion reveal">Registrar comida</h2>
-<form method="post" action="{{ url_for('registrar_comida') }}" class="formulario grid-12 reveal">
-  <div class="campo md-6 lg-4">
-    <label for="co-nombre">Comida</label>
-    <input id="co-nombre" name="nombre" placeholder="ej: Desayuno, Batido de proteína" maxlength="60" required>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="co-fecha">Día</label>
-    <input id="co-fecha" type="date" name="fecha" value="{{ dia.isoformat() }}" required>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="co-kcal">Calorías (kcal)</label>
-    <input id="co-kcal" type="number" name="kcal" min="0" step="any" inputmode="decimal" placeholder="0">
-  </div>
-  <div class="campo md-6 lg-3">
-    <label for="co-prot">Proteínas (g)</label>
-    <input id="co-prot" type="number" name="proteinas" min="0" step="any" inputmode="decimal" placeholder="0">
-  </div>
-  <div class="campo md-6 lg-3">
-    <label for="co-carb">Carbohidratos (g)</label>
-    <input id="co-carb" type="number" name="carbohidratos" min="0" step="any" inputmode="decimal" placeholder="0">
-  </div>
-  <div class="campo md-6 lg-3">
-    <label for="co-gras">Grasas (g)</label>
-    <input id="co-gras" type="number" name="grasas" min="0" step="any" inputmode="decimal" placeholder="0">
-  </div>
-  <div class="campo md-6 lg-3">
-    <button class="boton-enviar">Guardar comida</button>
-  </div>
-</form>
-
-<!-- Lo que comiste el día elegido, con el total -->
-<h2 class="titulo-seccion reveal">{{ "Hoy" if dia == hoy else "El " ~ dia.isoformat() }}</h2>
-<div class="grid-12">
-  {% for etiqueta, clave, unidad in [("Calorías", "kcal", "kcal"), ("Proteínas", "proteinas", "g"), ("Carbohidratos", "carbohidratos", "g"), ("Grasas", "grasas", "g")] %}
-    <article class="tarjeta tarjeta-macro reveal md-6 lg-3">
-      <h3 class="titulo-tarjeta">{{ etiqueta }}</h3>
-      <p class="numero">{{ total_dia[clave] }}{% if objetivo %} <small>/ {{ objetivo[clave] }}</small>{% endif %} <small>{{ unidad }}</small></p>
-      {% if objetivo and objetivo[clave] %}
-        {% set avance = (100 * total_dia[clave] / objetivo[clave]) | round | int %}
-        <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ [avance, 100] | min }}" aria-label="{{ etiqueta }} del objetivo">
-          <div style="width: {{ [avance, 100] | min }}%"></div>
-        </div>
-      {% endif %}
-    </article>
-  {% endfor %}
-</div>
-{% if comidas %}
-  <div class="tabla-contenedor reveal">
-    <table class="tabla">
-      <thead><tr><th scope="col">Comida</th><th scope="col">kcal</th><th scope="col">Proteínas</th><th scope="col">Carbohidratos</th><th scope="col">Grasas</th><th scope="col"><span class="saltar-lector">Borrar</span></th></tr></thead>
-      <tbody>
-      {% for c in comidas %}
-        <tr>
-          <td>{{ c.nombre }}</td><td>{{ c.kcal | round | int }}</td><td>{{ c.proteinas | round | int }} g</td>
-          <td>{{ c.carbohidratos | round | int }} g</td><td>{{ c.grasas | round | int }} g</td>
-          <td>{{ boton_borrar(url_for('borrar_comida', id=c.id), "Borrar comida: " ~ c.nombre) }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% else %}
-  <p class="vacio reveal">Todavía no has registrado comidas este día.</p>
-{% endif %}
 
 <!-- ===== IMC: peso (kg) / estatura (m)² ===== -->
 <h2 id="imc" class="titulo-seccion reveal">Calcula tu IMC</h2>

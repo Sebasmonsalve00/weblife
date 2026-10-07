@@ -832,6 +832,10 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 /* Transición entre páginas: la actual se queda quieta (sticky, la colocación la
    calcula pagina-siguiente.js) y la siguiente sube por encima, como una hoja.
    Mientras sube, lo de la página de debajo se difumina y desaparece (--cubierto de 0 a 1). */
+/* Las variables que pagina-siguiente.js cambia en cada cuadro no se heredan: así el
+   navegador solo recalcula el tramo y lo que las pide (con "inherit"), no toda la página */
+@property --cubierto { syntax: "<number>"; inherits: false; initial-value: 0; }
+@property --desfase-burbujas { syntax: "<length>"; inherits: false; initial-value: 0px; }
 .tramo { position: relative; isolation: isolate; background: var(--color-fondo); }
 /* Cada página ocupa al menos toda la pantalla: las cortas (como Pendientes) la llenan
    entera antes de que la siguiente empiece a subir */
@@ -880,19 +884,26 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
   -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y;
   /* Las burbujas van con la página al hacer scroll. Cuando la página se queda quieta
      (mientras sube la siguiente), pagina-siguiente.js las sigue moviendo con --desfase-burbujas */
-  -webkit-mask-position: 0 var(--desfase-burbujas, 0px); mask-position: 0 var(--desfase-burbujas, 0px);
+  /* Se mueven con transform (no con mask-position): así el navegador pinta las burbujas
+     una sola vez y solo desplaza la capa, en vez de repintarlas en cada cuadro. */
+  --desfase-burbujas: inherit;
+  transform: translateY(var(--desfase-burbujas));
+  will-change: transform;
 }
 .tramo + .tramo.pegado { position: sticky; }
 /* (Los avisos fijos del calendario van en una caja con display: contents, así que
    no les afecta: tienen su propio desvanecido) */
 .tramo > * {
-  opacity: calc(1 - var(--cubierto, 0));
-  filter: blur(calc(var(--cubierto, 0) * 10px));
-  transform: scale(calc(1 - var(--cubierto, 0) * 0.04));
+  --cubierto: inherit;
+  opacity: calc(1 - var(--cubierto));
+  transform: scale(calc(1 - var(--cubierto) * 0.04));
   transform-origin: 50% 100%;
 }
-/* Sin efecto mientras no la tapa nada (filter y transform cambian cómo se colocan las cosas fijas) */
-.tramo:not(.cubriendo) > * { filter: none; transform: none; }
+/* Mientras la tapa la siguiente, va en su propia capa: el navegador no la repinta,
+   solo cambia su transparencia y su tamaño (sin difuminado: era lo que más trababa) */
+.tramo.cubriendo > * { will-change: opacity, transform; }
+/* Sin efecto mientras no la tapa nada (transform cambia cómo se colocan las cosas fijas) */
+.tramo:not(.cubriendo) > * { transform: none; }
 .tramo.tapado { visibility: hidden; }
 /* El footer pasa por encima de la última página */
 .footer { position: relative; z-index: 1; }
@@ -1020,3 +1031,52 @@ html:not(.js) .carga { display: none; }
 /* Texto con los gramos del objetivo y explicación del IMC */
 .nota-objetivo { color: var(--texto-secundario); margin: 0; }
 .tarjeta .descripcion-larga { display: block; -webkit-line-clamp: unset; }
+
+/* ---------- Distancia entre islas ----------
+   Todas las cajas de una página (formularios, tarjetas, tablas, listas) quedan a la
+   misma distancia: 24px entre una y otra, y 64px antes de cada título de sección. */
+.tramo-cuerpo > .formulario, .tramo-cuerpo > .grid-12, .tramo-cuerpo > .tarjeta,
+.tramo-cuerpo > .tabla-contenedor, .tramo-cuerpo > .lista, .tramo-cuerpo > .vacio { margin-top: 0; margin-bottom: 24px; }
+.tramo-cuerpo > .titulo-seccion:not(:first-child),
+.tramo-cuerpo > .panel-titulo:not(:first-child) { margin-top: 64px; margin-bottom: 24px; }
+.tramo-cuerpo > .panel-titulo .titulo-seccion { margin: 0; }
+
+/* ---------- Alimentación e info (Deporte): objetivo, comidas y pop-ups ---------- */
+.objetivo-resumen { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+.objetivo-cifras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; width: 100%; }
+.objetivo-cifras .numero { font-size: 2rem; margin: 0; }
+@media (max-width: 639px) { .objetivo-cifras { grid-template-columns: 1fr 1fr; } }
+.comida-seccion { display: flex; flex-direction: column; gap: 12px; }
+.comida-seccion > .boton { align-self: flex-start; margin-top: auto; }
+.comida-cabecera { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.comida-cabecera h3 { margin: 0; }
+.comida-lista { list-style: none; margin: 0; padding: 0; }
+.comida-lista li { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+                   padding: 10px 0; border-bottom: 1px solid var(--borde); }
+.comida-lista p { max-width: none; }
+.comida-total { margin: 0; }
+/* Pop-ups (ventanas): el de alimento es grande, con los campos en dos o cuatro columnas */
+.ventana { width: min(520px, calc(100vw - 32px)); padding: 24px; }
+.ventana-grande { width: min(860px, calc(100vw - 32px)); }
+.ventana .segmento { display: flex; align-items: center; justify-content: center; position: relative; }
+.ventana .segmento input { position: absolute; opacity: 0; pointer-events: none; }
+.ventana .segmento:has(input:checked) { background: #FFFFFF; font-weight: 600; box-shadow: 0 1px 3px rgba(29, 29, 31, 0.12), 0 0 0 0.5px rgba(29, 29, 31, 0.04); }
+.ventana .segmento:has(input:focus-visible) { outline: 2px solid var(--color-texto); outline-offset: 1px; }
+.ventana-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.ventana-grande .ventana-campos { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ventana-grande .ventana-campos .campo:nth-child(-n+3) { grid-column: span 2; }
+.ventana-ancho { grid-column: 1 / -1 !important; }
+.ventana .campo .segmentos { margin: 0; height: 52px; align-items: stretch; }
+.ventana .campo .segmento { height: auto; }
+.ventana-resumen { min-height: 1.4em; margin: 0 0 12px; max-width: none; }
+.ventana-guardar { width: 100%; height: 52px; }
+@media (max-width: 639px) {
+  .ventana-grande .ventana-campos { grid-template-columns: 1fr 1fr; }
+  .ventana-grande .ventana-campos .campo:nth-child(-n+3) { grid-column: span 2; }
+}
+.ventana-campos { align-items: end; }
+#form-objetivo .ventana-campos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Al saltar a #objetivo, #comidas o #imc, el título no queda escondido bajo la barra de arriba */
+#objetivo, #comidas, #imc { scroll-margin-top: 96px; }
+.tarjeta-macro .numero { white-space: nowrap; }
+@media (max-width: 639px) { .tarjeta-macro .numero { font-size: 1.5rem; } }

@@ -169,6 +169,13 @@ def crear_tablas():
             carbohidratos REAL NOT NULL DEFAULT 0,
             grasas REAL NOT NULL DEFAULT 0
         )""")
+    # Más datos de cada alimento: en qué comida va (desayuno, almuerzo, cena o snack),
+    # cuántos gramos, y el resto de la etiqueta (azúcares, grasas saturadas, fibra y sal)
+    columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(comidas_deporte)")]
+    for columna, tipo in (("tipo", "TEXT"), ("cantidad", "REAL"), ("azucares", "REAL"),
+                          ("saturadas", "REAL"), ("fibra", "REAL"), ("sal", "REAL")):
+        if columna not in columnas:
+            conexion.execute(f"ALTER TABLE comidas_deporte ADD COLUMN {columna} {tipo}")
 
     # Datos de Deporte de cada cuenta: objetivo de calorías, reparto de macros (%)
     # y lo último que pusiste en la calculadora de IMC.
@@ -1153,27 +1160,36 @@ def numero_del_form(nombre):
 
 @app.route("/deporte/comida", methods=["POST"])
 def registrar_comida():
-    """Guarda una comida con sus calorías y macros (solo en Deporte)."""
+    """Guarda un alimento en una comida del día (desayuno, almuerzo, cena o snack). Solo en Deporte."""
     fecha = request.form.get("fecha", "")
     try:
         date.fromisoformat(fecha)
     except ValueError:
         fecha = date.today().isoformat()
+    tipo = request.form.get("tipo", "")
+    if tipo not in dict(contenido.TIPOS_COMIDA):
+        tipo = "snack"
     nombre = request.form.get("nombre", "").strip()[:60]
     if mi_modo() == "deporte" and nombre:
-        modificar("INSERT INTO comidas_deporte (usuario_id, fecha, nombre, kcal, proteinas, carbohidratos, grasas) "
-                  "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                  (mi_cuenta(), fecha, nombre, numero_del_form("kcal"), numero_del_form("proteinas"),
-                   numero_del_form("carbohidratos"), numero_del_form("grasas")))
+        cantidad = numero_del_form("cantidad")
+        # Si copiaste la etiqueta "por 100 g", lo pasamos a la cantidad que comiste
+        factor = cantidad / 100 if request.form.get("por_100") and cantidad else 1
+        valores = {campo: round(numero_del_form(campo) * factor, 2)
+                   for campo in ("kcal", "proteinas", "carbohidratos", "grasas", "azucares", "saturadas", "fibra", "sal")}
+        modificar("INSERT INTO comidas_deporte (usuario_id, fecha, tipo, nombre, cantidad, kcal, proteinas, carbohidratos, "
+                  "grasas, azucares, saturadas, fibra, sal) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                  (mi_cuenta(), fecha, tipo, nombre, cantidad or None, valores["kcal"], valores["proteinas"],
+                   valores["carbohidratos"], valores["grasas"], valores["azucares"], valores["saturadas"],
+                   valores["fibra"], valores["sal"]))
         flash(contenido.MENSAJES["comida"])
-    return redirect(url_for("asistencia", fecha=fecha))
+    return redirect(url_for("asistencia", fecha=fecha) + "#comidas")
 
 
 @app.route("/deporte/comida/borrar/<int:id>", methods=["POST"])
 def borrar_comida(id):
     fila = consultar("SELECT fecha FROM comidas_deporte WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
     modificar("DELETE FROM comidas_deporte WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
-    return redirect(url_for("asistencia", fecha=fila[0]["fecha"] if fila else None))
+    return redirect(url_for("asistencia", fecha=fila[0]["fecha"] if fila else None) + "#comidas")
 
 
 def guardar_perfil_deporte(**datos):
@@ -1296,10 +1312,18 @@ def alimentacion_e_info():
     completados = sum(f["completados"] for f in filas)
     dias_con_comidas = [f for f in filas if f["macros"]["kcal"] or f["macros"]["proteinas"]]
     media_kcal = round(sum(f["macros"]["kcal"] for f in dias_con_comidas) / len(dias_con_comidas)) if dias_con_comidas else 0
+    # Los alimentos del día, separados por comida (los antiguos sin comida van a Snack)
+    por_comida = {clave: [] for clave, nombre in contenido.TIPOS_COMIDA}
+    for comida in comidas_dia:
+        por_comida.get(comida["tipo"], por_comida["snack"]).append(comida)
+    secciones = [{"clave": clave, "nombre": nombre, "alimentos": por_comida[clave],
+                  "total": sumar_macros(por_comida[clave])} for clave, nombre in contenido.TIPOS_COMIDA]
+
     filas_perfil = consultar("SELECT * FROM perfil_deporte WHERE usuario_id = ?", (mi_cuenta(),))
     perfil = filas_perfil[0] if filas_perfil else None
     return render_template(
-        "deporte_info.html", perfil=perfil, objetivo=gramos_objetivo(perfil), imc=imc_de(perfil), dia=dia, hoy=date.today(), comidas=comidas_dia, total_dia=sumar_macros(comidas_dia),
+        "deporte_info.html", secciones=secciones, dia_anterior=(dia - timedelta(days=1)).isoformat(),
+        dia_siguiente=(dia + timedelta(days=1)).isoformat(), perfil=perfil, objetivo=gramos_objetivo(perfil), imc=imc_de(perfil), dia=dia, hoy=date.today(), comidas=comidas_dia, total_dia=sumar_macros(comidas_dia),
         lunes=lunes, domingo=domingo, filas=filas, por_tipo=sorted(por_tipo.items()),
         programados=programados, completados=completados,
         porcentaje=round(100 * completados / programados) if programados else 0,
