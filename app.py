@@ -155,9 +155,11 @@ def crear_tablas():
     if "tipo" not in columnas:
         conexion.execute("ALTER TABLE clases ADD COLUMN tipo TEXT")
 
-    # Comidas de Deporte: lo que comiste cada día con sus macros (en gramos) y calorías
+    # Comidas de Deporte: lo que comiste cada día con sus macros (en gramos) y calorías.
+    # Se llama "comidas_deporte" porque en algunas bases de datos ya existe una tabla
+    # "comidas" antigua (de la sección Vida) con otras columnas.
     conexion.execute("""
-        CREATE TABLE IF NOT EXISTS comidas (
+        CREATE TABLE IF NOT EXISTS comidas_deporte (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER NOT NULL,
             fecha TEXT NOT NULL,          -- "2026-10-07"
@@ -1159,7 +1161,7 @@ def registrar_comida():
         fecha = date.today().isoformat()
     nombre = request.form.get("nombre", "").strip()[:60]
     if mi_modo() == "deporte" and nombre:
-        modificar("INSERT INTO comidas (usuario_id, fecha, nombre, kcal, proteinas, carbohidratos, grasas) "
+        modificar("INSERT INTO comidas_deporte (usuario_id, fecha, nombre, kcal, proteinas, carbohidratos, grasas) "
                   "VALUES (?, ?, ?, ?, ?, ?, ?)",
                   (mi_cuenta(), fecha, nombre, numero_del_form("kcal"), numero_del_form("proteinas"),
                    numero_del_form("carbohidratos"), numero_del_form("grasas")))
@@ -1169,8 +1171,8 @@ def registrar_comida():
 
 @app.route("/deporte/comida/borrar/<int:id>", methods=["POST"])
 def borrar_comida(id):
-    fila = consultar("SELECT fecha FROM comidas WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
-    modificar("DELETE FROM comidas WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
+    fila = consultar("SELECT fecha FROM comidas_deporte WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
+    modificar("DELETE FROM comidas_deporte WHERE id = ? AND usuario_id = ?", (id, mi_cuenta()))
     return redirect(url_for("asistencia", fecha=fila[0]["fecha"] if fila else None))
 
 
@@ -1256,9 +1258,9 @@ def alimentacion_e_info():
     domingo = lunes + timedelta(days=6)
     dias = [lunes + timedelta(days=n) for n in range(7)]
 
-    comidas_dia = consultar("SELECT * FROM comidas WHERE usuario_id = ? AND fecha = ? ORDER BY id",
+    comidas_dia = consultar("SELECT * FROM comidas_deporte WHERE usuario_id = ? AND fecha = ? ORDER BY id",
                             (mi_cuenta(), dia.isoformat()))
-    comidas_semana = consultar("SELECT * FROM comidas WHERE usuario_id = ? AND fecha BETWEEN ? AND ?",
+    comidas_semana = consultar("SELECT * FROM comidas_deporte WHERE usuario_id = ? AND fecha BETWEEN ? AND ?",
                                (mi_cuenta(), lunes.isoformat(), domingo.isoformat()))
 
     # Lo programado en el horario (se repite cada semana) y lo que marcaste como completado
