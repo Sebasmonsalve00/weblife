@@ -212,38 +212,77 @@
       avisos.classList.toggle("avisos-fuera", visible === 0);   // del todo ido: no se puede pulsar
     });
   }
-  // ---------- Encajar: el cambio de página nunca se queda a medias ----------
-  // Cuando dejas de hacer scroll con una página a medio subir, terminamos el
-  // movimiento: si bajabas, la siguiente entra entera; si subías, vuelve a irse.
-  var bajando = true, dedoPuesto = false, esperaEncaje = null;
-  function encajar() {
-    esperaEncaje = null;
-    if (dedoPuesto) return;   // con el dedo aún en la pantalla, esperamos a que lo suelte
-    var alto = window.innerHeight;
+  // ---------- Tope: el scroll se detiene al final de cada página ----------
+  // Un "gesto" es un movimiento de scroll seguido (el dedo en la pantalla y lo
+  // que sigue deslizando al soltarlo, o una tanda de ruedas sin pausa). Si en un
+  // mismo gesto llegas al final de una página, el scroll se queda ahí. Para seguir
+  // hay que soltar y volver a hacer scroll. También para cuando la página nueva
+  // termina de entrar, y lo mismo al subir.
+  var gesto = null;          // { inicio: posiciones al empezar, tope: scroll donde se queda }
+  var finGesto = null, dedoPuesto = false;
+  var PAUSA = 300;           // ms quieto que cuentan como "has soltado"
+
+  // Dónde está el borde de arriba de cada página que entra (0 = arriba de la pantalla)
+  function bordes() {
+    var lista = [];
     document.querySelectorAll(".tramo").forEach(function (t) {
       var debajo = siguienteTramo(t);
-      if (!debajo) return;
-      var arriba = debajo.getBoundingClientRect().top;   // dónde va el borde de la siguiente
-      if (arriba <= 1 || arriba >= alto - 1) return;     // no está a medias
-      var sinMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      window.scrollBy({ top: bajando ? arriba : arriba - alto, behavior: sinMovimiento ? "auto" : "smooth" });
+      if (debajo) lista.push({ el: debajo, top: debajo.getBoundingClientRect().top });
     });
+    return lista;
   }
-  function esperarEncaje() {
-    if (ajustes.encajar === false) return;
-    clearTimeout(esperaEncaje);
-    esperaEncaje = setTimeout(encajar, 160);   // 160 ms sin scroll = has soltado
+  function empezarGesto() {
+    if (ajustes.tope === false) return;
+    if (!gesto) {
+      gesto = { inicio: new Map(), tope: null };
+      bordes().forEach(function (b) { gesto.inicio.set(b.el, b.top); });
+    }
   }
-  window.addEventListener("scroll", function () {
-    var y = window.scrollY;
-    if (y !== ultimoEncajeY) bajando = y > ultimoEncajeY;
-    ultimoEncajeY = y;
-    esperarEncaje();
-  }, { passive: true });
-  var ultimoEncajeY = window.scrollY;
-  window.addEventListener("touchstart", function () { dedoPuesto = true; }, { passive: true });
-  window.addEventListener("touchend", function () { dedoPuesto = false; esperarEncaje(); }, { passive: true });
-  window.addEventListener("touchcancel", function () { dedoPuesto = false; esperarEncaje(); }, { passive: true });
+  function terminarGesto(espera) {
+    clearTimeout(finGesto);
+    finGesto = setTimeout(function () { if (!dedoPuesto) gesto = null; }, espera);
+  }
+  function irA(y) { window.scrollTo({ top: y, behavior: "instant" }); }
+
+  // ¿Ha cruzado este gesto un tope? Las paradas son: la página siguiente justo
+  // asomando por abajo (borde = alto) y ya entera arriba (borde = 0).
+  function revisarTope() {
+    if (!gesto) return;
+    if (gesto.tope !== null) { if (Math.abs(window.scrollY - gesto.tope) > 0.5) irA(gesto.tope); return; }
+    var alto = window.innerHeight;
+    var ahora = bordes();
+    for (var i = 0; i < ahora.length && gesto.tope === null; i++) {
+      var b = ahora[i].top;
+      // Una página que acaba de aparecer: apuntamos dónde estaba y seguimos
+      if (!gesto.inicio.has(ahora[i].el)) { gesto.inicio.set(ahora[i].el, b); continue; }
+      var antes = gesto.inicio.get(ahora[i].el);
+      [alto, 0].forEach(function (parada) {
+        if (gesto.tope !== null) return;
+        var cruzaBajando = antes > parada + 1 && b <= parada;
+        var cruzaSubiendo = antes < parada - 1 && b >= parada;
+        if (cruzaBajando || cruzaSubiendo) {
+          gesto.tope = window.scrollY + (b - parada);
+          irA(gesto.tope);
+        }
+      });
+    }
+  }
+  window.addEventListener("scroll", function () { revisarTope(); if (gesto && !dedoPuesto) terminarGesto(PAUSA); }, { passive: true });
+
+  // Rueda o trackpad: cada tanda sin pausas es un gesto. Parado en un tope, no dejamos mover.
+  window.addEventListener("wheel", function (e) {
+    empezarGesto();
+    if (gesto && gesto.tope !== null && e.cancelable) e.preventDefault();
+    terminarGesto(PAUSA);
+  }, { passive: false });
+  // Dedo: el gesto dura mientras está puesto y lo que desliza después de soltarlo
+  window.addEventListener("touchstart", function () { dedoPuesto = true; gesto = null; empezarGesto(); }, { passive: true });
+  window.addEventListener("touchmove", function (e) {
+    if (gesto && gesto.tope !== null && e.cancelable) e.preventDefault();
+  }, { passive: false });
+  function soltarDedo() { dedoPuesto = false; terminarGesto(PAUSA); }
+  window.addEventListener("touchend", soltarDedo, { passive: true });
+  window.addEventListener("touchcancel", soltarDedo, { passive: true });
 
   function pedir() { if (!pendiente) { pendiente = true; requestAnimationFrame(revisar); } }
   window.addEventListener("scroll", pedir, { passive: true });
