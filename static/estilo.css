@@ -218,6 +218,29 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   .nav-acciones { display: flex; }
 }
 
+/* Logo + interruptor Universidad / Deporte, juntos a la izquierda */
+.nav-marca { display: flex; align-items: center; gap: 12px; }
+/* Interruptor: píldora gris (como los segmentos) con una bolita blanca que se desliza */
+.interruptor-modo {
+  position: relative; display: inline-grid; grid-template-columns: 1fr 1fr;
+  height: 30px; padding: 3px; border: none; border-radius: 999px;
+  background: rgba(118, 118, 128, 0.12);
+  font: inherit; font-size: 12px; font-weight: 500; color: var(--texto-secundario);
+  cursor: pointer;
+}
+.interruptor-modo:focus-visible { outline: 2px solid var(--color-texto); outline-offset: 2px; }
+.interruptor-bola {
+  position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px);
+  border-radius: 999px; background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(29, 29, 31, 0.12), 0 0 0 0.5px rgba(29, 29, 31, 0.04);
+  transition: transform 220ms var(--easing);
+}
+.interruptor-modo[aria-checked="true"] .interruptor-bola { transform: translateX(100%); }
+.interruptor-op { position: relative; display: flex; align-items: center; justify-content: center; padding: 0 10px; transition: color 200ms ease; }
+.interruptor-modo[aria-checked="false"] .op-uni,
+.interruptor-modo[aria-checked="true"] .op-deporte { color: var(--color-texto); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .interruptor-bola, .interruptor-op { transition: none; } }
+
 /* Botón hamburguesa: 2 líneas que se convierten en X */
 .hamburguesa {
   width: 44px; height: 44px;

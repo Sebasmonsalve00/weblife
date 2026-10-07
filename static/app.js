@@ -4,6 +4,7 @@
 //  2. Menú móvil (abrir/cerrar con X, Escape o al hacer clic)
 //  3. Animaciones al hacer scroll (.reveal)
 //  4. Validación en vivo de los formularios
+//  5. Interruptor Universidad / Deporte del header
 //  Los tiempos vienen de config_diseno.py (window.WEBLIFE).
 // ============================================================
 
@@ -142,5 +143,21 @@
     prepararFormularios(raiz);
   };
   preparar(document);
+
+  // ---------- 5. Interruptor Universidad / Deporte ----------
+  // La bolita se desliza primero y luego se envía el cambio. Volvemos a la página
+  // que estás viendo (con el scroll continuo la dirección puede haber cambiado).
+  var formModo = document.getElementById("form-modo");
+  if (formModo) {
+    formModo.addEventListener("submit", function (e) {
+      e.preventDefault();
+      formModo.volver.value = location.pathname;
+      var interruptor = formModo.querySelector(".interruptor-modo");
+      interruptor.setAttribute("aria-checked", interruptor.getAttribute("aria-checked") === "true" ? "false" : "true");
+      interruptor.disabled = true;
+      setTimeout(function () { formModo.submit(); }, sinMovimiento ? 0 : 220);
+    });
+  }
+
   window.Weblife = { preparar: preparar };
 })();

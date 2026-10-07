@@ -422,13 +422,17 @@ def perfil():
 
 @app.route("/perfil/modo", methods=["POST"])
 def cambiar_modo():
-    """Cambia de calendario: Universidad o Deporte. Cada uno tiene sus propios datos."""
+    """Cambia de calendario: Universidad o Deporte (el interruptor del header). Cada uno tiene sus propios datos."""
     modo = request.form.get("modo")
     if modo in MODOS:
         modificar("UPDATE usuarios SET modo = ? WHERE id = ?", (modo, mi_cuenta()))
         session["modo"] = modo
         flash(contenido.MENSAJES["modo_" + modo])
-    return redirect(url_for("ajustes"))
+    # Volvemos a la página donde estabas (solo rutas de esta web, nunca otra)
+    volver = request.form.get("volver", "")
+    if not volver.startswith("/") or volver.startswith("//"):
+        volver = url_for("inicio")
+    return redirect(volver)
 
 
 @app.route("/perfil/ajustes", methods=["GET", "POST"])

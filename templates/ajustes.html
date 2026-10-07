@@ -3,19 +3,7 @@
 {% block titulo %}Ajustes{% endblock %}
 {% block contenido %}
 {{ encabezado({"etiqueta": "Mi perfil", "titulo": "Ajustes",
-               "subtitulo": "Cambia de calendario y elige el color de la web. Solo cambia para ti."}) }}
-
-{# Calendario: Universidad (todo lo de siempre) o Deporte. Cada uno guarda sus datos aparte. #}
-<form method="post" action="{{ url_for('cambiar_modo') }}" class="formulario reveal ajustes-modo">
-  <h2 class="subtitulo-chico">Calendario</h2>
-  <p class="ajustes-nota">Cada calendario tiene su propio horario, tareas, eventos y asistencia.</p>
-  <div class="segmentos segmentos-grandes" role="group" aria-label="Elegir calendario">
-    {% for valor, nombre in [("universidad", "Universidad"), ("deporte", "Deporte")] %}
-      <button class="segmento {{ 'activo' if modo == valor }}" name="modo" value="{{ valor }}"
-              aria-pressed="{{ 'true' if modo == valor else 'false' }}">{{ nombre }}</button>
-    {% endfor %}
-  </div>
-</form>
+               "subtitulo": "Elige el color de la web. Solo cambia para ti."}) }}
 
 <form method="post" class="formulario reveal ajustes-color">
   <fieldset>
