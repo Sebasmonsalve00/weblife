@@ -178,7 +178,11 @@
     document.querySelectorAll(".tramo").forEach(function (t) {
       var debajo = siguienteTramo(t);
       var cubierto = debajo ? limitar(1 - debajo.getBoundingClientRect().top / alto) : 0;
-      t.style.setProperty("--cubierto", cubierto.toFixed(3));
+      // Solo tocamos los estilos si algo cambió (cada cambio obliga al navegador a recalcular)
+      var valor = cubierto.toFixed(3);
+      if (t.dataset.cubierto === valor) return;
+      t.dataset.cubierto = valor;
+      t.style.setProperty("--cubierto", valor);
       // Mientras la página está quieta, sus burbujas del fondo siguen subiendo con el
       // scroll (lo que has bajado desde que se quedó quieta = lo que ha subido la siguiente)
       t.style.setProperty("--desfase-burbujas", (-cubierto * alto).toFixed(1) + "px");

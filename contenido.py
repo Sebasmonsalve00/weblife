@@ -92,7 +92,7 @@ PAGINAS_DEPORTE = {
     "asistencia": {
         "etiqueta": "Deporte",
         "titulo": "Alimentación e info",
-        "subtitulo": "Tu objetivo de calorías y macros, tus comidas, tu IMC y cómo va tu semana.",
+        "subtitulo": "Tu objetivo de calorías y macros, lo que comes en cada comida, tu IMC y cómo va tu semana.",
     },
 }
 
@@ -108,6 +108,14 @@ TIPOS_DEPORTE = [
     ("fuerza", "Entrenamiento de fuerza"),
 ]
 NOMBRE_TIPO_DEPORTE = dict(TIPOS_DEPORTE)
+
+# Comidas del día en "Alimentación e info" (Deporte): (clave, nombre)
+TIPOS_COMIDA = [
+    ("desayuno", "Desayuno"),
+    ("almuerzo", "Almuerzo"),
+    ("cena", "Cena"),
+    ("snack", "Snack"),
+]
 
 # ---- Palabras que cambian según el calendario ----
 # En Universidad se habla de tareas y materias; en Deporte, de metas y deportes.
@@ -216,7 +224,7 @@ MENSAJES = {
     "cuenta": "Nombre guardado.",
     "clave": "Contraseña cambiada.",
     "evento": "Evento agregado al calendario.",
-    "comida": "Comida registrada.",
+    "comida": "Alimento añadido.",
     "objetivo": "Objetivo de calorías guardado.",
     "porcentajes_ajustados": "Los porcentajes no sumaban 100 %, así que los ajusté manteniendo la proporción.",
     "examen": "Examen agregado al calendario.",
@@ -250,6 +258,7 @@ def todo(modo="universidad"):
         "texto_salir": TEXTO_SALIR,
         "paginas": PAGINAS_DEPORTE if modo == "deporte" else PAGINAS,
         "tipos_deporte": TIPOS_DEPORTE, "nombre_tipo_deporte": NOMBRE_TIPO_DEPORTE,
+        "tipos_comida": TIPOS_COMIDA,
         "inicio": INICIO,
         "entrar": ENTRAR,
         "registrar": REGISTRAR,
