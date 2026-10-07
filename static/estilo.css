@@ -1017,3 +1017,6 @@ html:not(.js) .carga { display: none; }
   .tarjeta-macro { grid-column: span 6 !important; padding: 16px 20px; }
   .tarjeta-macro .numero { font-size: 1.75rem; margin: 0; }
 }
+/* Texto con los gramos del objetivo y explicación del IMC */
+.nota-objetivo { color: var(--texto-secundario); margin: 0; }
+.tarjeta .descripcion-larga { display: block; -webkit-line-clamp: unset; }

@@ -92,7 +92,7 @@ PAGINAS_DEPORTE = {
     "asistencia": {
         "etiqueta": "Deporte",
         "titulo": "Alimentación e info",
-        "subtitulo": "Registra tus comidas con sus macros y calorías, y mira cómo va tu semana.",
+        "subtitulo": "Tu objetivo de calorías y macros, tus comidas, tu IMC y cómo va tu semana.",
     },
 }
 
@@ -217,6 +217,8 @@ MENSAJES = {
     "clave": "Contraseña cambiada.",
     "evento": "Evento agregado al calendario.",
     "comida": "Comida registrada.",
+    "objetivo": "Objetivo de calorías guardado.",
+    "porcentajes_ajustados": "Los porcentajes no sumaban 100 %, así que los ajusté manteniendo la proporción.",
     "examen": "Examen agregado al calendario.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",

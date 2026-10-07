@@ -168,6 +168,19 @@ def crear_tablas():
             grasas REAL NOT NULL DEFAULT 0
         )""")
 
+    # Datos de Deporte de cada cuenta: objetivo de calorías, reparto de macros (%)
+    # y lo último que pusiste en la calculadora de IMC.
+    conexion.execute("""
+        CREATE TABLE IF NOT EXISTS perfil_deporte (
+            usuario_id INTEGER PRIMARY KEY,
+            kcal_objetivo REAL,
+            pct_proteinas REAL,
+            pct_carbohidratos REAL,
+            pct_grasas REAL,
+            peso REAL,                    -- kg
+            altura REAL                   -- cm
+        )""")
+
     # "categoria" en clases y eventos: en Deporte, el tipo de entreno que elegiste
     # (cardio, fuerza, comida...). Ver contenido.TIPOS_DEPORTE.
     for tabla in ("clases", "eventos"):
@@ -1161,6 +1174,68 @@ def borrar_comida(id):
     return redirect(url_for("asistencia", fecha=fila[0]["fecha"] if fila else None))
 
 
+def guardar_perfil_deporte(**datos):
+    """Guarda algunos datos del perfil de Deporte (crea la fila si no existe)."""
+    modificar("INSERT OR IGNORE INTO perfil_deporte (usuario_id) VALUES (?)", (mi_cuenta(),))
+    columnas = ", ".join(f"{columna} = ?" for columna in datos)
+    modificar(f"UPDATE perfil_deporte SET {columnas} WHERE usuario_id = ?", (*datos.values(), mi_cuenta()))
+
+
+@app.route("/deporte/objetivo", methods=["POST"])
+def guardar_objetivo():
+    """Guarda las calorías que necesitas y qué % va a proteínas, carbohidratos y grasas."""
+    if mi_modo() == "deporte":
+        pct = [numero_del_form("pct_proteinas"), numero_del_form("pct_carbohidratos"), numero_del_form("pct_grasas")]
+        suma = sum(pct)
+        if suma == 0:
+            pct = [30, 40, 30]                 # reparto de ejemplo si lo dejas todo vacío
+        elif round(suma) != 100:
+            pct = [p * 100 / suma for p in pct]  # que siempre sume 100 %
+            flash(contenido.MENSAJES["porcentajes_ajustados"])
+        guardar_perfil_deporte(kcal_objetivo=numero_del_form("kcal_objetivo"), pct_proteinas=round(pct[0], 1),
+                               pct_carbohidratos=round(pct[1], 1), pct_grasas=round(pct[2], 1))
+        flash(contenido.MENSAJES["objetivo"])
+    return redirect(url_for("asistencia", fecha=request.form.get("fecha") or None) + "#objetivo")
+
+
+@app.route("/deporte/imc", methods=["POST"])
+def calcular_imc():
+    """Guarda tu peso y altura; la página calcula el IMC con ellos."""
+    if mi_modo() == "deporte":
+        altura = numero_del_form("altura")
+        if 0 < altura < 3:        # si la pusiste en metros (1,75), la pasamos a centímetros
+            altura *= 100
+        guardar_perfil_deporte(peso=numero_del_form("peso"), altura=altura)
+    return redirect(url_for("asistencia", fecha=request.form.get("fecha") or None) + "#imc")
+
+
+def gramos_objetivo(perfil):
+    """Gramos de cada macro: proteínas y carbohidratos tienen 4 kcal por gramo; las grasas, 9."""
+    if not perfil or not perfil["kcal_objetivo"]:
+        return None
+    kcal = perfil["kcal_objetivo"]
+    return {"kcal": round(kcal),
+            "proteinas": round(kcal * (perfil["pct_proteinas"] or 0) / 100 / 4),
+            "carbohidratos": round(kcal * (perfil["pct_carbohidratos"] or 0) / 100 / 4),
+            "grasas": round(kcal * (perfil["pct_grasas"] or 0) / 100 / 9)}
+
+
+def imc_de(perfil):
+    """IMC = peso (kg) / estatura (m)². Devuelve el número y qué significa (tabla de la OMS)."""
+    if not perfil or not perfil["peso"] or not perfil["altura"]:
+        return None
+    imc = perfil["peso"] / (perfil["altura"] / 100) ** 2
+    if imc < 18.5:
+        categoria = "Bajo peso"
+    elif imc < 25:
+        categoria = "Peso normal"
+    elif imc < 30:
+        categoria = "Sobrepeso"
+    else:
+        categoria = "Obesidad"
+    return {"valor": round(imc, 1), "categoria": categoria}
+
+
 def sumar_macros(comidas):
     """Total de calorías y macros de una lista de comidas (redondeado)."""
     total = {"kcal": 0, "proteinas": 0, "carbohidratos": 0, "grasas": 0}
@@ -1219,8 +1294,10 @@ def alimentacion_e_info():
     completados = sum(f["completados"] for f in filas)
     dias_con_comidas = [f for f in filas if f["macros"]["kcal"] or f["macros"]["proteinas"]]
     media_kcal = round(sum(f["macros"]["kcal"] for f in dias_con_comidas) / len(dias_con_comidas)) if dias_con_comidas else 0
+    filas_perfil = consultar("SELECT * FROM perfil_deporte WHERE usuario_id = ?", (mi_cuenta(),))
+    perfil = filas_perfil[0] if filas_perfil else None
     return render_template(
-        "deporte_info.html", dia=dia, hoy=date.today(), comidas=comidas_dia, total_dia=sumar_macros(comidas_dia),
+        "deporte_info.html", perfil=perfil, objetivo=gramos_objetivo(perfil), imc=imc_de(perfil), dia=dia, hoy=date.today(), comidas=comidas_dia, total_dia=sumar_macros(comidas_dia),
         lunes=lunes, domingo=domingo, filas=filas, por_tipo=sorted(por_tipo.items()),
         programados=programados, completados=completados,
         porcentaje=round(100 * completados / programados) if programados else 0,

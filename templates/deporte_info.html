@@ -5,6 +5,56 @@
 {# Página de Deporte "Alimentación e info": registro de comidas y resumen de la semana #}
 {{ encabezado(texto.paginas.asistencia) }}
 
+<!-- ===== Tu objetivo: calorías que necesitas y reparto en % de los macros ===== -->
+<h2 id="objetivo" class="titulo-seccion reveal">Tu objetivo diario</h2>
+{% set pct = {"proteinas": perfil.pct_proteinas if perfil and perfil.pct_proteinas is not none else 30,
+              "carbohidratos": perfil.pct_carbohidratos if perfil and perfil.pct_carbohidratos is not none else 40,
+              "grasas": perfil.pct_grasas if perfil and perfil.pct_grasas is not none else 30} %}
+<form method="post" action="{{ url_for('guardar_objetivo') }}" class="formulario grid-12 reveal" id="form-objetivo">
+  <input type="hidden" name="fecha" value="{{ dia.isoformat() }}">
+  <div class="campo md-6 lg-3">
+    <label for="ob-kcal">Calorías que necesitas (kcal)</label>
+    <input id="ob-kcal" type="number" name="kcal_objetivo" min="0" step="any" inputmode="decimal"
+           value="{{ (perfil.kcal_objetivo | round | int) if perfil and perfil.kcal_objetivo else '' }}" placeholder="ej: 2200" required>
+  </div>
+  {% for etiqueta, clave, kcal_gramo in [("Proteínas", "proteinas", 4), ("Carbohidratos", "carbohidratos", 4), ("Grasas", "grasas", 9)] %}
+  <div class="campo md-6 lg-3">
+    <label for="ob-{{ clave }}">{{ etiqueta }} (%)</label>
+    <input id="ob-{{ clave }}" type="number" name="pct_{{ clave }}" min="0" max="100" step="any" inputmode="decimal"
+           value="{{ pct[clave] | round(1) | replace('.0', '') }}" data-kcal-gramo="{{ kcal_gramo }}">
+  </div>
+  {% endfor %}
+  <p class="nota-objetivo" id="ob-resumen" aria-live="polite">
+    {% if objetivo %}Necesitas {{ objetivo.proteinas }} g de proteínas, {{ objetivo.carbohidratos }} g de carbohidratos y {{ objetivo.grasas }} g de grasas al día.{% else %}Pon tus calorías y el % de cada macro; te digo cuántos gramos necesitas.{% endif %}
+  </p>
+  <div class="campo md-6 lg-3">
+    <button class="boton-enviar">Guardar objetivo</button>
+  </div>
+</form>
+<script>
+  // Mientras cambias los números, recalcula los gramos (sin guardar todavía).
+  // Proteínas y carbohidratos: 4 kcal por gramo. Grasas: 9 kcal por gramo.
+  (function () {
+    var form = document.getElementById("form-objetivo");
+    var resumen = document.getElementById("ob-resumen");
+    function recalcular() {
+      var kcal = parseFloat(form.kcal_objetivo.value) || 0;
+      var nombres = {proteinas: "proteínas", carbohidratos: "carbohidratos", grasas: "grasas"};
+      var partes = [], suma = 0;
+      for (var clave in nombres) {
+        var campo = form["pct_" + clave];
+        var pct = parseFloat(campo.value) || 0;
+        suma += pct;
+        partes.push(Math.round(kcal * pct / 100 / campo.dataset.kcalGramo) + " g de " + nombres[clave]);
+      }
+      if (!kcal) { resumen.textContent = "Pon tus calorías y el % de cada macro; te digo cuántos gramos necesitas."; return; }
+      resumen.textContent = "Necesitas " + partes[0] + ", " + partes[1] + " y " + partes[2] + " al día." +
+        (Math.round(suma) !== 100 ? " Ojo: los porcentajes suman " + Math.round(suma) + " % (deberían sumar 100 %)." : "");
+    }
+    form.addEventListener("input", recalcular);
+  })();
+</script>
+
 <!-- ===== Registrar una comida: calorías y macros ===== -->
 <h2 class="titulo-seccion reveal">Registrar comida</h2>
 <form method="post" action="{{ url_for('registrar_comida') }}" class="formulario grid-12 reveal">
@@ -43,7 +93,13 @@
   {% for etiqueta, clave, unidad in [("Calorías", "kcal", "kcal"), ("Proteínas", "proteinas", "g"), ("Carbohidratos", "carbohidratos", "g"), ("Grasas", "grasas", "g")] %}
     <article class="tarjeta tarjeta-macro reveal md-6 lg-3">
       <h3 class="titulo-tarjeta">{{ etiqueta }}</h3>
-      <p class="numero">{{ total_dia[clave] }} <small>{{ unidad }}</small></p>
+      <p class="numero">{{ total_dia[clave] }}{% if objetivo %} <small>/ {{ objetivo[clave] }}</small>{% endif %} <small>{{ unidad }}</small></p>
+      {% if objetivo and objetivo[clave] %}
+        {% set avance = (100 * total_dia[clave] / objetivo[clave]) | round | int %}
+        <div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ [avance, 100] | min }}" aria-label="{{ etiqueta }} del objetivo">
+          <div style="width: {{ [avance, 100] | min }}%"></div>
+        </div>
+      {% endif %}
     </article>
   {% endfor %}
 </div>
@@ -64,6 +120,33 @@
   </div>
 {% else %}
   <p class="vacio reveal">Todavía no has registrado comidas este día.</p>
+{% endif %}
+
+<!-- ===== IMC: peso (kg) / estatura (m)² ===== -->
+<h2 id="imc" class="titulo-seccion reveal">Calcula tu IMC</h2>
+<form method="post" action="{{ url_for('calcular_imc') }}" class="formulario grid-12 reveal">
+  <input type="hidden" name="fecha" value="{{ dia.isoformat() }}">
+  <div class="campo md-6 lg-4">
+    <label for="imc-peso">Peso (kg)</label>
+    <input id="imc-peso" type="number" name="peso" min="1" step="any" inputmode="decimal" placeholder="ej: 70"
+           value="{{ perfil.peso | round(1) | replace('.0', '') if perfil and perfil.peso else '' }}" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <label for="imc-altura">Altura (cm)</label>
+    <input id="imc-altura" type="number" name="altura" min="1" step="any" inputmode="decimal" placeholder="ej: 175"
+           value="{{ perfil.altura | round(1) | replace('.0', '') if perfil and perfil.altura else '' }}" required>
+  </div>
+  <div class="campo md-6 lg-4">
+    <button class="boton-enviar">Calcular IMC</button>
+  </div>
+</form>
+{% if imc %}
+  <article class="tarjeta reveal">
+    <h3 class="titulo-tarjeta">Tu IMC</h3>
+    <p class="numero">{{ imc.valor }}</p>
+    <p><b>{{ imc.categoria }}</b></p>
+    <p class="descripcion descripcion-larga">{{ perfil.peso | round(1) | replace('.0', '') }} kg ÷ ({{ "%.2f" | format(perfil.altura / 100) }} m)². Según la OMS: menos de 18,5 bajo peso; 18,5 a 24,9 normal; 25 a 29,9 sobrepeso; 30 o más obesidad.</p>
+  </article>
 {% endif %}
 
 <!-- ===== Cómo va la semana ===== -->
