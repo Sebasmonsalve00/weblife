@@ -265,12 +265,12 @@
 
 <!-- Resumen: cada materia con sus horas a la semana -->
 <section class="seccion reveal">
-  <h2 class="titulo-seccion" data-revelar-palabras>Mis materias</h2>
+  <h2 class="titulo-seccion" data-revelar-palabras>{{ "Mis actividades" if modo == "deporte" else "Mis materias" }}</h2>
   <ul class="resumen-materias" data-zona="horario-materias">
     {% for materia in resumen %}
       <li><span>{{ materia.nombre }}</span><b>{{ materia.texto }} / semana</b></li>
     {% else %}
-      <li class="vacio">Todavía no agregas clases.</li>
+      <li class="vacio">{{ "Todavía no agregas actividades." if modo == "deporte" else "Todavía no agregas clases." }}</li>
     {% endfor %}
   </ul>
 </section>
