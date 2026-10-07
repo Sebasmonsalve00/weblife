@@ -179,7 +179,7 @@ PERFIL = {
     "avances_titulo": "Mis avances",
     "avances_texto": "Mira tu asistencia y las tareas que has cumplido.",
     "ajustes_titulo": "Ajustes",
-    "ajustes_texto": "Cambia de calendario (Universidad o Deporte) y elige el color de la web.",
+    "ajustes_texto": "Elige el color de la web.",
 }
 
 # ---- Página "Mis avances" ----

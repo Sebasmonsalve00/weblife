@@ -43,7 +43,22 @@
   <!-- ===== Barra de navegación (fija arriba, difuminada) ===== -->
   <header class="nav" id="nav">
     <div class="nav-interior">
-      <a href="{{ url_for('inicio') }}" class="logo">{{ texto.nombre_sitio }}</a>
+      <div class="nav-marca">
+        <a href="{{ url_for('inicio') }}" class="logo">{{ texto.nombre_sitio }}</a>
+        {% if session.usuario_id %}
+          <!-- Interruptor Universidad / Deporte: cada calendario guarda sus datos aparte -->
+          <form method="post" action="{{ url_for('cambiar_modo') }}" class="en-linea" id="form-modo">
+            <input type="hidden" name="modo" value="{{ 'universidad' if modo == 'deporte' else 'deporte' }}">
+            <input type="hidden" name="volver" value="{{ request.path }}">
+            <button class="interruptor-modo" role="switch" aria-checked="{{ 'true' if modo == 'deporte' else 'false' }}"
+                    aria-label="Calendario de Deporte" title="Cambiar entre Universidad y Deporte">
+              <span class="interruptor-bola" aria-hidden="true"></span>
+              <span class="interruptor-op op-uni" aria-hidden="true">Uni</span>
+              <span class="interruptor-op op-deporte" aria-hidden="true">Deporte</span>
+            </button>
+          </form>
+        {% endif %}
+      </div>
 
       <!-- Enlaces del centro (escritorio) -->
       <nav class="nav-enlaces" aria-label="Principal">
