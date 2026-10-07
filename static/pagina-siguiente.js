@@ -179,6 +179,9 @@
       var debajo = siguienteTramo(t);
       var cubierto = debajo ? limitar(1 - debajo.getBoundingClientRect().top / alto) : 0;
       t.style.setProperty("--cubierto", cubierto.toFixed(3));
+      // Mientras la página está quieta, sus burbujas del fondo siguen subiendo con el
+      // scroll (lo que has bajado desde que se quedó quieta = lo que ha subido la siguiente)
+      t.style.setProperty("--desfase-burbujas", (-cubierto * alto).toFixed(1) + "px");
       t.classList.toggle("cubriendo", cubierto > 0);
       t.classList.toggle("tapado", cubierto >= 1);
     });

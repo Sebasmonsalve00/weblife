@@ -867,6 +867,9 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
   /* Todo el ancho, y se repite hacia abajo cada 1000px (las burbujas no tocan los bordes) */
   -webkit-mask-size: 100% 1000px; mask-size: 100% 1000px;
   -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y;
+  /* Las burbujas van con la página al hacer scroll. Cuando la página se queda quieta
+     (mientras sube la siguiente), pagina-siguiente.js las sigue moviendo con --desfase-burbujas */
+  -webkit-mask-position: 0 var(--desfase-burbujas, 0px); mask-position: 0 var(--desfase-burbujas, 0px);
 }
 .tramo + .tramo.pegado { position: sticky; }
 /* (Los avisos fijos del calendario van en una caja con display: contents, así que
