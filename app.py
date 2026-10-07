@@ -652,15 +652,19 @@ def guardar_tarea(titulo, materia, fecha_entrega):
 def tareas():
     if request.method == "POST":
         guardar_tarea(request.form["titulo"], request.form["materia"], request.form["fecha_entrega"])
-        flash(contenido.MENSAJES["tarea"])
+        flash(contenido.MENSAJES["meta" if mi_modo() == "deporte" else "tarea"])
         return redirect(url_for("tareas"))
 
     todas = consultar("SELECT * FROM tareas WHERE usuario_id = ? ORDER BY hecha, fecha_entrega", (yo(),))
     # Las materias salen de las clases del horario (sin repetir y en orden alfabético).
     materias = [fila["nombre"] for fila in
                 consultar("SELECT DISTINCT nombre FROM clases WHERE usuario_id = ? ORDER BY nombre", (yo(),))]
+    # En Deporte las metas son de la semana: proponemos el domingo de esta semana.
+    hoy = date.today()
+    if mi_modo() == "deporte":
+        hoy = hoy + timedelta(days=6 - hoy.weekday())
     return render_template("tareas.html", tareas=todas, materias=materias,
-                           hoy=date.today().isoformat())
+                           hoy=hoy.isoformat())
 
 
 @app.route("/universidad/tareas/cambiar/<int:id>", methods=["POST"])

@@ -2,15 +2,15 @@
 {% from "_componentes.html" import boton_borrar %}
 <li class="{{ 'hecha' if tarea.hecha }}" data-zona="tarea-{{ tarea.id }}">
   <form method="post" action="{{ url_for('cambiar_tarea', id=tarea.id) }}" class="en-linea">
-    <button class="boton-check" aria-label="{{ 'Marcar como pendiente' if tarea.hecha else 'Marcar como hecha' }}: {{ tarea.titulo }}">{{ "✓" if tarea.hecha else "" }}</button>
+    <button class="boton-check" aria-label="{{ 'Marcar como pendiente' if tarea.hecha else ('Marcar como cumplida' if modo == 'deporte' else 'Marcar como hecha') }}: {{ tarea.titulo }}">{{ "✓" if tarea.hecha else "" }}</button>
   </form>
   <span class="tarea-texto">
     {{ tarea.titulo }}
     {% if tarea.materia %}<span class="etiqueta">{{ tarea.materia }}</span>{% endif %}
     <small class="fechas">
-      Entrega: <b>{{ tarea.fecha_entrega }}</b>
+      {{ texto.p.entrega }}: <b>{{ tarea.fecha_entrega }}</b>
       · Creada: {{ tarea.fecha_creacion or "—" }}
     </small>
   </span>
-  {{ boton_borrar(url_for('borrar_tarea', id=tarea.id), "Borrar tarea: " ~ tarea.titulo) }}
+  {{ boton_borrar(url_for('borrar_tarea', id=tarea.id), "Borrar " ~ texto.p.tarea ~ ": " ~ tarea.titulo) }}
 </li>

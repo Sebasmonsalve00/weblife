@@ -116,7 +116,7 @@
     </div>
     {% endif %}
   </div>
-  <p class="leyenda" id="mes-leyenda"><span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span>{% if eleccion or manuales %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
+  <p class="leyenda" id="mes-leyenda"><span><span class="punto tarea"></span>{{ texto.p.tarea }}</span> <span><span class="punto evento"></span>evento</span>{% if eleccion or manuales %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
 
   <div class="calendario-contenedor" id="mes-calendario" data-anio="{{ anio }}" data-mes="{{ mes }}">
     <!-- Lo de cada día, para la vista de un día (se abre al pulsar una fecha) -->
@@ -168,7 +168,7 @@
   </div>
   <div class="dia-vista-sin-hora"></div>
   <div class="dia-vista-horas"></div>
-  <p class="leyenda dia-vista-leyenda"><span><span class="punto clase"></span>clase</span> <span><span class="punto tarea"></span>tarea</span> <span><span class="punto evento"></span>evento</span> <span><span class="punto examen"></span>examen</span></p>
+  <p class="leyenda dia-vista-leyenda"><span><span class="punto clase"></span>{{ texto.p.clase }}</span> <span><span class="punto tarea"></span>{{ texto.p.tarea }}</span> <span><span class="punto evento"></span>evento</span>{% if modo != "deporte" %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
 </dialog>
 <script>
 (function () {
@@ -176,7 +176,7 @@
   if (!dialogo) return;
   var DESDE = 8, HASTA = 20;          // horas que se ven
   var MESES = {{ texto_meses | tojson }}, DIAS = {{ dias | tojson }};
-  var nombres = { clase: "Clase", tarea: "Entrega", "tarea-hecha": "Entrega (hecha)", evento: "Evento", examen: "Examen" };
+  var nombres = {% if modo == "deporte" %}{ clase: "Entreno", tarea: "Meta", "tarea-hecha": "Meta (cumplida)", evento: "Evento", examen: "Examen" }{% else %}{ clase: "Clase", tarea: "Entrega", "tarea-hecha": "Entrega (hecha)", evento: "Evento", examen: "Examen" }{% endif %};
   var abierto = null;                 // día que se está viendo
 
   function minutos(hora) { return parseInt(hora.slice(0, 2), 10) * 60 + parseInt(hora.slice(3, 5), 10); }

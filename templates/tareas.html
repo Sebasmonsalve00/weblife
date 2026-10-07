@@ -6,36 +6,36 @@
 
 <form method="post" class="formulario grid-12 reveal">
   <div class="campo lg-6">
-    <label for="t-titulo">¿Qué tienes que hacer?</label>
-    <input id="t-titulo" name="titulo" placeholder="ej: Guía de ejercicios 3" required>
+    <label for="t-titulo">{{ texto.p.pregunta }}</label>
+    <input id="t-titulo" name="titulo" placeholder="{{ texto.p.ejemplo }}" required>
   </div>
   <div class="campo md-6 lg-3">
     <!-- Las materias vienen del Horario semanal -->
-    <label for="t-materia">Materia</label>
+    <label for="t-materia">{{ texto.p.materia }}</label>
     <select id="t-materia" name="materia">
-      <option value="">Sin materia</option>
+      <option value="">{{ texto.p.sin_materia }}</option>
       {% for materia in materias %}
         <option>{{ materia }}</option>
       {% endfor %}
     </select>
   </div>
   <div class="campo md-6 lg-3">
-    <label for="t-fecha">Fecha de entrega</label>
+    <label for="t-fecha">{{ texto.p.fecha }}</label>
     <input id="t-fecha" type="date" name="fecha_entrega" value="{{ hoy }}" required>
   </div>
   <div class="campo">
-    <button class="boton-enviar">Agregar tarea</button>
+    <button class="boton-enviar">{{ texto.p.boton }}</button>
   </div>
 </form>
 {% if not materias %}
-  <p class="nota">Para elegir una materia, primero agrega tus clases en el <a href="{{ url_for('horario') }}">Horario</a>.</p>
+  <p class="nota">{{ texto.p.sin_materias }} <a href="{{ url_for('horario') }}">{{ texto.menu[0][0] }}</a>.</p>
 {% endif %}
 
 <ul class="lista reveal">
   {% for tarea in tareas %}
     {% include "_tarea.html" %}
   {% else %}
-    <li class="vacio">Todavía no hay tareas.</li>
+    <li class="vacio">{{ texto.p.vacio }}</li>
   {% endfor %}
 </ul>
 {% endblock %}

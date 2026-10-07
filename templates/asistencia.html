@@ -32,7 +32,7 @@
     <table class="tabla">
       <thead><tr>
         <th scope="col">Materia</th><th scope="col">Horas asistidas</th><th scope="col">Clases a las que fui</th>
-        <th scope="col">Horas faltadas</th><th scope="col">Actividades de asistencia</th><th scope="col">Tareas hechas</th><th scope="col">Asistencia</th>
+        <th scope="col">Horas faltadas</th><th scope="col">Actividades de asistencia</th><th scope="col">{{ texto.p.hechas }}</th><th scope="col">Asistencia</th>
       </tr></thead>
       <tbody>
       {% for m in resumen.materias %}
@@ -75,13 +75,13 @@
 
 <!-- Tareas que ya completaste -->
 {% if hechas %}
-  <h2 class="titulo-seccion reveal" data-revelar-palabras>Tareas completadas</h2>
+  <h2 class="titulo-seccion reveal" data-revelar-palabras>{{ texto.p.completadas }}</h2>
   <div class="tabla-contenedor reveal">
     <table class="tabla">
-      <thead><tr><th scope="col">Tarea</th><th scope="col">Materia</th><th scope="col">Entrega</th></tr></thead>
+      <thead><tr><th scope="col">{{ texto.p.Tarea }}</th><th scope="col">{{ texto.p.materia }}</th><th scope="col">{{ texto.p.entrega }}</th></tr></thead>
       <tbody>
       {% for tarea in hechas %}
-        <tr><td>✓ {{ tarea.titulo }}</td><td>{{ tarea.materia or "Sin materia" }}</td><td>{{ tarea.fecha_entrega }}</td></tr>
+        <tr><td>✓ {{ tarea.titulo }}</td><td>{{ tarea.materia or texto.p.sin_materia }}</td><td>{{ tarea.fecha_entrega }}</td></tr>
       {% endfor %}
       </tbody>
     </table>

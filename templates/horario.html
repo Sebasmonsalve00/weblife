@@ -59,7 +59,7 @@
           {% if item.pendientes %}
           <!-- Si la actividad era una tarea que ya hiciste, se marca como completada -->
           <div class="campo">
-            <label for="rk-{{ clase.id }}">¿Era una de tus tareas? (se marcará como hecha)</label>
+            <label for="rk-{{ clase.id }}">{{ texto.p.era }}</label>
             <select id="rk-{{ clase.id }}" name="tarea_id">
               <option value="">No, otra cosa</option>
               {% for tarea in item.pendientes %}<option value="{{ tarea.id }}">{{ tarea.titulo }} · entrega {{ tarea.fecha_entrega }}</option>{% endfor %}
@@ -72,7 +72,7 @@
 
       <!-- ¿Dejaron tarea? Se abre al hacer clic -->
       <details>
-        <summary>+ ¿Dejaron tarea?</summary>
+        <summary>{{ texto.p.dejaron }}</summary>
         <form method="post" action="{{ url_for('tarea_rapida', id=clase.id) }}" class="tarea-rapida">
           <input type="hidden" name="fecha" value="{{ dia_panel }}">
           <div class="campo">
@@ -83,7 +83,7 @@
             <label for="rf-{{ clase.id }}">Entrega</label>
             <input id="rf-{{ clase.id }}" type="date" name="fecha_entrega" value="{{ entrega_sugerida }}" required>
           </div>
-          <button>Añadir a Tareas</button>
+          <button>{{ texto.p.anadir }}</button>
         </form>
       </details>
 
@@ -94,7 +94,7 @@
               <form method="post" action="{{ url_for('cambiar_tarea', id=tarea.id) }}" class="en-linea">
                 <button class="boton-check" title="Marcar como hecha" aria-label="Marcar como hecha: {{ tarea.titulo }}"></button>
               </form>
-              <span>{{ tarea.titulo }} <small>· entrega {{ tarea.fecha_entrega }}</small></span>
+              <span>{{ tarea.titulo }} <small>· {{ texto.p.entrega | lower }} {{ tarea.fecha_entrega }}</small></span>
             </li>
           {% endfor %}
         </ul>

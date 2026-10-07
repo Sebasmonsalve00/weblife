@@ -21,7 +21,7 @@ MENU = [
 # En Deporte, el menú cambia el nombre de la primera página
 MENU_DEPORTE = [
     ("Entrenos", "horario"),
-    ("Tareas", "tareas"),
+    ("Metas", "tareas"),
     ("Pendientes", "pendientes"),
     ("Calendario", "calendario_vista"),
     ("Asistencia", "asistencia"),
@@ -76,8 +76,8 @@ PAGINAS_DEPORTE = {
     },
     "tareas": {
         "etiqueta": "Deporte",
-        "titulo": "Tareas",
-        "subtitulo": "Lo que tienes que hacer para tus deportes, con sus fechas.",
+        "titulo": "Metas",
+        "subtitulo": "Las metas que quieres alcanzar esta semana. Salen en el calendario el día que elijas.",
     },
     "pendientes": {
         "etiqueta": "Deporte",
@@ -87,12 +87,37 @@ PAGINAS_DEPORTE = {
     "calendario": {
         "etiqueta": "Deporte",
         "titulo": "Calendario",
-        "subtitulo": "Tus partidos, competiciones y tareas del mes.",
+        "subtitulo": "Tus partidos, competiciones y metas del mes.",
     },
     "asistencia": {
         "etiqueta": "Deporte",
         "titulo": "Asistencia",
         "subtitulo": "Las horas de entreno a las que has ido en cada deporte, según lo que marcas en el horario.",
+    },
+}
+
+# ---- Palabras que cambian según el calendario ----
+# En Universidad se habla de tareas y materias; en Deporte, de metas y deportes.
+PALABRAS = {
+    "universidad": {
+        "tarea": "tarea", "Tarea": "Tarea", "tareas": "tareas", "Tareas": "Tareas",
+        "materia": "Materia", "sin_materia": "Sin materia", "clase": "clase",
+        "pregunta": "¿Qué tienes que hacer?", "ejemplo": "ej: Guía de ejercicios 3",
+        "fecha": "Fecha de entrega", "entrega": "Entrega", "boton": "Agregar tarea",
+        "vacio": "Todavía no hay tareas.", "completadas": "Tareas completadas", "hechas": "Tareas hechas",
+        "proximas": "Próximas tareas", "dejaron": "+ ¿Dejaron tarea?", "anadir": "Añadir a Tareas",
+        "era": "¿Era una de tus tareas? (se marcará como hecha)",
+        "sin_materias": "Para elegir una materia, primero agrega tus clases en el",
+    },
+    "deporte": {
+        "tarea": "meta", "Tarea": "Meta", "tareas": "metas", "Tareas": "Metas",
+        "materia": "Deporte", "sin_materia": "Sin deporte", "clase": "entreno",
+        "pregunta": "¿Qué meta quieres alcanzar?", "ejemplo": "ej: Correr 15 km en la semana",
+        "fecha": "Para el día (esta semana)", "entrega": "Para el", "boton": "Agregar meta",
+        "vacio": "Todavía no hay metas.", "completadas": "Metas cumplidas", "hechas": "Metas cumplidas",
+        "proximas": "Próximas metas", "dejaron": "+ ¿Nueva meta?", "anadir": "Añadir a Metas",
+        "era": "¿Era una de tus metas? (se marcará como cumplida)",
+        "sin_materias": "Para elegir un deporte, primero agrega tus entrenos en",
     },
 }
 
@@ -166,6 +191,7 @@ REGISTRAR = {
 MENSAJES = {
     "clase": "Clase agregada al horario.",
     "tarea": "Tarea guardada.",
+    "meta": "Meta guardada.",
     "actividad": "Actividad de asistencia guardada.",
     "color": "Color guardado.",
     "color_invalido": "Ese color no es válido.",
@@ -201,6 +227,7 @@ def todo(modo="universidad"):
     return {
         "nombre_sitio": NOMBRE_SITIO,
         "menu": menu(modo),
+        "p": PALABRAS["deporte" if modo == "deporte" else "universidad"],
         "boton_menu": BOTON_MENU,
         "texto_salir": TEXTO_SALIR,
         "paginas": PAGINAS_DEPORTE if modo == "deporte" else PAGINAS,

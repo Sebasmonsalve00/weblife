@@ -40,7 +40,7 @@
     </article>
 
     <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
-      <h3>Próximas tareas</h3>
+      <h3>{{ texto.p.proximas }}</h3>
       {% for tarea in pendientes %}
         <p><b>{{ tarea.fecha_entrega }}</b> {{ tarea.titulo }} <small>{{ tarea.materia }}</small></p>
       {% else %}
