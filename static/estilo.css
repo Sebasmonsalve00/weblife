@@ -802,6 +802,9 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
    calcula pagina-siguiente.js) y la siguiente sube por encima, como una hoja.
    Mientras sube, lo de la página de debajo se difumina y desaparece (--cubierto de 0 a 1). */
 .tramo { position: relative; isolation: isolate; background: var(--color-fondo); }
+/* Cada página ocupa al menos toda la pantalla: las cortas (como Pendientes) la llenan
+   entera antes de que la siguiente empiece a subir */
+.tramo { min-height: 100vh; min-height: 100svh; }
 .tramo.pegado { position: sticky; }
 .tramo + .tramo {
   border-radius: 32px 32px 0 0;
