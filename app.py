@@ -155,6 +155,13 @@ def crear_tablas():
     if "tipo" not in columnas:
         conexion.execute("ALTER TABLE clases ADD COLUMN tipo TEXT")
 
+    # "categoria" en clases y eventos: en Deporte, el tipo de entreno que elegiste
+    # (cardio, fuerza, comida...). Ver contenido.TIPOS_DEPORTE.
+    for tabla in ("clases", "eventos"):
+        columnas = [fila["name"] for fila in conexion.execute(f"PRAGMA table_info({tabla})")]
+        if "categoria" not in columnas:
+            conexion.execute(f"ALTER TABLE {tabla} ADD COLUMN categoria TEXT")
+
     # Las tablas creadas antes no tenían "fecha_creacion" en tareas: la agregamos.
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(tareas)")]
     if "fecha_creacion" not in columnas:
@@ -251,6 +258,20 @@ def yo():
 def es_mi_clase(id):
     """True si la clase existe y es del usuario que inició sesión."""
     return bool(consultar("SELECT id FROM clases WHERE id = ? AND usuario_id = ?", (id, yo())))
+
+
+def categoria_elegida():
+    """El tipo de entreno elegido en el formulario (solo en Deporte; si no, None)."""
+    categoria = request.form.get("categoria")
+    if mi_modo() == "deporte" and categoria in contenido.NOMBRE_TIPO_DEPORTE:
+        return categoria
+    return None
+
+
+def con_categoria(texto, categoria):
+    """Añade el tipo de entreno al texto: "Correr · Cardio"."""
+    nombre = contenido.NOMBRE_TIPO_DEPORTE.get(categoria or "")
+    return f"{texto} · {nombre}" if nombre and texto else (nombre or texto)
 
 
 @app.before_request
@@ -508,8 +529,10 @@ def horario():
             # El botón "Agregar actividad" manda tipo=actividad; "Agregar clase" no manda nada.
             tipo = "actividad" if request.form.get("tipo") == "actividad" else None
             modificar(
-                "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala, usuario_id, tipo) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"], yo(), tipo),
+                "INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala, usuario_id, tipo, categoria) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form["sala"], yo(), tipo,
+                 categoria_elegida()),
             )
             flash(contenido.MENSAJES["actividad_extra" if tipo else "clase"])  # mensaje de éxito en el panel difuminado
             return redirect(url_for("horario"))
@@ -601,10 +624,10 @@ def editar_clase(id):
         session["error_horario"] = "La hora de término tiene que ser después de la hora de inicio."
     else:
         tipo = "actividad" if request.form.get("tipo") == "actividad" else None
-        modificar("UPDATE clases SET nombre = ?, dia = ?, hora_inicio = ?, hora_fin = ?, sala = ?, tipo = ? "
-                  "WHERE id = ? AND usuario_id = ?",
+        modificar("UPDATE clases SET nombre = ?, dia = ?, hora_inicio = ?, hora_fin = ?, sala = ?, tipo = ?, "
+                  "categoria = ? WHERE id = ? AND usuario_id = ?",
                   (request.form["nombre"], int(request.form["dia"]), inicio, fin, request.form.get("sala", ""),
-                   tipo, id, yo()))
+                   tipo, categoria_elegida(), id, yo()))
         flash(contenido.MENSAJES["clase_editada"])
     return redirect(request.referrer or url_for("horario"))
 
@@ -799,8 +822,8 @@ def avisos_calendario():
 def calendario_vista():
     # Agregar un evento (examen, reunión, etc.)
     if request.method == "POST":
-        modificar("INSERT INTO eventos (titulo, fecha, hora, usuario_id) VALUES (?, ?, ?, ?)",
-                  (request.form["titulo"], request.form["fecha"], request.form["hora"], yo()))
+        modificar("INSERT INTO eventos (titulo, fecha, hora, usuario_id, categoria) VALUES (?, ?, ?, ?, ?)",
+                  (request.form["titulo"], request.form["fecha"], request.form["hora"], yo(), categoria_elegida()))
         fecha = date.fromisoformat(request.form["fecha"])
         flash(contenido.MENSAJES["evento"])
         return redirect(url_for("calendario_vista", anio=fecha.year, mes=fecha.month))
@@ -825,6 +848,7 @@ def calendario_vista():
                             (patron, yo())):
         dia = int(evento["fecha"][8:10])
         texto = f"{evento['hora']} {evento['titulo']}" if evento["hora"] else evento["titulo"]
+        texto = con_categoria(texto, evento["categoria"])
         cosas_por_dia.setdefault(dia, []).append(
             {"texto": texto, "tipo": "evento", "id": evento["id"]})
 
@@ -887,12 +911,13 @@ def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales):
         for dia_semana, dia in enumerate(semana):
             for clase in clases_por_dia.get(dia_semana, []) if dia else []:
                 anotar(dia, clase["nombre"], "actividad" if clase["tipo"] == "actividad" else "clase",
-                       clase["hora_inicio"], clase["hora_fin"], clase["sala"] or "")
+                       clase["hora_inicio"], clase["hora_fin"], con_categoria(clase["sala"] or "", clase["categoria"]))
     for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (prefijo + "%", yo())):
         anotar(int(tarea["fecha_entrega"][8:10]), tarea["titulo"], "tarea-hecha" if tarea["hecha"] else "tarea",
                detalle=tarea["materia"] or "")
     for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ?", (prefijo + "%", yo())):
-        anotar(int(evento["fecha"][8:10]), evento["titulo"], "evento", evento["hora"])
+        anotar(int(evento["fecha"][8:10]), evento["titulo"], "evento", evento["hora"],
+               detalle=contenido.NOMBRE_TIPO_DEPORTE.get(evento["categoria"] or "", ""))
     for asignatura, fecha, hora, _ in lista_examenes:
         if fecha.startswith(prefijo) and (asignatura, fecha) not in ya_manuales:
             anotar(int(fecha[8:10]), asignatura, "examen", hora)

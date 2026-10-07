@@ -96,6 +96,19 @@ PAGINAS_DEPORTE = {
     },
 }
 
+# ---- Tipos de entreno (solo en Deporte) ----
+# Al añadir algo al calendario o al horario en Deporte se elige uno de estos.
+# (clave que se guarda en la base de datos, nombre que se ve)
+TIPOS_DEPORTE = [
+    ("entrenamiento", "Entrenamiento"),
+    ("descarga", "Descarga"),
+    ("rehabilitacion", "Rehabilitación"),
+    ("comida", "Comida"),
+    ("cardio", "Cardio"),
+    ("fuerza", "Entrenamiento de fuerza"),
+]
+NOMBRE_TIPO_DEPORTE = dict(TIPOS_DEPORTE)
+
 # ---- Palabras que cambian según el calendario ----
 # En Universidad se habla de tareas y materias; en Deporte, de metas y deportes.
 PALABRAS = {
@@ -233,6 +246,7 @@ def todo(modo="universidad"):
         "boton_menu": BOTON_MENU,
         "texto_salir": TEXTO_SALIR,
         "paginas": PAGINAS_DEPORTE if modo == "deporte" else PAGINAS,
+        "tipos_deporte": TIPOS_DEPORTE, "nombre_tipo_deporte": NOMBRE_TIPO_DEPORTE,
         "inicio": INICIO,
         "entrar": ENTRAR,
         "registrar": REGISTRAR,

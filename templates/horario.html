@@ -135,6 +135,14 @@
     <label for="h-hasta">Hasta</label>
     <input id="h-hasta" type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required>
   </div>
+  {% if modo == "deporte" %}
+  <div class="campo md-6 lg-4">
+    <label for="h-categoria">Tipo</label>
+    <select id="h-categoria" name="categoria">
+      {% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
   <div class="campo md-6 lg-4">
     <!-- Dos botones iguales, uno al lado del otro: clase (cuenta para la asistencia) o actividad aparte -->
     <div class="botones-pareja">
@@ -167,8 +175,9 @@
                role="button" tabindex="0" aria-label="Editar {{ item.clase.nombre }} ({{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }})" title="{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}"
                data-editar="{{ url_for('editar_clase', id=item.clase.id) }}" data-nombre="{{ item.clase.nombre }}"
                data-dia="{{ item.clase.dia }}" data-sala="{{ item.clase.sala or '' }}" data-tipo="{{ item.clase.tipo or 'clase' }}"
-               data-desde="{{ item.clase.hora_inicio }}" data-hasta="{{ item.clase.hora_fin }}">
+               data-desde="{{ item.clase.hora_inicio }}" data-hasta="{{ item.clase.hora_fin }}" data-categoria="{{ item.clase.categoria or '' }}">
             <b>{{ item.clase.nombre }}</b>
+            {% if modo == "deporte" and item.clase.categoria %}<span class="bloque-tipo">{{ texto.nombre_tipo_deporte.get(item.clase.categoria, "") }}</span>{% endif %}
             {% if item.clase.sala %}<span>{{ item.clase.sala if es_actividad else "Aula " ~ item.clase.sala }}</span>{% endif %}
             {% set que = "actividad" if es_actividad else "clase" %}
             {{ boton_borrar(url_for('borrar_clase', id=item.clase.id), "Borrar " ~ que ~ ": " ~ item.clase.nombre ~ " del " ~ dias[d], "¿Borrar esta " ~ que ~ " del horario?") }}
@@ -196,6 +205,10 @@
       <div class="campo"><label for="e-dia">Día</label>
         <select id="e-dia" name="dia">{% for nombre in dias %}<option value="{{ loop.index0 }}">{{ nombre }}</option>{% endfor %}</select></div>
       <div class="campo"><label for="e-sala">Aula o lugar</label><input id="e-sala" name="sala"></div>
+      {% if modo == "deporte" %}
+      <div class="campo"><label for="e-categoria">Tipo</label>
+        <select id="e-categoria" name="categoria">{% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}</select></div>
+      {% endif %}
       <div class="campo"><label for="e-desde">Desde</label><input id="e-desde" type="time" name="hora_inicio" min="08:00" max="20:00" required></div>
       <div class="campo"><label for="e-hasta">Hasta</label><input id="e-hasta" type="time" name="hora_fin" min="08:00" max="20:00" required></div>
     </div>
@@ -214,6 +227,7 @@
     form.action = d.editar;
     form.nombre.value = d.nombre; form.dia.value = d.dia; form.sala.value = d.sala;
     form.hora_inicio.value = d.desde; form.hora_fin.value = d.hasta;
+    if (form.categoria) form.categoria.value = d.categoria || form.categoria.options[0].value;
     form.querySelector("input[name=tipo][value=" + d.tipo + "]").checked = true;
     marcarSegmento(form);
     dialogo.showModal();
