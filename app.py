@@ -15,7 +15,7 @@ import sqlite3
 import time
 from datetime import date, datetime, timedelta
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 # Herramientas de Flask para guardar contraseñas cifradas (nunca guardamos la contraseña tal cual).
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -171,6 +171,18 @@ def crear_tablas():
         )""")
     # Más datos de cada alimento: en qué comida va (desayuno, almuerzo, cena o snack),
     # cuántos gramos, y el resto de la etiqueta (azúcares, grasas saturadas, fibra y sal)
+    # Alimentos que alguien añadió a mano: se guardan para que salgan en su buscador.
+    # Valores por 100 g; si no puso los gramos, son de una porción (porcion = 1).
+    conexion.execute("""
+        CREATE TABLE IF NOT EXISTS alimentos_propios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            nombre TEXT NOT NULL,
+            porcion INTEGER NOT NULL DEFAULT 0,
+            kcal REAL, proteinas REAL, carbohidratos REAL, azucares REAL,
+            grasas REAL, saturadas REAL, fibra REAL, sal REAL,
+            UNIQUE (usuario_id, nombre)
+        )""")
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(comidas_deporte)")]
     for columna, tipo in (("tipo", "TEXT"), ("cantidad", "REAL"), ("azucares", "REAL"),
                           ("saturadas", "REAL"), ("fibra", "REAL"), ("sal", "REAL")):
@@ -1181,8 +1193,34 @@ def registrar_comida():
                   (mi_cuenta(), fecha, tipo, nombre, cantidad or None, valores["kcal"], valores["proteinas"],
                    valores["carbohidratos"], valores["grasas"], valores["azucares"], valores["saturadas"],
                    valores["fibra"], valores["sal"]))
+        if request.form.get("manual"):
+            guardar_alimento_propio(nombre, cantidad, valores)
         flash(contenido.MENSAJES["comida"])
     return redirect(url_for("asistencia", fecha=fecha) + "#comidas")
+
+
+NUTRIENTES = ("kcal", "proteinas", "carbohidratos", "azucares", "grasas", "saturadas", "fibra", "sal")
+
+
+def guardar_alimento_propio(nombre, cantidad, valores):
+    """Guarda un alimento añadido a mano para que salga en el buscador (si ya existía, lo actualiza).
+    "valores" son de lo que comiste: con los gramos los pasamos a 100 g; sin gramos, quedan como una porción."""
+    if cantidad:
+        por_100 = [round(valores[campo] * 100 / cantidad, 2) for campo in NUTRIENTES]
+    else:
+        por_100 = [valores[campo] for campo in NUTRIENTES]
+    modificar("DELETE FROM alimentos_propios WHERE usuario_id = ? AND nombre = ?", (mi_cuenta(), nombre))
+    modificar(f"INSERT INTO alimentos_propios (usuario_id, nombre, porcion, {', '.join(NUTRIENTES)}) "
+              f"VALUES (?, ?, ?, {', '.join('?' for campo in NUTRIENTES)})",
+              (mi_cuenta(), nombre, 0 if cantidad else 1, *por_100))
+
+
+@app.route("/deporte/mis-alimentos")
+def mis_alimentos():
+    """Tus alimentos añadidos a mano, con el mismo formato que static/alimentos.json."""
+    filas = consultar("SELECT * FROM alimentos_propios WHERE usuario_id = ? ORDER BY nombre", (mi_cuenta(),))
+    return jsonify([[fila["nombre"], "Mis alimentos"] + [fila[campo] for campo in NUTRIENTES] + [fila["porcion"]]
+                    for fila in filas])
 
 
 @app.route("/deporte/comida/borrar/<int:id>", methods=["POST"])

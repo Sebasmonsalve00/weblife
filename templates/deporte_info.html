@@ -106,7 +106,8 @@
      (CIQUAL) y solo pones los gramos; si no está, lo añades a mano con toda su información -->
 <dialog class="dia-vista ventana ventana-grande" id="dlg-alimento" aria-labelledby="dlg-alimento-titulo">
   <form method="post" action="{{ url_for('registrar_comida') }}" id="form-alimento" data-modo="buscar"
-        data-alimentos="{{ url_for('static', filename='alimentos.json') }}">
+        data-alimentos="{{ url_for('static', filename='alimentos.json') }}" data-mis-alimentos="{{ url_for('mis_alimentos') }}">
+    <input type="hidden" name="manual" value="">
     <div class="dia-vista-cabecera">
       <span class="selector-hueco"></span>
       <h2 id="dlg-alimento-titulo">Añadir alimento</h2>
@@ -141,7 +142,7 @@
         <label for="al-nombre">Alimento</label>
         <input id="al-nombre" name="nombre" placeholder="ej: Avena, Pechuga de pollo, Yogur griego" maxlength="60" required>
       </div>
-      <div class="campo">
+      <div class="campo al-cantidad">
         <label for="al-cantidad">Cantidad (g)</label>
         <input id="al-cantidad" type="number" name="cantidad" min="0" step="any" inputmode="decimal" placeholder="ej: 80" value="100">
       </div>
@@ -162,6 +163,7 @@
       </div>
       {% endfor %}
     </div>
+    <p class="nota-mini al-solo-manual">Se guardará en tu lista para que la próxima vez solo tengas que buscarlo.</p>
     <p class="nota-objetivo ventana-resumen al-oculto-buscar" id="al-resumen" aria-live="polite"></p>
     <button class="boton boton-primario ventana-guardar al-oculto-buscar">Añadir alimento</button>
     <p class="nota-mini fuente-datos">Datos de los alimentos: tabla CIQUAL 2025 (ANSES), por 100 g.</p>
@@ -219,10 +221,19 @@
     var alResumen = document.getElementById("al-resumen");
     var NUTRIENTES = ["kcal", "proteinas", "carbohidratos", "azucares", "grasas", "saturadas", "fibra", "sal"];
     var tabla = null;    // se descarga la primera vez que abres el pop-up
+    var mios = [];       // tus alimentos añadidos a mano (se piden cada vez que lo abres)
 
     // "Árroz Cocído" -> "arroz cocido" (sin tildes ni mayúsculas, para comparar)
     function normal(texto) {
       return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+    // Tus alimentos guardados: salen primero en el buscador
+    function cargarMios() {
+      return fetch(alimento.dataset.misAlimentos, { credentials: "same-origin" }).then(function (r) { return r.json(); })
+        .then(function (filas) {
+          filas.forEach(function (fila) { fila.busqueda = normal(fila[0]); fila.mio = true; });
+          mios = filas;
+        }).catch(function () { mios = []; });
     }
     function cargarTabla() {
       if (tabla) return Promise.resolve(tabla);
@@ -240,6 +251,7 @@
     // Modo del pop-up: "buscar" (lista), "elegido" (solo pones los gramos) o "manual" (todo a mano)
     function cambiarModo(modo) {
       alimento.dataset.modo = modo;
+      alimento.manual.value = modo === "manual" ? "1" : "";   // lo hecho a mano se guarda en "Mis alimentos"
       alimento.nombre.required = modo !== "buscar";
       resumirAlimento();
     }
@@ -252,11 +264,11 @@
       var palabras = normal(buscar.value).split(/\s+/).filter(Boolean);
       if (!tabla || !palabras.length) { if (tabla) estado.textContent = "Escribe para buscar entre " + tabla.alimentos.length.toLocaleString("es") + " alimentos."; return; }
       // Tienen que aparecer todas las palabras; primero los que empiezan por lo que escribiste y los nombres más cortos
-      var encontrados = tabla.alimentos.filter(function (fila) {
+      var encontrados = mios.concat(tabla.alimentos).filter(function (fila) {
         return palabras.every(function (p) { return fila.busqueda.indexOf(p) !== -1; });
       }).sort(function (a, b) {
         var pa = a.busqueda.indexOf(palabras[0]) === 0 ? 0 : 1, pb = b.busqueda.indexOf(palabras[0]) === 0 ? 0 : 1;
-        return pa - pb || a[0].length - b[0].length;
+        return (b.mio ? 1 : 0) - (a.mio ? 1 : 0) || pa - pb || a[0].length - b[0].length;
       });
       estado.textContent = encontrados.length ? encontrados.length + " encontrados" + (encontrados.length > 40 ? " (se ven los 40 primeros)." : ".")
                                               : "No está en la lista. Prueba con otra palabra o añádelo a mano.";
@@ -268,7 +280,8 @@
         var nombre = document.createElement("span");
         nombre.textContent = fila[0];
         var info = document.createElement("small");
-        info.textContent = tabla.grupos[fila[1]] + (fila[2] != null ? " · " + Math.round(fila[2]) + " kcal / 100 g" : "");
+        var grupo = typeof fila[1] === "string" ? fila[1] : tabla.grupos[fila[1]];
+        info.textContent = grupo + (fila[2] != null ? " · " + Math.round(fila[2]) + " kcal" + (fila[10] ? " / porción" : " / 100 g") : "");
         boton.append(nombre, info);
         boton.addEventListener("click", function () { elegir(fila); });
         li.appendChild(boton);
@@ -283,14 +296,18 @@
         var valor = fila[i + 2];
         alimento[campo].value = valor == null ? "" : valor;   // sin dato = vacío (cuenta como 0)
       });
-      ponerPor100(true);
+      // Los tuyos sin gramos son "una porción": se suman tal cual, sin cantidad
+      var porcion = !!fila[10];
+      alimento.dataset.porcion = porcion ? "1" : "";
+      ponerPor100(!porcion);
+      if (porcion) alimento.cantidad.value = "";
+      else if (!alimento.cantidad.value) alimento.cantidad.value = "100";
       document.getElementById("al-elegido-nombre").textContent = fila[0];
       var por100 = function (i, u) { return fila[i] == null ? "—" : (Math.round(fila[i] * 10) / 10) + u; };
-      document.getElementById("al-elegido-info").textContent = "Por 100 g: " + por100(2, " kcal") + " · P " + por100(3, " g") +
+      document.getElementById("al-elegido-info").textContent = (porcion ? "Una porción: " : "Por 100 g: ") + por100(2, " kcal") + " · P " + por100(3, " g") +
         " · C " + por100(4, " g") + " · G " + por100(6, " g");
       cambiarModo("elegido");
-      alimento.cantidad.focus();
-      alimento.cantidad.select();
+      if (!porcion) { alimento.cantidad.focus(); alimento.cantidad.select(); }
     }
 
     function empezar() {
@@ -299,8 +316,9 @@
       alimento.nombre.value = "";
       NUTRIENTES.forEach(function (campo) { alimento[campo].value = ""; });
       alimento.cantidad.value = "100";
+      alimento.dataset.porcion = "";
       cambiarModo("buscar");
-      cargarTabla().then(mostrarResultados);
+      Promise.all([cargarTabla(), cargarMios()]).then(mostrarResultados);
       buscar.focus();
     }
     ventanaAlimento.addEventListener("abierta", empezar);
@@ -324,6 +342,7 @@
       alimento.nombre.value = buscar.value.slice(0, 60);
       NUTRIENTES.forEach(function (campo) { alimento[campo].value = ""; });
       alimento.cantidad.value = "";
+      alimento.dataset.porcion = "";
       ponerPor100(false);
       cambiarModo("manual");
       alimento.nombre.focus();
