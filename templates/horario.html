@@ -182,7 +182,18 @@
       <div class="grilla-columna" style="height: {{ alto_total }}px; background-size: 100% {{ pixeles_hora }}px">
         {% for item in por_dia[d] %}
           {% set es_actividad = item.clase.tipo == "actividad" %}
-          <div class="bloque {{ 'bloque-actividad' if es_actividad }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px"
+          {# Si se pisa con otro bloque, cada uno ocupa su parte del ancho #}
+          {% set ancho = 100 / item.carriles %}
+          {% set lugar = "left: calc(" ~ (item.carril * ancho) ~ "% + 3px); width: calc(" ~ ancho ~ "% - 6px); right: auto;" if item.carriles > 1 else "" %}
+          {% if item.otro %}
+          <!-- Del otro modo: solo para verlo (se edita cambiando de modo) -->
+          <div class="bloque bloque-otro-modo" style="top: {{ item.arriba }}px; height: {{ item.alto }}px; {{ lugar }}"
+               title="{{ otro_modo }}: {{ item.clase.nombre }} ({{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }})">
+            <b>{{ item.clase.nombre }}</b>
+            <span class="bloque-modo">{{ otro_modo }}</span>
+          </div>
+          {% else %}
+          <div class="bloque {{ 'bloque-actividad' if es_actividad }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px; {{ lugar }}"
                role="button" tabindex="0" aria-label="Editar {{ item.clase.nombre }} ({{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }})" title="{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}"
                data-editar="{{ url_for('editar_clase', id=item.clase.id) }}" data-nombre="{{ item.clase.nombre }}"
                data-dia="{{ item.clase.dia }}" data-sala="{{ item.clase.sala or '' }}" data-tipo="{{ item.clase.tipo or 'clase' }}"
@@ -193,6 +204,7 @@
             {% set que = "actividad" if es_actividad else "clase" %}
             {{ boton_borrar(url_for('borrar_clase', id=item.clase.id), "Borrar " ~ que ~ ": " ~ item.clase.nombre ~ " del " ~ dias[d], "¿Borrar esta " ~ que ~ " del horario?") }}
           </div>
+          {% endif %}
         {% endfor %}
       </div>
     {% endfor %}
