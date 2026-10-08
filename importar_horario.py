@@ -9,10 +9,16 @@
 #  2) La tabla de horario de siempre: los días arriba (Lunes, Martes...), las horas
 #     a la izquierda ("08:00", "8:00 - 9:00") y en cada casilla la materia.
 #     Si una materia ocupa varias horas seguidas, se junta en una sola clase.
+#  3) La página de pintahorarios (u otro calendario hecho con FullCalendar) guardada
+#     desde el navegador: ⌘/Ctrl + S -> "Página web, un solo archivo" (.mhtml).
 #  Las materias del horario son las que luego salen en Tareas, Asistencia y "Mis materias".
 # ============================================================
 
+import email
 import re
+from datetime import date
+from email import policy
+from html.parser import HTMLParser
 
 from importar_eventos import hojas_del_archivo, leer_hora, sin_tildes
 
@@ -88,7 +94,12 @@ def leer_horario(nombre_archivo, contenido):
     """Lee el documento y devuelve (clases, problemas).
     clases = [{"nombre", "dia" (0-6), "hora_inicio", "hora_fin", "sala", "tipo" (None o "actividad")}]."""
     clases, problemas = [], []
-    for nombre_hoja, filas in hojas_del_archivo(nombre_archivo, contenido):
+    if nombre_archivo.lower().endswith((".mhtml", ".mht", ".html", ".htm")):
+        clases = leer_pagina(nombre_archivo, contenido)
+        hojas = []
+    else:
+        hojas = hojas_del_archivo(nombre_archivo, contenido)
+    for nombre_hoja, filas in hojas:
         filas = [list(f) for f in filas]
         if not leer_lista(nombre_hoja, filas, clases, problemas):
             leer_tabla(filas, clases)
@@ -193,3 +204,69 @@ def clase_de_casilla(texto, dia, inicio, fin):
     sala = re.sub(r"^aula\s*:?\s*", "", sala, flags=re.IGNORECASE)   # el horario ya pone "Aula" delante
     return {"nombre": lineas[0][:80], "dia": dia, "hora_inicio": inicio, "hora_fin": fin, "sala": sala[:60],
             "tipo": None}
+
+
+# ---------- Página web guardada (pintahorarios) ----------
+
+def html_de_la_pagina(nombre_archivo, contenido):
+    """El HTML de la página: de un .mhtml ("Página web, un solo archivo") se saca la parte HTML."""
+    if nombre_archivo.lower().endswith((".mhtml", ".mht")):
+        mensaje = email.message_from_bytes(contenido, policy=policy.compat32)
+        for parte in mensaje.walk():
+            if parte.get_content_type() == "text/html":
+                datos = parte.get_payload(decode=True) or b""
+                return datos.decode(parte.get_content_charset() or "utf-8", errors="replace")
+        return ""
+    return contenido.decode("utf-8", errors="replace")
+
+
+class LectorCalendario(HTMLParser):
+    """Recorre la página y apunta cada clase: en qué columna de día está (data-date)
+    y sus textos: hora ("9:00 - 12:00"), nombre y aula."""
+
+    CAMPOS = {"fc-event-time": "horario", "fc-event-title": "nombre", "fc-room": "sala"}
+
+    def __init__(self):
+        super().__init__()
+        self.fecha = None        # la columna de día en la que estamos
+        self.evento = None       # la clase que estamos leyendo
+        self.campo = None        # qué texto estamos leyendo ahora
+        self.eventos = []
+
+    def handle_starttag(self, etiqueta, atributos):
+        atributos = dict(atributos)
+        clases_css = (atributos.get("class") or "").split()
+        if etiqueta == "td" and atributos.get("data-date") and "fc-timegrid-col" in clases_css:
+            self.fecha = atributos["data-date"]
+        if "fc-event" in clases_css and self.fecha:
+            tipo = next((c[len("event-type-"):] for c in clases_css if c.startswith("event-type-")), "")
+            self.evento = {"fecha": self.fecha, "horario": "", "nombre": "", "sala": "", "tipo": tipo}
+            self.eventos.append(self.evento)
+        if self.evento is not None:
+            self.campo = next((campo for css, campo in self.CAMPOS.items() if css in clases_css), self.campo)
+
+    def handle_endtag(self, etiqueta):
+        if etiqueta == "div":
+            self.campo = None
+
+    def handle_data(self, texto):
+        if self.evento is not None and self.campo:
+            self.evento[self.campo] += texto
+
+
+def leer_pagina(nombre_archivo, contenido):
+    """Las clases de una página de horario guardada (pintahorarios usa FullCalendar)."""
+    lector = LectorCalendario()
+    lector.feed(html_de_la_pagina(nombre_archivo, contenido))
+    clases = []
+    for evento in lector.eventos:
+        inicio, fin = leer_rango(evento["horario"])
+        nombre = " ".join(evento["nombre"].split())
+        try:
+            dia = date.fromisoformat(evento["fecha"]).weekday()
+        except ValueError:
+            continue
+        if nombre and inicio and fin and a_minutos(fin) > a_minutos(inicio):
+            clases.append({"nombre": nombre[:80], "dia": dia, "hora_inicio": inicio, "hora_fin": fin,
+                           "sala": " ".join(evento["sala"].split())[:60], "tipo": None})
+    return clases

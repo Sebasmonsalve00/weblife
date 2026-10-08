@@ -168,12 +168,12 @@
 <form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal">
   <div class="subir-horario-texto">
     <b>{{ "Sube tus entrenos" if modo == "deporte" else "Sube tu horario" }}</b>
-    <small>Una fila por {{ "actividad" if modo == "deporte" else "clase" }} (día, desde, hasta, {{ "actividad" if modo == "deporte" else "materia" }}, aula) o la tabla con los días arriba y las horas a la izquierda.</small>
+    <small>Tu página de pintahorarios guardada (⌘/Ctrl + S, "Página web, un solo archivo"), o un CSV/Excel con una fila por {{ "actividad" if modo == "deporte" else "clase" }} (día, desde, hasta, {{ "actividad" if modo == "deporte" else "materia" }}, aula) o con los días arriba y las horas a la izquierda.</small>
   </div>
   <label class="subir-archivo">
-    <input type="file" name="archivo" accept=".csv,.xlsx,.txt" required data-archivo>
+    <input type="file" name="archivo" accept=".mhtml,.mht,.html,.htm,.csv,.xlsx,.txt" required data-archivo>
     <span class="subir-icono" aria-hidden="true">↑</span>
-    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>CSV o Excel · hasta 2 MB</small></span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>Página guardada, CSV o Excel · hasta 2 MB</small></span>
   </label>
   <div class="subir-horario-botones">
     <button class="boton boton-primario boton-chico">Subir horario</button>
