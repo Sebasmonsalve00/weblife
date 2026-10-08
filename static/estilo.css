@@ -776,6 +776,9 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .nota-mini { font-size: 12px; line-height: 1.4; color: var(--texto-secundario); margin: 4px 0 0; }
 .examenes-actual { font-size: 13px; margin: 0 0 6px; color: var(--texto-secundario); }
 .item.hecha { text-decoration: line-through; opacity: 0.6; }
+/* Del otro modo (Uni en Deporte o al revés): más claro, con borde de puntos y sin borrar */
+.item.otro-modo, .dia-item.otro-modo, .dia-bloque.otro-modo { background: transparent; color: var(--texto-secundario); border: 1px dashed var(--borde-boton); font-weight: 400; opacity: 0.85; }
+.item-modo { font-style: normal; font-size: 0.625rem; padding: 0 4px; border-radius: 999px; background: rgba(118, 118, 128, 0.14); }
 .item .boton-icono { width: 18px; height: 18px; font-size: 0.625rem; flex-shrink: 0; }
 .item.examen .boton-icono, .item.examen .boton-icono:hover { background: transparent; color: var(--color-fondo); border-color: var(--color-fondo); }
 

@@ -940,9 +940,33 @@ def calendario_vista():
             cosas_por_dia.setdefault(int(examen["fecha"][8:10]), []).insert(
                 0, {"texto": texto, "tipo": "examen", "manual_id": examen["id"]})
 
+    # Lo del OTRO modo (Uni en Deporte y al revés) también se ve en el calendario, solo para mirarlo:
+    # sin botón de borrar y con su etiqueta. Los avisos de arriba siguen siendo solo de este modo.
+    otro_dueno = -yo()
+    otro = "Uni" if mi_modo() == "deporte" else "Deporte"
+    otros_examenes = examenes_elegidos(otro_dueno)[0]
+    otros_manuales = examenes_manuales(otro_dueno)
+    otros_ya_manuales = {(examen["asignatura"], examen["fecha"]) for examen in otros_manuales}
+    for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (patron, otro_dueno)):
+        cosas_por_dia.setdefault(int(tarea["fecha_entrega"][8:10]), []).append(
+            {"texto": tarea["titulo"], "tipo": "tarea", "hecha": tarea["hecha"], "otro": otro})
+    for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ? ORDER BY hora",
+                            (patron, otro_dueno)):
+        texto = f"{evento['hora']} {evento['titulo']}" if evento["hora"] else evento["titulo"]
+        cosas_por_dia.setdefault(int(evento["fecha"][8:10]), []).append(
+            {"texto": con_categoria(texto, evento["categoria"]), "tipo": "evento", "otro": otro})
+    examenes_del_otro = [(e[0], e[1], e[2]) for e in otros_examenes if (e[0], e[1]) not in otros_ya_manuales]
+    examenes_del_otro += [(e["asignatura"], e["fecha"], e["hora"]) for e in otros_manuales]
+    for asignatura, fecha, hora in examenes_del_otro:
+        if fecha.startswith(f"{anio}-{mes:02d}-"):
+            texto = f"{hora} {asignatura}" if hora else asignatura
+            cosas_por_dia.setdefault(int(fecha[8:10]), []).append({"texto": texto, "tipo": "examen", "otro": otro})
+
     # Mes anterior y siguiente para los botones ◀ ▶
     mes_anterior = (anio, mes - 1) if mes > 1 else (anio - 1, 12)
     agenda = agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales)
+    agenda_del_mes(anio, mes, semanas, otros_examenes, otros_manuales, otros_ya_manuales,
+                   dueno=otro_dueno, otro=otro, agenda=agenda)
     mes_siguiente = (anio, mes + 1) if mes < 12 else (anio + 1, 1)
 
     return render_template(
@@ -956,11 +980,13 @@ def calendario_vista():
     )
 
 
-def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales):
+def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales, dueno=None, otro=None, agenda=None):
     """Lo que tienes cada día del mes, para la vista de un día (8:00 a 20:00).
     Devuelve {dia: {"sin_hora": [...], "con_hora": [...]}}. Cada cosa con hora
-    lleva "inicio" y "fin" ("09:00"); las que no tienen hora van en "sin_hora"."""
-    agenda = {}
+    lleva "inicio" y "fin" ("09:00"); las que no tienen hora van en "sin_hora".
+    Con "dueno" y "otro" ("Uni" o "Deporte") suma a "agenda" lo del otro modo, marcado con "otro"."""
+    dueno = yo() if dueno is None else dueno
+    agenda = {} if agenda is None else agenda
 
     def anotar(dia, texto, tipo, inicio=None, fin=None, detalle=""):
         del_dia = agenda.setdefault(dia, {"sin_hora": [], "con_hora": []})
@@ -970,24 +996,24 @@ def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales):
                 hora, minutos = int(inicio[:2]), inicio[3:5]
                 fin = f"{min(hora + 1, 23):02d}:{minutos}"
             del_dia["con_hora"].append({"texto": texto, "tipo": tipo, "inicio": inicio[:5],
-                                        "fin": fin[:5], "detalle": detalle})
+                                        "fin": fin[:5], "detalle": detalle, "otro": otro})
         else:
-            del_dia["sin_hora"].append({"texto": texto, "tipo": tipo, "detalle": detalle})
+            del_dia["sin_hora"].append({"texto": texto, "tipo": tipo, "detalle": detalle, "otro": otro})
 
     prefijo = f"{anio}-{mes:02d}-"
     # Clases: se repiten cada semana el mismo día (0 = lunes)
     clases_por_dia = {}
-    for clase in consultar("SELECT * FROM clases WHERE usuario_id = ? ORDER BY hora_inicio", (yo(),)):
+    for clase in consultar("SELECT * FROM clases WHERE usuario_id = ? ORDER BY hora_inicio", (dueno,)):
         clases_por_dia.setdefault(clase["dia"], []).append(clase)
     for semana in semanas:
         for dia_semana, dia in enumerate(semana):
             for clase in clases_por_dia.get(dia_semana, []) if dia else []:
                 anotar(dia, clase["nombre"], "actividad" if clase["tipo"] == "actividad" else "clase",
                        clase["hora_inicio"], clase["hora_fin"], con_categoria(clase["sala"] or "", clase["categoria"]))
-    for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (prefijo + "%", yo())):
+    for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (prefijo + "%", dueno)):
         anotar(int(tarea["fecha_entrega"][8:10]), tarea["titulo"], "tarea-hecha" if tarea["hecha"] else "tarea",
                detalle=tarea["materia"] or "")
-    for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ?", (prefijo + "%", yo())):
+    for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ?", (prefijo + "%", dueno)):
         anotar(int(evento["fecha"][8:10]), evento["titulo"], "evento", evento["hora"],
                detalle=contenido.NOMBRE_TIPO_DEPORTE.get(evento["categoria"] or "", ""))
     for asignatura, fecha, hora, _ in lista_examenes:
@@ -1001,11 +1027,13 @@ def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales):
     return agenda
 
 
-def examenes_elegidos():
+def examenes_elegidos(dueno=None):
     """Los exámenes de la carrera, curso y convocatoria que eligió el usuario (o [] si no eligió).
     Devuelve (lista, (carrera, curso, convocatoria)). No se guardan como eventos:
-    se leen de examenes.py cada vez, así que solo se ven mientras la opción está elegida."""
-    if mi_modo() == "deporte":   # los exámenes oficiales son solo de Universidad
+    se leen de examenes.py cada vez, así que solo se ven mientras la opción está elegida.
+    "dueno" sirve para leer los del otro modo (por defecto, yo())."""
+    dueno = yo() if dueno is None else dueno
+    if dueno < 0:   # los exámenes oficiales son solo de Universidad (Deporte usa el número en negativo)
         return [], None
     fila = consultar("SELECT examenes_sel FROM usuarios WHERE id = ?", (mi_cuenta(),))
     texto = fila[0]["examenes_sel"] if fila else None
@@ -1016,7 +1044,7 @@ def examenes_elegidos():
         return [], None
     # Quitamos los que borraste con la ✕.
     ocultos = {(fila["asignatura"], fila["fecha"]) for fila in
-               consultar("SELECT asignatura, fecha FROM examenes_ocultos WHERE usuario_id = ?", (yo(),))}
+               consultar("SELECT asignatura, fecha FROM examenes_ocultos WHERE usuario_id = ?", (dueno,))}
     lista = [examen for examen in examenes.examenes(*eleccion) if (examen[0], examen[1]) not in ocultos]
     return lista, eleccion
 
@@ -1067,10 +1095,10 @@ def elegir_examenes():
     return redirect(url_for("calendario_vista", anio=int(primero[:4]), mes=int(primero[5:7])))
 
 
-def examenes_manuales():
+def examenes_manuales(dueno=None):
     """Los exámenes que el usuario agregó con "Examen manual", ordenados por fecha."""
     return consultar("SELECT * FROM examenes_manuales WHERE usuario_id = ? ORDER BY fecha, hora",
-                     (yo(),))
+                     (yo() if dueno is None else dueno,))
 
 
 @app.route("/universidad/calendario/examen-manual", methods=["POST"])
