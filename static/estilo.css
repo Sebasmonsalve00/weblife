@@ -731,9 +731,6 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .examenes-form { display: flex; flex-direction: column; gap: 6px; }
 .examenes-form[hidden] { display: none; }
 /* Pestañas "De la lista" / "Escribir a mano" */
-.pestanas { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--borde); border-radius: 999px; margin-bottom: 6px; }
-.pestana { flex: 1; border: 0; background: transparent; color: var(--color-texto); font: inherit; font-size: 13px; font-weight: 500; padding: 6px 8px; border-radius: 999px; cursor: pointer; }
-.pestana[aria-pressed="true"] { background: var(--color-texto); color: var(--color-fondo); }
 .manuales { border-top: 1px solid var(--borde); margin-top: 8px; padding-top: 8px; max-height: 160px; overflow-y: auto; }
 .manual-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }
 .manual-item small { display: block; color: var(--texto-secundario); }

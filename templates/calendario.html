@@ -38,88 +38,72 @@
     <h2 class="titulo-seccion" id="mes-titulo" aria-live="polite">{{ nombre_mes }} {{ anio }}</h2>
     <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_siguiente[0], mes=mes_siguiente[1]) }}" aria-label="Mes siguiente" id="mes-siguiente" data-cambiar-mes>→</a>
 
-    {% if modo != "deporte" %}{# Los exámenes oficiales son solo de Universidad #}
+    {% if modo != "deporte" %}{# Los calendarios de eventos son solo de Universidad #}
     <div class="examenes-botones">
-    <!-- Opción pequeña: cargar las fechas oficiales de examen (se abre al hacer clic) -->
+    <!-- Añade tus eventos: subir una tabla (CSV o Excel) con fecha, hora, nombre y tipo -->
     <details class="examenes-mini">
-      <summary class="boton boton-secundario boton-chico">Fechas de examen <span class="flecha" aria-hidden="true">▾</span></summary>
-      <form method="post" action="{{ url_for('elegir_examenes') }}" class="examenes-panel vidrio" id="form-examenes">
-        {% if eleccion %}<p class="examenes-actual">Viendo: {{ eleccion[0] }} · {{ eleccion[1] }} · {{ eleccion[2] }}</p>{% endif %}
-        <label for="ex-carrera">Carrera</label>
-        <select id="ex-carrera" name="carrera" required>
-          {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
-        </select>
-        <label for="ex-curso">Curso</label>
-        <select id="ex-curso" name="curso" required></select>
-        <label for="ex-convocatoria">Convocatoria</label>
-        <select id="ex-convocatoria" name="convocatoria" required></select>
-        <button class="boton boton-primario boton-chico" name="accion" value="ver">Ver exámenes</button>
-        {% if eleccion %}<button class="boton boton-secundario boton-chico" name="accion" value="quitar" formnovalidate>Quitar</button>{% endif %}
-        {% if ocultos %}<button class="boton boton-secundario boton-chico" name="accion" value="mostrar_ocultos" formnovalidate>Volver a mostrar borrados ({{ ocultos }})</button>{% endif %}
-        <p class="nota-mini">{{ texto.nota_examenes }}</p>
-      </form>
-    </details>
-
-    <!-- Examen manual: elegir uno de la lista o escribirlo a mano -->
-    <details class="examenes-mini">
-      <summary class="boton boton-secundario boton-chico">Examen manual <span class="flecha" aria-hidden="true">▾</span></summary>
+      <summary class="boton boton-secundario boton-chico">Añade tus eventos <span class="flecha" aria-hidden="true">▾</span></summary>
       <div class="examenes-panel vidrio">
-        <div class="pestanas" role="group" aria-label="Cómo agregar el examen">
-          <button type="button" class="pestana" data-pestana="lista" aria-pressed="true">De la lista</button>
-          <button type="button" class="pestana" data-pestana="mano" aria-pressed="false">Escribir a mano</button>
-        </div>
-
-        <form method="post" action="{{ url_for('examen_manual') }}" class="examenes-form" data-panel="lista">
-          <input type="hidden" name="modo" value="lista">
-          <label for="em-carrera">Carrera</label>
-          <select id="em-carrera" name="carrera" required>
-            {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
-          </select>
-          <label for="em-curso">Curso</label>
-          <select id="em-curso" name="curso" required></select>
-          <label for="em-convocatoria">Convocatoria</label>
-          <select id="em-convocatoria" name="convocatoria" required></select>
-          <label for="em-examen">Examen</label>
-          <select id="em-examen" name="examen" required></select>
-          <button class="boton boton-primario boton-chico">Añadir examen</button>
-        </form>
-
-        <form method="post" action="{{ url_for('examen_manual') }}" class="examenes-form" data-panel="mano" hidden>
-          <input type="hidden" name="modo" value="mano">
-          <label for="mm-carrera">Carrera</label>
-          <select id="mm-carrera" name="carrera" required>
-            {% for carrera in calendarios %}<option>{{ carrera }}</option>{% endfor %}
-          </select>
-          <label for="mm-curso">Año</label>
-          <select id="mm-curso" name="curso" required>
-            {% for curso in cursos %}<option>{{ curso }}</option>{% endfor %}
-          </select>
-          <label for="mm-convocatoria">Convocatoria</label>
-          <select id="mm-convocatoria" name="convocatoria" required>
-            {% for convocatoria in convocatorias %}<option>{{ convocatoria }}</option>{% endfor %}
-          </select>
-          <label for="mm-asignatura">Nombre del examen</label>
-          <input id="mm-asignatura" name="asignatura" placeholder="ej: Ética I" required>
-          <label for="mm-fecha">Fecha</label>
-          <input id="mm-fecha" type="date" name="fecha" required>
-          <label for="mm-hora">Hora (opcional)</label>
-          <input id="mm-hora" type="time" name="hora">
-          <button class="boton boton-primario boton-chico">Añadir examen</button>
-        </form>
-
-        {% if manuales %}
+      <form method="post" action="{{ url_for('subir_eventos') }}" enctype="multipart/form-data" class="examenes-form">
+        <p class="nota-mini">Sube una tabla (CSV o Excel) con una fila por evento y estas columnas:
+          <b>fecha</b>, <b>hora</b>, <b>nombre</b> y <b>tipo</b> (examen, entrega, presentación...).
+          <a href="{{ url_for('plantilla_eventos') }}">Descargar plantilla</a></p>
+        <label for="se-universidad">Universidad</label>
+        <input id="se-universidad" name="universidad" list="lista-universidades" required maxlength="80" placeholder="ej: Universidad de Navarra">
+        <label for="se-curso">Año</label>
+        <input id="se-curso" name="curso" list="lista-cursos" required maxlength="80" placeholder="ej: 2º Curso">
+        <label for="se-carrera">Carrera</label>
+        <input id="se-carrera" name="carrera" list="lista-carreras" required maxlength="80" placeholder="ej: Grado en Marketing">
+        <label for="se-convocatoria">Convocatoria</label>
+        <input id="se-convocatoria" name="convocatoria" list="lista-convocatorias" required maxlength="80" placeholder="ej: Diciembre 2026">
+        <label for="se-archivo">Documento</label>
+        <input id="se-archivo" type="file" name="archivo" accept=".csv,.xlsx,.txt" required>
+        <button class="boton boton-primario boton-chico">Subir eventos</button>
+        <p class="nota-mini">Los calendarios que subes los pueden elegir también tus compañeros en "Seleccionar evento".</p>
+      </form>
+        {% if mis_calendarios %}
         <div class="manuales">
-          <p class="examenes-actual">Tus exámenes manuales</p>
-          {% for examen in manuales %}
+          <p class="examenes-actual">Subidos por ti</p>
+          {% for c in mis_calendarios %}
             <div class="manual-item">
-              <span>{{ examen.asignatura }} <small>{{ examen.fecha }}{% if examen.hora %} · {{ examen.hora }}{% endif %}</small></span>
-              {{ boton_borrar(url_for('borrar_examen_manual', id=examen.id), "Borrar examen: " ~ examen.asignatura) }}
+              <span>{{ c.carrera }} <small>{{ c.universidad }} · {{ c.curso }} · {{ c.convocatoria }}</small></span>
+              {{ boton_borrar(url_for('borrar_calendario_eventos', id=c.id), "Borrar calendario: " ~ c.carrera ~ " " ~ c.convocatoria, "¿Borrar este calendario de eventos para todos?") }}
             </div>
           {% endfor %}
         </div>
         {% endif %}
-        <p class="nota-mini">Los exámenes manuales se ven siempre, aunque no tengas elegidas unas fechas de examen.</p>
       </div>
+    </details>
+    {# Sugerencias al escribir: lo que ya hay cargado #}
+    <datalist id="lista-universidades">{% for u in calendarios %}<option value="{{ u }}">{% endfor %}</datalist>
+    <datalist id="lista-cursos">{% for c in cursos %}<option value="{{ c }}">{% endfor %}</datalist>
+    <datalist id="lista-carreras">{% for u in calendarios.values() %}{% for a in u.values() %}{% for c in a %}<option value="{{ c }}">{% endfor %}{% endfor %}{% endfor %}</datalist>
+    <datalist id="lista-convocatorias">{% for c in convocatorias %}<option value="{{ c }}">{% endfor %}</datalist>
+
+    <!-- Seleccionar evento: elegir universidad, año, carrera y convocatoria para verlos en el calendario -->
+    <details class="examenes-mini">
+      <summary class="boton boton-secundario boton-chico">Seleccionar evento <span class="flecha" aria-hidden="true">▾</span></summary>
+      <form method="post" action="{{ url_for('elegir_examenes') }}" class="examenes-panel vidrio" id="form-examenes">
+        {% if eleccion %}<p class="examenes-actual">Viendo: {{ eleccion.universidad }} · {{ eleccion.curso }} · {{ eleccion.carrera }} · {{ eleccion.convocatoria }}</p>{% endif %}
+        {% if calendarios %}
+        <label for="ex-universidad">Universidad</label>
+        <select id="ex-universidad" required>
+          {% for universidad in calendarios %}<option>{{ universidad }}</option>{% endfor %}
+        </select>
+        <label for="ex-curso">Año</label>
+        <select id="ex-curso" required></select>
+        <label for="ex-carrera">Carrera</label>
+        <select id="ex-carrera" required></select>
+        <label for="ex-convocatoria">Convocatoria</label>
+        <select id="ex-convocatoria" name="calendario" required></select>
+        <button class="boton boton-primario boton-chico" name="accion" value="ver">Ver eventos</button>
+        {% else %}
+        <p class="nota-mini">Todavía no hay eventos cargados. Súbelos con "Añade tus eventos".</p>
+        {% endif %}
+        {% if eleccion %}<button class="boton boton-secundario boton-chico" name="accion" value="quitar" formnovalidate>Quitar</button>{% endif %}
+        {% if ocultos %}<button class="boton boton-secundario boton-chico" name="accion" value="mostrar_ocultos" formnovalidate>Volver a mostrar borrados ({{ ocultos }})</button>{% endif %}
+        <p class="nota-mini">{{ texto.nota_examenes }}</p>
+      </form>
     </details>
     </div>
     {% endif %}
@@ -144,11 +128,11 @@
                   <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }} {{ 'otro-modo modo-' ~ cosa.otro|lower if cosa.otro }}"{% if cosa.otro %} title="{{ cosa.otro }}"{% endif %}>
                     <span>{% if cosa.otro %}<em class="item-modo">{{ cosa.otro }}</em> {% endif %}{{ cosa.texto }}</span>
                     {% if cosa.otro %}{# del otro modo: solo para verlo, sin borrar #}
-                    {% elif cosa.tipo == "evento" %}
-                      {{ boton_borrar(url_for('borrar_evento', id=cosa.id), "Borrar evento: " ~ cosa.texto) }}
                     {% elif cosa.manual_id %}
                       {{ boton_borrar(url_for('borrar_examen_manual', id=cosa.manual_id), "Borrar examen: " ~ cosa.texto) }}
-                    {% elif cosa.tipo == "examen" %}
+                    {% elif cosa.tipo == "evento" and not cosa.de_calendario %}
+                      {{ boton_borrar(url_for('borrar_evento', id=cosa.id), "Borrar evento: " ~ cosa.texto) }}
+                    {% elif cosa.de_calendario %}{# de "Seleccionar evento": la ✕ solo lo esconde para ti #}
                       <form method="post" action="{{ url_for('borrar_examen_automatico') }}" class="en-linea">
                         <input type="hidden" name="asignatura" value="{{ cosa.asignatura }}">
                         <input type="hidden" name="fecha" value="{{ cosa.fecha }}">
@@ -282,73 +266,44 @@
 })();
 </script>
 {% if modo != "deporte" %}
-<!-- Las opciones de "Curso" y "Convocatoria" cambian según lo elegido antes -->
+<!-- Seleccionar evento: cada lista cambia según lo elegido antes (universidad, año, carrera, convocatoria) -->
 <script>
 (function () {
   var datos = {{ calendarios | tojson }};
-  var carrera = document.getElementById("ex-carrera");
+  var universidad = document.getElementById("ex-universidad");
+  if (!universidad) return;
   var curso = document.getElementById("ex-curso");
+  var carrera = document.getElementById("ex-carrera");
   var convocatoria = document.getElementById("ex-convocatoria");
-  function llenar(select, opciones) {
+  function llenar(select, objeto, conValor) {
     select.innerHTML = "";
-    opciones.forEach(function (texto) {
+    Object.keys(objeto || {}).forEach(function (nombre) {
       var opcion = document.createElement("option");
-      opcion.textContent = texto;
+      opcion.textContent = nombre;
+      opcion.value = conValor ? objeto[nombre] : nombre;   // la convocatoria manda el número del calendario
       select.appendChild(opcion);
     });
   }
-  function cambiarCurso() { llenar(convocatoria, Object.keys(datos[carrera.value][curso.value] || {})); }
-  function cambiarCarrera() { llenar(curso, Object.keys(datos[carrera.value] || {})); cambiarCurso(); }
-  carrera.addEventListener("change", cambiarCarrera);
+  function anio() { return datos[universidad.value] || {}; }
+  function cambiarCarrera() { llenar(convocatoria, (anio()[curso.value] || {})[carrera.value], true); }
+  function cambiarCurso() { llenar(carrera, anio()[curso.value]); cambiarCarrera(); }
+  function cambiarUniversidad() { llenar(curso, anio()); cambiarCurso(); }
+  universidad.addEventListener("change", cambiarUniversidad);
   curso.addEventListener("change", cambiarCurso);
-  // Si ya elegiste un calendario, lo dejamos marcado.
-  var elegido = {{ (eleccion or []) | list | tojson }};
-  if (elegido.length === 3 && datos[elegido[0]]) carrera.value = elegido[0];
-  cambiarCarrera();
-  if (elegido.length === 3) { curso.value = elegido[1]; cambiarCurso(); convocatoria.value = elegido[2]; }
+  carrera.addEventListener("change", cambiarCarrera);
+  // Si ya elegiste uno, lo dejamos marcado.
+  var elegido = {{ ([eleccion.universidad, eleccion.curso, eleccion.carrera, eleccion.id] if eleccion else []) | tojson }};
+  if (elegido.length && datos[elegido[0]]) universidad.value = elegido[0];
+  cambiarUniversidad();
+  if (elegido.length) {
+    curso.value = elegido[1]; cambiarCurso();
+    carrera.value = elegido[2]; cambiarCarrera();
+    convocatoria.value = elegido[3];
+  }
 })();
-</script>
 
-<!-- Examen manual: pestañas, listas que dependen de lo elegido, y un solo panel abierto a la vez -->
-<script>
+// Al abrir un panel se cierra el otro
 (function () {
-  var datos = {{ calendarios | tojson }};
-  var carrera = document.getElementById("em-carrera");
-  var curso = document.getElementById("em-curso");
-  var convocatoria = document.getElementById("em-convocatoria");
-  var examen = document.getElementById("em-examen");
-  function llenar(select, opciones) {
-    select.innerHTML = "";
-    opciones.forEach(function (op) {
-      var opcion = document.createElement("option");
-      opcion.textContent = op.texto;
-      opcion.value = op.valor;
-      select.appendChild(opcion);
-    });
-  }
-  function nombres(objeto) { return Object.keys(objeto || {}).map(function (k) { return {texto: k, valor: k}; }); }
-  function cambiarConvocatoria() {
-    var lista = ((datos[carrera.value] || {})[curso.value] || {})[convocatoria.value] || [];
-    llenar(examen, lista.map(function (e, i) {
-      return {texto: e[0] + " · " + e[1].slice(8, 10) + "/" + e[1].slice(5, 7) + (e[2] ? " " + e[2] : ""), valor: i};
-    }));
-  }
-  function cambiarCurso() { llenar(convocatoria, nombres((datos[carrera.value] || {})[curso.value])); cambiarConvocatoria(); }
-  function cambiarCarrera() { llenar(curso, nombres(datos[carrera.value])); cambiarCurso(); }
-  carrera.addEventListener("change", cambiarCarrera);
-  curso.addEventListener("change", cambiarCurso);
-  convocatoria.addEventListener("change", cambiarConvocatoria);
-  cambiarCarrera();
-
-  // Pestañas "De la lista" / "Escribir a mano"
-  document.querySelectorAll(".pestana").forEach(function (boton) {
-    boton.addEventListener("click", function () {
-      document.querySelectorAll(".pestana").forEach(function (b) { b.setAttribute("aria-pressed", b === boton); });
-      document.querySelectorAll(".examenes-form[data-panel]").forEach(function (f) { f.hidden = f.dataset.panel !== boton.dataset.pestana; });
-    });
-  });
-
-  // Al abrir un panel se cierra el otro
   var paneles = document.querySelectorAll(".examenes-mini");
   paneles.forEach(function (panel) {
     panel.addEventListener("toggle", function () {
