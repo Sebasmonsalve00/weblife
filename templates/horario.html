@@ -7,8 +7,87 @@
 
 <div class="grid-12">
 
-<!-- ===== Panel lateral: clases del día, asistencia y tareas rápidas ===== -->
-<aside class="panel-dia lg-4 reveal" aria-label="Clases del día" data-zona="horario-panel">
+<!-- ===== Columna izquierda: añadir clases, subir horario y, debajo, el día ===== -->
+<div class="lg-4 horario-lateral">
+<!-- Formulario para agregar una clase -->
+<!-- Al agregar, solo se actualizan la grilla, el panel y "Mis materias" (zonas.js) -->
+<form method="post" class="formulario form-clase form-compacta reveal" data-actualiza="horario-grilla horario-panel horario-materias">
+  <p class="form-compacta-titulo ancho">{{ "Añade una actividad" if modo == "deporte" else "Añade una clase" }}</p>
+  <div class="campo ancho">
+    <label for="h-nombre">{{ "Actividad" if modo == "deporte" else "Materia o actividad" }}</label>
+    <input id="h-nombre" name="nombre" placeholder="{{ "ej: Gimnasio o Fútbol" if modo == "deporte" else "ej: Cálculo o Gimnasio" }}" required data-limpiar>
+  </div>
+  <div class="campo">
+    <label for="h-dia">Día</label>
+    <select id="h-dia" name="dia">
+      {% for nombre in dias %}
+        <option value="{{ loop.index0 }}">{{ nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="campo">
+    <label for="h-aula">{{ "Lugar" if modo == "deporte" else "Aula o lugar" }}</label>
+    <input id="h-aula" name="sala" placeholder="{{ "ej: Polideportivo" if modo == "deporte" else "ej: 2.14" }}" data-limpiar>
+  </div>
+  <div class="campo">
+    <label for="h-desde">Desde</label>
+    <input id="h-desde" type="time" name="hora_inicio" min="08:00" max="20:00" value="08:00" required>
+  </div>
+  <div class="campo">
+    <label for="h-hasta">Hasta</label>
+    <input id="h-hasta" type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required>
+  </div>
+  {% if modo == "deporte" %}
+  <div class="campo">
+    <label for="h-categoria">Tipo</label>
+    <select id="h-categoria" name="categoria">
+      {% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="campo ancho">
+    {% if modo == "deporte" %}
+    <!-- En Deporte no hay clases: un solo botón (se guarda como entreno normal, con su casilla de Completado) -->
+    <button class="boton-enviar" title="Agregar actividad" aria-label="Agregar actividad">+ Agregar actividad</button>
+    {% else %}
+    <!-- Dos botones iguales, uno al lado del otro: clase (cuenta para la asistencia) o actividad aparte -->
+    <div class="botones-pareja">
+      <button class="boton-enviar" title="Agregar clase" aria-label="Agregar clase">+ Clase</button>
+      <button class="boton-enviar boton-enviar-secundario" name="tipo" value="actividad" title="Agregar actividad aparte" aria-label="Agregar actividad aparte">+ Actividad</button>
+    </div>
+    {% endif %}
+  </div>
+</form>
+{% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
+
+<!-- Subir el horario entero desde un documento (pintahorarios guardado, CSV o Excel) -->
+<form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal">
+  <div class="subir-horario-texto">
+    <b>{{ "Sube tus entrenos" if modo == "deporte" else "Sube tu horario" }}</b>
+    <small>Tu pintahorarios guardado (⌘/Ctrl + S → "Página web, un solo archivo") o un CSV/Excel.</small>
+  </div>
+  <label class="subir-archivo">
+    <input type="file" name="archivo" accept=".mhtml,.mht,.html,.htm,.csv,.xlsx,.txt" required data-archivo>
+    <span class="subir-icono" aria-hidden="true">↑</span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>Página guardada, CSV o Excel · hasta 2 MB</small></span>
+  </label>
+  <div class="subir-horario-botones">
+    <button class="boton boton-primario boton-chico">Subir horario</button>
+    <a class="enlace-mini" href="{{ url_for('plantilla_horario') }}">Plantilla de ejemplo</a>
+  </div>
+</form>
+<script>
+document.querySelectorAll("[data-archivo]").forEach(function (campo) {
+  campo.addEventListener("change", function () {
+    var caja = campo.closest(".subir-archivo");
+    caja.querySelector("[data-archivo-nombre]").textContent = campo.files.length ? campo.files[0].name : "Elegir documento";
+    caja.classList.toggle("con-archivo", campo.files.length > 0);
+  });
+});
+</script>
+
+<!-- Panel del día: clases del día, asistencia y tareas rápidas -->
+<aside class="panel-dia reveal" aria-label="Clases del día" data-zona="horario-panel">
   <div class="panel-titulo">
     <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_anterior) }}" aria-label="Día anterior">←</a>
     <div>
@@ -110,85 +189,11 @@
     <p class="vacio centro">{{ "No tienes nada programado este día." if modo == "deporte" else "No tienes clases este día." }}</p>
   {% endfor %}
 </aside>
+</div>
 
-<!-- ===== Parte principal: formulario, grilla y materias ===== -->
+<!-- ===== Parte principal: grilla y materias ===== -->
 <div class="lg-8 horario-principal">
 
-<!-- Formulario para agregar una clase -->
-<!-- Al agregar, solo se actualizan la grilla, el panel y "Mis materias" (zonas.js) -->
-<form method="post" class="formulario form-clase grid-12 reveal" data-actualiza="horario-grilla horario-panel horario-materias">
-  <div class="campo md-6 lg-4">
-    <label for="h-nombre">{{ "Actividad" if modo == "deporte" else "Materia o actividad" }}</label>
-    <input id="h-nombre" name="nombre" placeholder="{{ "ej: Gimnasio o Fútbol" if modo == "deporte" else "ej: Cálculo o Gimnasio" }}" required data-limpiar>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="h-dia">Día</label>
-    <select id="h-dia" name="dia">
-      {% for nombre in dias %}
-        <option value="{{ loop.index0 }}">{{ nombre }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="h-aula">{{ "Lugar" if modo == "deporte" else "Aula o lugar" }}</label>
-    <input id="h-aula" name="sala" placeholder="{{ "ej: Polideportivo" if modo == "deporte" else "ej: 2.14" }}" data-limpiar>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="h-desde">Desde</label>
-    <input id="h-desde" type="time" name="hora_inicio" min="08:00" max="20:00" value="08:00" required>
-  </div>
-  <div class="campo md-6 lg-4">
-    <label for="h-hasta">Hasta</label>
-    <input id="h-hasta" type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required>
-  </div>
-  {% if modo == "deporte" %}
-  <div class="campo md-6 lg-4">
-    <label for="h-categoria">Tipo</label>
-    <select id="h-categoria" name="categoria">
-      {% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
-    </select>
-  </div>
-  {% endif %}
-  <div class="campo md-6 lg-4">
-    {% if modo == "deporte" %}
-    <!-- En Deporte no hay clases: un solo botón (se guarda como entreno normal, con su casilla de Completado) -->
-    <button class="boton-enviar" title="Agregar actividad" aria-label="Agregar actividad">+ Agregar actividad</button>
-    {% else %}
-    <!-- Dos botones iguales, uno al lado del otro: clase (cuenta para la asistencia) o actividad aparte -->
-    <div class="botones-pareja">
-      <button class="boton-enviar" title="Agregar clase" aria-label="Agregar clase">+ Clase</button>
-      <button class="boton-enviar boton-enviar-secundario" name="tipo" value="actividad" title="Agregar actividad aparte" aria-label="Agregar actividad aparte">+ Actividad</button>
-    </div>
-    {% endif %}
-  </div>
-</form>
-{% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
-
-<!-- Subir el horario entero desde un documento (CSV o Excel) -->
-<form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal">
-  <div class="subir-horario-texto">
-    <b>{{ "Sube tus entrenos" if modo == "deporte" else "Sube tu horario" }}</b>
-    <small>Tu página de pintahorarios guardada (⌘/Ctrl + S, "Página web, un solo archivo"), o un CSV/Excel con una fila por {{ "actividad" if modo == "deporte" else "clase" }} (día, desde, hasta, {{ "actividad" if modo == "deporte" else "materia" }}, aula) o con los días arriba y las horas a la izquierda.</small>
-  </div>
-  <label class="subir-archivo">
-    <input type="file" name="archivo" accept=".mhtml,.mht,.html,.htm,.csv,.xlsx,.txt" required data-archivo>
-    <span class="subir-icono" aria-hidden="true">↑</span>
-    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>Página guardada, CSV o Excel · hasta 2 MB</small></span>
-  </label>
-  <div class="subir-horario-botones">
-    <button class="boton boton-primario boton-chico">Subir horario</button>
-    <a class="enlace-mini" href="{{ url_for('plantilla_horario') }}">Plantilla de ejemplo</a>
-  </div>
-</form>
-<script>
-document.querySelectorAll("[data-archivo]").forEach(function (campo) {
-  campo.addEventListener("change", function () {
-    var caja = campo.closest(".subir-archivo");
-    caja.querySelector("[data-archivo-nombre]").textContent = campo.files.length ? campo.files[0].name : "Elegir documento";
-    caja.classList.toggle("con-archivo", campo.files.length > 0);
-  });
-});
-</script>
 
 <!-- Grilla: una columna por día, una fila por hora de 8:00 a 20:00 -->
 <div class="grilla-contenedor reveal" data-zona="horario-grilla" data-zona-tambien="horario-panel horario-materias">
