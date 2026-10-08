@@ -555,6 +555,26 @@ def resumen_del_dia(clases_del_dia, nombre_dia, es_hoy):
     return [primera, segunda]
 
 
+def repartir_en_carriles(bloques):
+    """Si dos bloques del mismo día se pisan (misma hora), los pone uno al lado del otro.
+    A cada bloque le agrega "carril" (0, 1, 2...) y "carriles" (cuántos comparten ese rato)."""
+    bloques.sort(key=lambda b: (b["inicio"], b["fin"]))
+    grupo, fin_grupo = [], 0
+    for bloque in bloques + [None]:   # None = marca para cerrar el último grupo
+        if bloque is None or (grupo and bloque["inicio"] >= fin_grupo):
+            # Se terminó un grupo de bloques que se pisan: todos con el mismo número de carriles
+            for b in grupo:
+                b["carriles"] = max(x["carril"] for x in grupo) + 1
+            grupo, fin_grupo = [], 0
+        if bloque is None:
+            break
+        # El primer carril libre (donde el bloque anterior ya terminó)
+        ocupados = {b["carril"] for b in grupo if b["fin"] > bloque["inicio"]}
+        bloque["carril"] = min(c for c in range(len(grupo) + 1) if c not in ocupados)
+        grupo.append(bloque)
+        fin_grupo = max(fin_grupo, bloque["fin"])
+
+
 @app.route("/universidad/horario", methods=["GET", "POST"])
 def horario():
     error = session.pop("error_horario", None)   # si falló al editar una clase
@@ -614,17 +634,26 @@ def horario():
     # "arriba" = cuántos píxeles desde las 8:00, "alto" = cuánto dura.
     limite_arriba = HORA_INICIO_DIA * 60
     limite_abajo = HORA_FIN_DIA * 60
+    # En la grilla también salen las cosas del OTRO modo (Uni en Deporte y al revés),
+    # solo para verlas: el panel del día y el resto de la página siguen con las del modo actual.
+    # Los datos del otro modo son del mismo dueño pero con el signo cambiado (ver yo()).
+    otras = consultar("SELECT * FROM clases WHERE usuario_id = ? ORDER BY dia, hora_inicio", (-yo(),))
+    otro_modo = "Uni" if mi_modo() == "deporte" else "Deporte"
     por_dia = {numero: [] for numero in range(7)}
-    for clase in clases:
+    for clase, es_otro in [(c, False) for c in clases] + [(c, True) for c in otras]:
         inicio = max(a_minutos(clase["hora_inicio"]), limite_arriba)
         fin = min(a_minutos(clase["hora_fin"]), limite_abajo)
         if fin <= inicio:
             continue  # la clase queda fuera de 8:00-20:00, no se dibuja
         por_dia[clase["dia"]].append({
             "clase": clase,
+            "otro": es_otro,
+            "inicio": inicio, "fin": fin,
             "arriba": (inicio - limite_arriba) * PIXELES_POR_HORA // 60,
             "alto": (fin - inicio) * PIXELES_POR_HORA // 60,
         })
+    for bloques in por_dia.values():
+        repartir_en_carriles(bloques)
 
     # Horas a la semana de cada materia (sumando todas sus clases).
     minutos_por_materia = {}
@@ -646,7 +675,7 @@ def horario():
     return render_template(
         "horario.html", dias=DIAS_SEMANA, dias_visibles=dias_visibles, por_dia=por_dia,
         clases=clases, horas=horas, alto_total=(HORA_FIN_DIA - HORA_INICIO_DIA) * PIXELES_POR_HORA,
-        pixeles_hora=PIXELES_POR_HORA, error=error, subtitulo_dia=subtitulo_dia,
+        pixeles_hora=PIXELES_POR_HORA, error=error, otro_modo=otro_modo, subtitulo_dia=subtitulo_dia,
         panel=panel, resumen=resumen, dia_panel=texto_panel, nombre_dia_panel=DIAS_SEMANA[dia_panel.weekday()],
         es_hoy=(dia_panel == date.today()),
         dia_anterior=(dia_panel - timedelta(days=1)).isoformat(),
