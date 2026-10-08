@@ -68,8 +68,6 @@
           <a href="{{ url_for(ruta) }}" {% if request.endpoint == ruta %}class="activo" aria-current="page"{% endif %}>{{ nombre }}</a>
         {% endfor %}
       </nav>
-      <!-- Hueco igual al de la izquierda, para que el menú siga en su sitio -->
-      <span class="nav-hueco" aria-hidden="true"></span>
 
       <!-- Botones de la derecha -->
       <div class="nav-acciones">
