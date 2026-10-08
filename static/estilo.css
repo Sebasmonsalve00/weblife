@@ -595,6 +595,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .selector { width: min(420px, calc(100vw - 32px)); }
 .selector-hueco { width: 36px; }
 /* Control segmentado: una píldora gris con la opción elegida en blanco */
+.segmentos[hidden] { display: none; }
 .segmentos { display: flex; padding: 3px; gap: 2px; border-radius: var(--radio-chico); background: rgba(118, 118, 128, 0.12); margin-bottom: 16px; }
 .segmento { flex: 1; height: 32px; border: none; border-radius: 9px; background: transparent; font: inherit; font-size: 0.8125rem;
             font-weight: 500; color: var(--color-texto); cursor: pointer; transition: background 200ms ease, box-shadow 200ms ease; }
