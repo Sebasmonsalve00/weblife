@@ -48,6 +48,16 @@ OPACIDADES = {
     "acento_degradado": 0.35,
     "acento_manchas": 0.40,
     "acento_hover_fila": 0.10,
+    # Lo del otro modo en Horario y Calendario (Uni en Deporte y al revés):
+    "otro_modo_fondo": 0.20,     # relleno: más suave que lo propio (0.35), pero se nota
+    "otro_modo_borde": 0.55,
+}
+
+# Tonos de cada modo, sacados del color elegido en Ajustes (0 = tu color tal cual, 1 = blanco o negro).
+# Uni usa tu color; Deporte, tu color más oscuro. Así se distinguen en Horario y Calendario.
+TONOS_MODO = {
+    "uni": ("#FFFFFF", 0),
+    "deporte": ("#000000", 0.35),
 }
 
 # ---- 2. Tipografía ----
@@ -175,9 +185,17 @@ def variables_css(acento=None):
         b = int(color_hex[5:7], 16)
         return f"rgba({r}, {g}, {b}, {opacidad})"
 
+    def mezclar(color_hex, otro_hex, cuanto):
+        # Mezcla dos colores: cuanto=0 deja el primero, cuanto=1 da el segundo
+        canales = [round(int(color_hex[i:i + 2], 16) * (1 - cuanto) + int(otro_hex[i:i + 2], 16) * cuanto)
+                   for i in (1, 3, 5)]
+        return "#" + "".join(f"{c:02X}" for c in canales)
+
     texto = COLORES["texto"]
     acento = acento if color_valido(acento) else COLORES["acento"]
     o = OPACIDADES
+    tono_uni = mezclar(acento, *TONOS_MODO["uni"])
+    tono_deporte = mezclar(acento, *TONOS_MODO["deporte"])
     variables = {
         "--color-fondo": COLORES["fondo"],
         "--color-texto": texto,
@@ -191,6 +209,12 @@ def variables_css(acento=None):
         "--acento-degradado": rgba(acento, o["acento_degradado"]),
         "--acento-manchas": rgba(acento, o["acento_manchas"]),
         "--acento-suave": rgba(acento, o["acento_hover_fila"]),
+        "--uni-fondo": rgba(tono_uni, o["otro_modo_fondo"]),
+        "--uni-borde": rgba(tono_uni, o["otro_modo_borde"]),
+        "--deporte-fondo": rgba(tono_deporte, o["otro_modo_fondo"]),
+        "--deporte-propio-fondo": rgba(tono_deporte, o["acento_degradado"]),
+        "--deporte-propio-borde": tono_deporte,
+        "--deporte-borde": rgba(tono_deporte, o["otro_modo_borde"]),
         "--sombra": f"0 8px 32px {rgba(texto, 0.06)}",
         "--sombra-hover": f"0 16px 48px {rgba(texto, 0.10)}",
         "--fuente": f'"{FUENTE["nombre"]}", {FUENTE["respaldo"]}',

@@ -549,8 +549,8 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .bloque form { position: absolute; top: 4px; right: 4px; }
 .bloque .boton-icono { width: 22px; height: 22px; font-size: 0.6875rem; }
 /* Del otro modo (Uni en Deporte o al revés): más claro, con borde de puntos y sin editar */
-.bloque.bloque-otro-modo { background: transparent; border: 1px dashed var(--borde-boton); color: var(--texto-secundario); padding-right: 10px; opacity: 0.85; }
-.bloque .bloque-modo { align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: 999px; font-size: 0.6875rem; background: rgba(118, 118, 128, 0.14); }
+.bloque.bloque-otro-modo { padding-right: 10px; }
+.bloque .bloque-modo { align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: 999px; font-size: 0.6875rem; color: var(--color-texto); background: var(--superficie-sin-blur); }
 
 .resumen-materias { list-style: none; padding: 8px 0; margin: 0; border-radius: var(--radio-tarjeta); box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); max-width: 560px; }
 .resumen-materias li { display: flex; justify-content: space-between; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--borde); }
@@ -777,8 +777,20 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .examenes-actual { font-size: 13px; margin: 0 0 6px; color: var(--texto-secundario); }
 .item.hecha { text-decoration: line-through; opacity: 0.6; }
 /* Del otro modo (Uni en Deporte o al revés): más claro, con borde de puntos y sin borrar */
-.item.otro-modo, .dia-item.otro-modo, .dia-bloque.otro-modo { background: transparent; color: var(--texto-secundario); border: 1px dashed var(--borde-boton); font-weight: 400; opacity: 0.85; }
-.item-modo { font-style: normal; font-size: 0.625rem; padding: 0 4px; border-radius: 999px; background: rgba(118, 118, 128, 0.14); }
+.item.otro-modo, .dia-item.otro-modo, .dia-bloque.otro-modo { color: var(--color-texto); font-weight: 400; }
+.item-modo { font-style: normal; font-size: 0.625rem; padding: 0 4px; border-radius: 999px; background: var(--superficie-sin-blur); }
+/* Cada modo con su tono de tu color (ver config_diseno.TONOS_MODO): Uni tu color, Deporte más oscuro.
+   Lo propio de Deporte, con su tono; lo del otro modo, el mismo tono pero más suave. */
+[data-modo="deporte"] .bloque:not(.bloque-otro-modo):not(.bloque-actividad),
+[data-modo="deporte"] .dia-bloque.clase:not(.otro-modo), [data-modo="deporte"] .dia-item.clase:not(.otro-modo),
+[data-modo="deporte"] .item.tarea:not(.otro-modo), [data-modo="deporte"] .dia-bloque.tarea:not(.otro-modo),
+[data-modo="deporte"] .dia-item.tarea:not(.otro-modo), [data-modo="deporte"] .dia-item.tarea-hecha:not(.otro-modo),
+[data-modo="deporte"] .item.evento:not(.otro-modo), [data-modo="deporte"] .dia-bloque.evento:not(.otro-modo),
+[data-modo="deporte"] .dia-item.evento:not(.otro-modo) {
+  background: var(--deporte-propio-fondo); border: 1px solid var(--deporte-propio-borde);
+}
+.modo-uni.bloque, .modo-uni.item, .modo-uni.dia-item, .modo-uni.dia-bloque { background: var(--uni-fondo); border: 1px solid var(--uni-borde); }
+.modo-deporte.bloque, .modo-deporte.item, .modo-deporte.dia-item, .modo-deporte.dia-bloque { background: var(--deporte-fondo); border: 1px solid var(--deporte-borde); }
 .item .boton-icono { width: 18px; height: 18px; font-size: 0.625rem; flex-shrink: 0; }
 .item.examen .boton-icono, .item.examen .boton-icono:hover { background: transparent; color: var(--color-fondo); border-color: var(--color-fondo); }
 

@@ -28,7 +28,7 @@
   {% if not efectos.cristal_difuminado %}<script>document.documentElement.classList.add("sin-cristal");</script>{% endif %}
   {% if not efectos.microinteracciones %}<script>document.documentElement.classList.add("sin-micro");</script>{% endif %}
 </head>
-<body class="{% block clase_body %}{% endblock %}">
+<body class="{% block clase_body %}{% endblock %}" data-modo="{{ modo }}">
   <!-- Enlace para saltar el menú con el teclado (accesibilidad) -->
   <a href="#contenido" class="saltar">Ir al contenido</a>
 

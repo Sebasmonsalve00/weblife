@@ -141,7 +141,7 @@
               <td class="{{ 'hoy' if (anio, mes, dia) == (hoy.year, hoy.month, hoy.day) }}" data-zona="dia-{{ anio }}-{{ mes }}-{{ dia }}">
                 <button type="button" class="num" data-dia="{{ dia }}" aria-label="Ver el {{ dia }} de {{ nombre_mes }} hora a hora">{{ dia }}</button>
                 {% for cosa in cosas_por_dia.get(dia, []) %}
-                  <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }} {{ 'otro-modo' if cosa.otro }}"{% if cosa.otro %} title="{{ cosa.otro }}"{% endif %}>
+                  <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }} {{ 'otro-modo modo-' ~ cosa.otro|lower if cosa.otro }}"{% if cosa.otro %} title="{{ cosa.otro }}"{% endif %}>
                     <span>{% if cosa.otro %}<em class="item-modo">{{ cosa.otro }}</em> {% endif %}{{ cosa.texto }}</span>
                     {% if cosa.otro %}{# del otro modo: solo para verlo, sin borrar #}
                     {% elif cosa.tipo == "evento" %}
@@ -221,7 +221,7 @@
       if (minutos(c.fin) <= DESDE * 60 || minutos(c.inicio) >= HASTA * 60) fuera.push(c); else dentro.push(c);
     });
     fuera.forEach(function (c) {
-      var item = crear("div", "dia-item " + c.tipo + (c.otro ? " otro-modo" : ""));
+      var item = crear("div", "dia-item " + c.tipo + (c.otro ? " otro-modo modo-" + c.otro.toLowerCase() : ""));
       item.appendChild(crear("b", "", c.texto));
       item.appendChild(crear("small", "", (c.otro ? c.otro + " · " : "") + (c.inicio ? c.inicio + " · " : "") + nombres[c.tipo] + (c.detalle ? " · " + c.detalle : "")));
       sinHora.appendChild(item);
@@ -248,7 +248,7 @@
       var col = columnasFin.findIndex(function (f) { return f <= inicio; });
       if (col === -1) { col = columnasFin.length; columnasFin.push(fin); } else columnasFin[col] = fin;
       finGrupo = Math.max(grupo.length ? finGrupo : 0, fin);
-      var item = crear("div", "dia-bloque " + c.tipo + (c.otro ? " otro-modo" : ""));
+      var item = crear("div", "dia-bloque " + c.tipo + (c.otro ? " otro-modo modo-" + c.otro.toLowerCase() : ""));
       item.style.setProperty("--inicio", (inicio - DESDE * 60) / 60);
       item.style.setProperty("--duracion", (fin - inicio) / 60);
       item.style.setProperty("--columna", col);
