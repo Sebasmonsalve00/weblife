@@ -61,21 +61,23 @@
 {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
 
 <!-- Subir el horario entero desde un documento (pintahorarios guardado, CSV o Excel) -->
-<form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal">
+<form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal" data-materias='{{ resumen|map(attribute="nombre")|list|tojson }}'>
   <div class="subir-horario-texto">
     <b>{{ "Sube tus entrenos" if modo == "deporte" else "Sube tu horario" }}</b>
-    <small>Tu pintahorarios guardado (⌘/Ctrl + S → "Página web, un solo archivo") o un CSV/Excel.</small>
+    <small>Una foto o captura de tu horario, tu pintahorarios guardado (⌘/Ctrl + S → "Página web, un solo archivo") o un CSV/Excel.</small>
   </div>
   <label class="subir-archivo">
-    <input type="file" name="archivo" accept=".mhtml,.mht,.html,.htm,.csv,.xlsx,.txt" required data-archivo>
+    <input type="file" name="archivo" accept="image/*,.mhtml,.mht,.html,.htm,.csv,.xlsx,.txt" required data-archivo>
     <span class="subir-icono" aria-hidden="true">↑</span>
-    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>Página guardada, CSV o Excel · hasta 2 MB</small></span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>Foto, página guardada, CSV o Excel</small></span>
   </label>
   <div class="subir-horario-botones">
     <button class="boton boton-primario boton-chico">Subir horario</button>
     <a class="enlace-mini" href="{{ url_for('plantilla_horario') }}">Plantilla de ejemplo</a>
   </div>
+  <div class="foto-resultado" data-foto-resultado hidden></div>
 </form>
+<script src="{{ url_for('static', filename='leer_foto.js') }}" defer></script>
 <script>
 document.querySelectorAll("[data-archivo]").forEach(function (campo) {
   campo.addEventListener("change", function () {
