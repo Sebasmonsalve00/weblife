@@ -118,8 +118,8 @@
 <!-- Al agregar, solo se actualizan la grilla, el panel y "Mis materias" (zonas.js) -->
 <form method="post" class="formulario form-clase grid-12 reveal" data-actualiza="horario-grilla horario-panel horario-materias">
   <div class="campo md-6 lg-4">
-    <label for="h-nombre">Materia o actividad</label>
-    <input id="h-nombre" name="nombre" placeholder="ej: Cálculo o Gimnasio" required data-limpiar>
+    <label for="h-nombre">{{ "Actividad" if modo == "deporte" else "Materia o actividad" }}</label>
+    <input id="h-nombre" name="nombre" placeholder="{{ "ej: Gimnasio o Fútbol" if modo == "deporte" else "ej: Cálculo o Gimnasio" }}" required data-limpiar>
   </div>
   <div class="campo md-6 lg-4">
     <label for="h-dia">Día</label>
@@ -130,8 +130,8 @@
     </select>
   </div>
   <div class="campo md-6 lg-4">
-    <label for="h-aula">Aula o lugar</label>
-    <input id="h-aula" name="sala" placeholder="ej: 2.14" data-limpiar>
+    <label for="h-aula">{{ "Lugar" if modo == "deporte" else "Aula o lugar" }}</label>
+    <input id="h-aula" name="sala" placeholder="{{ "ej: Polideportivo" if modo == "deporte" else "ej: 2.14" }}" data-limpiar>
   </div>
   <div class="campo md-6 lg-4">
     <label for="h-desde">Desde</label>
@@ -150,11 +150,16 @@
   </div>
   {% endif %}
   <div class="campo md-6 lg-4">
+    {% if modo == "deporte" %}
+    <!-- En Deporte no hay clases: un solo botón (se guarda como entreno normal, con su casilla de Completado) -->
+    <button class="boton-enviar" title="Agregar actividad" aria-label="Agregar actividad">+ Agregar actividad</button>
+    {% else %}
     <!-- Dos botones iguales, uno al lado del otro: clase (cuenta para la asistencia) o actividad aparte -->
     <div class="botones-pareja">
       <button class="boton-enviar" title="Agregar clase" aria-label="Agregar clase">+ Clase</button>
       <button class="boton-enviar boton-enviar-secundario" name="tipo" value="actividad" title="Agregar actividad aparte" aria-label="Agregar actividad aparte">+ Actividad</button>
     </div>
+    {% endif %}
   </div>
 </form>
 {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
@@ -214,7 +219,8 @@
       <h2>Editar</h2>
       <button type="button" class="boton-icono" data-editar-cerrar aria-label="Cerrar">✕</button>
     </div>
-    <div class="segmentos" role="group" aria-label="Qué es">
+    {# En Deporte no se elige Clase / Actividad (sigue aquí oculto para no cambiar lo guardado) #}
+    <div class="segmentos" role="group" aria-label="Qué es" {{ "hidden" if modo == "deporte" }}>
       <label class="segmento"><input type="radio" name="tipo" value="clase"> Clase</label>
       <label class="segmento"><input type="radio" name="tipo" value="actividad"> Actividad</label>
     </div>
