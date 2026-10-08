@@ -187,7 +187,7 @@
           {% set lugar = "left: calc(" ~ (item.carril * ancho) ~ "% + 3px); width: calc(" ~ ancho ~ "% - 6px); right: auto;" if item.carriles > 1 else "" %}
           {% if item.otro %}
           <!-- Del otro modo: solo para verlo (se edita cambiando de modo) -->
-          <div class="bloque bloque-otro-modo" style="top: {{ item.arriba }}px; height: {{ item.alto }}px; {{ lugar }}"
+          <div class="bloque bloque-otro-modo modo-{{ otro_modo|lower }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px; {{ lugar }}"
                title="{{ otro_modo }}: {{ item.clase.nombre }} ({{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }})">
             <b>{{ item.clase.nombre }}</b>
             <span class="bloque-modo">{{ otro_modo }}</span>
