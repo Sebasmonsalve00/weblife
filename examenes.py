@@ -58,8 +58,11 @@ CALENDARIOS = {
 }
 
 
-# Opciones para "Examen manual" -> "Escribir a mano" (puedes agregar más).
-CURSOS = ["1º Curso", "2º Curso", "3º Curso", "4º Curso"]
+# La universidad de estos calendarios (en "Seleccionar evento" se elige universidad, año, carrera y convocatoria).
+# Al arrancar, la web los copia a la base de datos (ver crear_tablas en app.py) junto a los que suben los usuarios.
+UNIVERSIDAD = "Universidad de Navarra"
+
+# Sugerencias para "Añade tus eventos" (puedes agregar más).
 CONVOCATORIAS = ["Diciembre 2026", "Mayo 2027", "Junio 2027"]
 
 

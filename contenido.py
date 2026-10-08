@@ -228,6 +228,12 @@ MENSAJES = {
     "objetivo": "Objetivo de calorías guardado.",
     "porcentajes_ajustados": "Los porcentajes no sumaban 100 %, así que los ajusté manteniendo la proporción.",
     "examen": "Examen agregado al calendario.",
+    "eventos_subidos": "Listo: {nuevos} evento(s) guardado(s) en {calendarios} carrera(s) y año(s). Elige el tuyo en \"Seleccionar evento\".",
+    "eventos_repetidos": " ({repetidos} ya estaban y no se repitieron.)",
+    "eventos_problemas": " Ojo: {cuantos} fila(s) no se entendieron ({primera})",
+    "eventos_vacio": "No encontré eventos en el documento. Revisa que tenga fecha, hora, nombre y tipo.",
+    "eventos_grande": "El documento es demasiado grande (máximo 2 MB).",
+    "calendario_borrado": "Calendario de eventos borrado.",
     "campo_obligatorio": "Este campo es obligatorio.",
     "numero_invalido": "Escribe un número mayor o igual a 0.",
 }
@@ -243,9 +249,9 @@ FOOTER = [
                                   ("Mes actual", "calendario_vista")]},
 ]
 COPYRIGHT = "weblife · Hecha con Python y Flask"
-# Nota pequeña que sale bajo "Fechas de examen" y en el footer
-NOTA_EXAMENES = ("Si hace falta una o más materias, revisar con su horario oficial "
-                 "de la universidad para añadirlas manualmente.")
+# Nota pequeña que sale en "Seleccionar evento"
+NOTA_EXAMENES = ("Si hace falta una o más materias, revisa el horario oficial de tu universidad "
+                 "y súbelas con \"Añade tus eventos\".")
 
 
 def todo(modo="universidad"):
