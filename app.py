@@ -237,6 +237,15 @@ def crear_tablas():
             hora TEXT,                     -- "16:00" o vacío
             tipo TEXT                      -- "Examen", "Entrega"...
         );
+
+        -- Asignaturas core que el documento de la facultad trae sin fecha ("detalle en enlace").
+        -- Se rellenan cuando alguien sube el documento de las core de la misma convocatoria.
+        CREATE TABLE IF NOT EXISTS eventos_pendientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            calendario_id INTEGER NOT NULL,   -- la carrera y año donde falta
+            nombre TEXT NOT NULL,             -- "Antropología I"
+            facultad TEXT                     -- "Comunicación" (para buscarla en las core de su facultad)
+        );
     """)
     # Los calendarios de examenes.py se copian una vez, para elegirlos igual que los subidos.
     for carrera, cursos in examenes.CALENDARIOS.items():
@@ -1214,6 +1223,54 @@ def ir_al_primero(eventos):
     return redirect(url_for("calendario_vista", anio=int(primero[:4]), mes=int(primero[5:7])))
 
 
+def calendario_de(universidad, curso, carrera, convocatoria):
+    """El número del calendario de esa carrera y año (lo crea si no existe)."""
+    clave = (universidad, curso, carrera, convocatoria)
+    existe = consultar("SELECT id FROM calendarios_eventos WHERE universidad = ? AND curso = ? "
+                       "AND carrera = ? AND convocatoria = ?", clave)
+    if not existe:
+        modificar("INSERT INTO calendarios_eventos (universidad, curso, carrera, convocatoria, subido_por, "
+                  "creado) VALUES (?, ?, ?, ?, ?, ?)", clave + (mi_cuenta(), date.today().isoformat()))
+        existe = consultar("SELECT MAX(id) AS id FROM calendarios_eventos WHERE subido_por = ?", (mi_cuenta(),))
+    return existe[0]["id"]
+
+
+def guardar_evento(calendario_id, nombre, fecha, hora, tipo):
+    """Guarda un evento en un calendario si no estaba ya. Devuelve 1 si lo guardó, 0 si ya estaba."""
+    if consultar("SELECT id FROM eventos_calendario WHERE calendario_id = ? AND nombre = ? AND fecha = ?",
+                 (calendario_id, nombre, fecha)):
+        return 0
+    modificar("INSERT INTO eventos_calendario (calendario_id, nombre, fecha, hora, tipo) VALUES (?, ?, ?, ?, ?)",
+              (calendario_id, nombre, fecha, hora, tipo))
+    return 1
+
+
+def rellenar_pendientes(universidad, convocatoria):
+    """Pone fecha a las asignaturas core que el documento de la facultad dejó sin ella ("detalle en enlace"),
+    buscándolas en los exámenes core subidos para la misma universidad y convocatoria.
+    Devuelve (cuántas se rellenaron, cuántas siguen sin fecha)."""
+    pendientes = consultar("SELECT p.* FROM eventos_pendientes p JOIN calendarios_eventos c ON c.id = p.calendario_id "
+                           "WHERE c.universidad = ? AND c.convocatoria = ?", (universidad, convocatoria))
+    core = consultar("SELECT e.*, c.carrera FROM eventos_calendario e JOIN calendarios_eventos c "
+                     "ON c.id = e.calendario_id WHERE c.universidad = ? AND c.convocatoria = ? AND c.carrera LIKE ?",
+                     (universidad, convocatoria, importar_eventos.CORE + " · %"))
+    core = [dict(e, facultad=importar_eventos.facultad_de_core(e["carrera"])) for e in core]
+    rellenadas = 0
+    for pendiente in pendientes:
+        calendario = consultar("SELECT carrera FROM calendarios_eventos WHERE id = ?", (pendiente["calendario_id"],))
+        iguales = importar_eventos.elegir_core(pendiente["nombre"], calendario[0]["carrera"],
+                                               pendiente["facultad"] or "", core)
+        vistos = set()
+        for examen in iguales:
+            if (examen["nombre"], examen["fecha"]) not in vistos:
+                vistos.add((examen["nombre"], examen["fecha"]))
+                guardar_evento(pendiente["calendario_id"], examen["nombre"], examen["fecha"], examen["hora"], "Examen")
+        if iguales:
+            modificar("DELETE FROM eventos_pendientes WHERE id = ?", (pendiente["id"],))
+            rellenadas += 1
+    return rellenadas, len(pendientes) - rellenadas
+
+
 @app.route("/universidad/calendario/subir-eventos", methods=["POST"])
 def subir_eventos():
     """ "Añade tus eventos": lee el documento (CSV o Excel) y guarda todos sus eventos.
@@ -1230,11 +1287,12 @@ def subir_eventos():
         flash(contenido.MENSAJES["eventos_grande"])
         return redirect(url_for("calendario_vista"))
     try:
-        eventos, problemas = importar_eventos.leer_eventos(archivo.filename, contenido_archivo)
+        eventos, problemas, pendientes = importar_eventos.leer_eventos(archivo.filename, contenido_archivo,
+                                                                       convocatoria)
     except Exception as error:   # documento roto o de otro tipo
         flash(str(error) if isinstance(error, ValueError) else contenido.MENSAJES["eventos_vacio"])
         return redirect(url_for("calendario_vista"))
-    if not eventos:
+    if not eventos and not pendientes:
         flash(contenido.MENSAJES["eventos_vacio"] + (" " + problemas[0] if problemas else ""))
         return redirect(url_for("calendario_vista"))
 
@@ -1242,28 +1300,27 @@ def subir_eventos():
     # un compañero), le sumamos los eventos que falten.
     nuevos = 0
     calendarios = {}   # (carrera, año) -> número del calendario
-    for evento in eventos:
+    for evento in eventos + pendientes:
         grupo = (evento["carrera"], evento["curso"])
         if grupo not in calendarios:
-            clave = (universidad, evento["curso"], evento["carrera"], convocatoria)
-            existe = consultar("SELECT id FROM calendarios_eventos WHERE universidad = ? AND curso = ? "
-                               "AND carrera = ? AND convocatoria = ?", clave)
-            if not existe:
-                modificar("INSERT INTO calendarios_eventos (universidad, curso, carrera, convocatoria, subido_por, "
-                          "creado) VALUES (?, ?, ?, ?, ?, ?)", clave + (mi_cuenta(), date.today().isoformat()))
-                existe = consultar("SELECT MAX(id) AS id FROM calendarios_eventos WHERE subido_por = ?", (mi_cuenta(),))
-            calendarios[grupo] = existe[0]["id"]
+            calendarios[grupo] = calendario_de(universidad, evento["curso"], evento["carrera"], convocatoria)
         calendario_id = calendarios[grupo]
-        if consultar("SELECT id FROM eventos_calendario WHERE calendario_id = ? AND nombre = ? AND fecha = ?",
-                     (calendario_id, evento["nombre"], evento["fecha"])):
-            continue   # ya estaba
-        modificar("INSERT INTO eventos_calendario (calendario_id, nombre, fecha, hora, tipo) VALUES (?, ?, ?, ?, ?)",
-                  (calendario_id, evento["nombre"], evento["fecha"], evento["hora"], evento["tipo"]))
-        nuevos += 1
+        if "fecha" not in evento:   # asignatura core sin fecha: queda pendiente
+            if not consultar("SELECT id FROM eventos_pendientes WHERE calendario_id = ? AND nombre = ?",
+                             (calendario_id, evento["nombre"])):
+                modificar("INSERT INTO eventos_pendientes (calendario_id, nombre, facultad) VALUES (?, ?, ?)",
+                          (calendario_id, evento["nombre"], evento["facultad"]))
+            continue
+        nuevos += guardar_evento(calendario_id, evento["nombre"], evento["fecha"], evento["hora"], evento["tipo"])
+    rellenadas, faltan = rellenar_pendientes(universidad, convocatoria)
 
     mensaje = contenido.MENSAJES["eventos_subidos"].format(nuevos=nuevos, calendarios=len(calendarios))
     if len(eventos) > nuevos:
         mensaje += contenido.MENSAJES["eventos_repetidos"].format(repetidos=len(eventos) - nuevos)
+    if rellenadas:
+        mensaje += contenido.MENSAJES["core_rellenadas"].format(cuantas=rellenadas)
+    if faltan:
+        mensaje += contenido.MENSAJES["core_pendientes"].format(cuantas=faltan)
     if problemas:
         mensaje += contenido.MENSAJES["eventos_problemas"].format(cuantos=len(problemas), primera=problemas[0])
     flash(mensaje)
@@ -1282,6 +1339,7 @@ def borrar_calendario_eventos(id):
     """Borra un calendario de eventos que subiste tú (los de otros no se pueden borrar)."""
     if consultar("SELECT id FROM calendarios_eventos WHERE id = ? AND subido_por = ?", (id, mi_cuenta())):
         modificar("DELETE FROM eventos_calendario WHERE calendario_id = ?", (id,))
+        modificar("DELETE FROM eventos_pendientes WHERE calendario_id = ?", (id,))
         modificar("DELETE FROM calendarios_eventos WHERE id = ?", (id,))
         flash(contenido.MENSAJES["calendario_borrado"])
     return redirect(url_for("calendario_vista"))

@@ -230,6 +230,8 @@ MENSAJES = {
     "examen": "Examen agregado al calendario.",
     "eventos_subidos": "Listo: {nuevos} evento(s) guardado(s) en {calendarios} carrera(s) y año(s). Elige los tuyos en \"Seleccionar evento\".",
     "eventos_repetidos": " ({repetidos} ya estaban y no se repitieron.)",
+    "core_rellenadas": " {cuantas} asignatura(s) core ya tienen su fecha en su carrera y año.",
+    "core_pendientes": " {cuantas} asignatura(s) core siguen sin fecha: sube el documento de las core con la misma universidad y convocatoria.",
     "eventos_problemas": " Ojo: {cuantos} fila(s) no se entendieron ({primera})",
     "eventos_vacio": "No encontré eventos en el documento. Revisa que tenga fecha, hora, nombre y tipo.",
     "eventos_grande": "El documento es demasiado grande (máximo 2 MB).",

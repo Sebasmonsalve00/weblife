@@ -13,6 +13,11 @@
 #  la primera fila (los calendarios oficiales suelen traer un título encima).
 #  También vale un Excel con una hoja por carrera o por curso, o con filas de título
 #  como "GRADO EN PERIODISMO" o "2º CURSO" encima de sus exámenes.
+#
+#  Asignaturas core: en el documento de la facultad salen sin fecha ("detalle en enlace");
+#  se guardan como pendientes. El documento de las core (columnas Asignatura, Facultad y
+#  "Examen diciembre", "Examen mayo"... con "Fecha: 7/12/2026 Horario: 9 a 11h Aula: ..." dentro)
+#  se sube aparte con la misma convocatoria, y sus fechas rellenan esas pendientes.
 # ============================================================
 
 import csv
@@ -54,7 +59,7 @@ def sin_tildes(texto):
 def columna_de(titulo):
     """Qué columna es un título: "Fecha del examen" -> "fecha", "Titulación" -> "carrera"..."""
     t = sin_tildes(titulo)
-    if not t:
+    if not t or len(t) > 40 or re.search(r"\d", t):   # un título es corto y sin números
         return None
     if t in SINONIMOS:
         return SINONIMOS[t]
@@ -104,10 +109,13 @@ def leer_hora(valor):
     if isinstance(valor, time):
         return valor.strftime("%H:%M")
     texto = str(valor or "").strip().lower()
+    if "horario" in texto:   # celda de las core: "Fecha: 7/12/2026  Horario: 9 a 11h  Aula: ..."
+        texto = texto.split("horario", 1)[1].lstrip(": ").split("\n")[0]
     if not texto or texto.strip("-–— ") == "" or texto in ("sin hora", "por determinar", "pd"):
         return None
-    # "16:00", "16.00 h", "9:30 - 11:30" (nos quedamos con la primera), "16h"
-    encontrada = re.search(r"(\d{1,2})\s*[:.h]\s*(\d{2})", texto) or re.search(r"\b(\d{1,2})\s*h\b", texto)
+    # "16:00", "16.00 h", "9:30 - 11:30" (nos quedamos con la primera), "16h", "9 a 11h"
+    encontrada = (re.search(r"(\d{1,2})\s*[:.h]\s*(\d{2})", texto)
+                  or re.search(r"\b(\d{1,2})\s*(?:h\b|a\s+\d|-\s*\d)", texto))
     if not encontrada:
         return False
     hora = int(encontrada.group(1))
@@ -191,18 +199,111 @@ def leer_seccion(texto):
     return None, None
 
 
-def leer_eventos(nombre_archivo, contenido):
-    """Lee el documento y devuelve (eventos, problemas).
-    eventos = [{"fecha", "hora", "nombre", "tipo", "carrera", "curso"}, ...]; problemas = textos con las filas que no se entendieron."""
-    eventos, problemas = [], []
-    for nombre_hoja, filas in hojas_del_archivo(nombre_archivo, contenido):
-        leer_hoja(nombre_hoja, filas, eventos, problemas)
-    if not eventos and not problemas:
+CORE = "Core Curriculum"
+
+
+def facultad_de_core(carrera):
+    """ "Core Curriculum · Comunicación (Mark.)" -> "Comunicación (Mark.)"."""
+    return carrera.split(" · ", 1)[1] if carrera.startswith(CORE + " · ") else ""
+
+
+def carrera_core(facultad):
+    """Dónde se guardan los exámenes core de una facultad: "Core Curriculum · Comunicación"."""
+    return f"{CORE} · {facultad}"
+
+
+def primera_palabra(nombre):
+    """ "Ética I C (Marketing)" -> "etica";  "Antropología FCOM (no Mark.)" -> "antropologia"."""
+    palabras = re.sub(r"[^a-z0-9 ]", " ", sin_tildes(nombre)).split()
+    return palabras[0] if palabras else ""
+
+
+def vale_para_carrera(facultad_core, carrera):
+    """¿Un examen core de "Comunicación (Mark.)" es para esta carrera?
+    Lo de entre paréntesis dice para quién es: "(Mark.)" solo Marketing, "(no Mark.)" todas menos Marketing,
+    "(Per. y Com.Corp.)" Periodismo y Corporativa. Sin paréntesis vale para todas.
+    Devuelve "propia" (es justo la de su carrera), "general" (vale para todas) o None (no es para ella)."""
+    parentesis = re.search(r"\(([^)]*)\)", sin_tildes(facultad_core))
+    if not parentesis:
+        return "general"
+    palabras_carrera = re.sub(r"[^a-z ]", " ", sin_tildes(carrera)).split()
+    for parte in re.split(r"\s+y\s+|,", parentesis.group(1)):
+        parte = parte.strip()
+        negada = parte.startswith("no ")
+        abreviatura = re.sub(r"[^a-z.]", "", parte.removeprefix("no ")).strip(".").split(".")[-1]
+        es_la_suya = bool(abreviatura) and any(p.startswith(abreviatura) for p in palabras_carrera)
+        if negada:
+            return None if es_la_suya else "propia"
+        if es_la_suya:
+            return "propia"
+    return None
+
+
+def elegir_core(nombre, carrera, facultad, examenes_core):
+    """Qué exámenes core corresponden a una asignatura sin fecha del documento de la facultad.
+    nombre: "Antropología I"; carrera: "Grado en Marketing"; facultad: "Comunicación";
+    examenes_core: [{"nombre", "facultad" ("Comunicación (Mark.)"), ...}].
+    Se busca la misma asignatura (por su primera palabra) en las core de su facultad; si hay una
+    hecha para su carrera se usa esa; si no, todas las que valen para la facultad entera (grupos)."""
+    palabra, suya = primera_palabra(nombre), sin_tildes(facultad)
+    propias, generales = [], []
+    for examen in examenes_core:
+        if primera_palabra(examen["nombre"]) != palabra:
+            continue
+        if suya and not sin_tildes(examen["facultad"]).startswith(suya):
+            continue
+        encaja = vale_para_carrera(examen["facultad"], carrera)
+        (propias if encaja == "propia" else generales if encaja == "general" else []).append(examen)
+    return propias or generales
+
+
+def leer_eventos(nombre_archivo, contenido, convocatoria=""):
+    """Lee el documento y devuelve (eventos, problemas, pendientes).
+    eventos = [{"fecha", "hora", "nombre", "tipo", "carrera", "curso"}, ...]; problemas = textos con las filas
+    que no se entendieron; pendientes = asignaturas sin fecha en este documento (las core: "detalle en enlace")."""
+    eventos, problemas, pendientes = [], [], []
+    hojas = hojas_del_archivo(nombre_archivo, contenido)
+    # En el documento de las core solo se leen las hojas con su tabla (las demás son borradores)
+    de_core = [h for h in hojas if any(columnas_core(fila, convocatoria) for fila in h[1][:15])]
+    for nombre_hoja, filas in de_core or hojas:
+        leer_hoja(nombre_hoja, filas, eventos, problemas, pendientes, convocatoria)
+    # El documento de las core repite filas en varias hojas: cada examen una sola vez
+    vistos = set()
+    eventos = [e for e in eventos if not ((e["carrera"], e["curso"], e["nombre"], e["fecha"]) in vistos
+                                          or vistos.add((e["carrera"], e["curso"], e["nombre"], e["fecha"])))]
+    if not eventos and not problemas and not pendientes:
         problemas.append("El documento está vacío.")
-    return eventos, problemas
+    return eventos, problemas, pendientes
 
 
-def leer_hoja(nombre_hoja, filas, eventos, problemas):
+def columnas_core(fila, convocatoria):
+    """Si es la fila de títulos del documento de las core, devuelve el orden de las columnas.
+    De "Examen diciembre", "Examen mayo", "Examen junio" solo vale la de la convocatoria que elegiste."""
+    titulos = [sin_tildes(c) if isinstance(c, str) else "" for c in fila]
+    meses = {i: re.match(r"examen(es)?\s+(?:de\s+)?([a-z]+)", t) for i, t in enumerate(titulos)}
+    meses = {i: m.group(2) for i, m in meses.items() if m and m.group(2) in MESES}
+    nombre_en = next((i for i, t in enumerate(titulos) if re.search(r"\b(asignatura|materia)\b", t)), None)
+    if nombre_en is None and "codigo" in titulos:
+        nombre_en = titulos.index("codigo") + 1   # en algunas hojas el título de la asignatura viene mal ("Filo")
+    if not meses or nombre_en is None:
+        return None
+    elegida = next((i for i, mes in meses.items() if mes in sin_tildes(convocatoria)), None)
+    orden = []
+    for i, t in enumerate(titulos):
+        if i == elegida:
+            orden.append("fecha")
+        elif i in meses:
+            orden.append(None)
+        elif i == nombre_en:
+            orden.append("nombre")
+        elif re.search(r"\b(facultad|facultades|centro)\b", t):
+            orden.append("facultad")
+        else:
+            orden.append(None)
+    return orden
+
+
+def leer_hoja(nombre_hoja, filas, eventos, problemas, pendientes, convocatoria=""):
     """Lee una hoja: busca la fila de títulos, y luego cada fila es un evento.
     La carrera y el curso salen de su columna; si no hay, de una fila de título encima
     ("GRADO EN PERIODISMO", "2º CURSO") o del nombre de la hoja."""
@@ -211,15 +312,40 @@ def leer_hoja(nombre_hoja, filas, eventos, problemas):
     curso_actual = leer_curso(nombre_hoja) if es_curso(nombre_hoja) else ""
 
     orden = None
+    es_core = False
+    facultad = ""   # "Comunicación", si el documento dice "FACULTAD DE COMUNICACIÓN"
     for numero, fila in enumerate(filas, start=1):
         celdas = [c for c in fila if str(c or "").strip()]
         if not celdas:
             continue
+        # ¿Es la fila de títulos del documento de las core?
+        core = columnas_core(fila, convocatoria)
+        if core:
+            orden, es_core = core, True
+            if "fecha" not in core:
+                return   # esta convocatoria no sale en el documento de las core
+            continue
         # ¿Es la fila de títulos? (tiene al menos "fecha" y "nombre")
         titulos = [columna_de(c) if isinstance(c, str) else None for c in fila]
         if "fecha" in titulos and "nombre" in titulos:
-            orden = titulos
+            orden, es_core = titulos, False
             continue
+        if not orden and len(celdas) == 1 and re.match(r"facultad\s+de\s+", sin_tildes(celdas[0])):
+            facultad = re.sub(r"^facultad\s+de\s+", "", " ".join(celdas[0].split()), flags=re.IGNORECASE)
+            facultad = facultad[:1].upper() + facultad[1:].lower()
+            continue
+        if es_core:
+            leer_fila_core(dict(zip(orden, fila)), eventos)
+            continue
+        # Asignatura sin fecha ("Antropología | detalle en enlace fila 6"): pendiente de las core
+        if orden:
+            datos = {columna: fila[i] for i, columna in enumerate(orden) if columna and i < len(fila)}
+            nombre, fecha_texto = str(datos.get("nombre") or "").strip(), datos.get("fecha")
+            if (nombre and isinstance(fecha_texto, str) and fecha_texto.strip() and not leer_fecha(fecha_texto)
+                    and not re.match(r"web\b", sin_tildes(fecha_texto)) and carrera_actual and curso_actual):
+                pendientes.append({"nombre": " ".join(nombre.split())[:120], "carrera": carrera_actual[:80],
+                                   "curso": curso_actual[:40], "facultad": facultad})
+                continue
         # Filas de título de un bloque: "1º Curso – Grado en Periodismo", "GRADO EN PERIODISMO", "2º CURSO"...
         # (también las que no tienen fecha, como "Antropología | detalle en enlace": se saltan)
         if len(celdas) <= 2 and all(isinstance(c, str) for c in celdas) and not any(leer_fecha(c) for c in celdas):
@@ -254,6 +380,25 @@ def leer_hoja(nombre_hoja, filas, eventos, problemas):
             continue
         eventos.append({"fecha": fecha, "hora": hora, "nombre": nombre[:120], "tipo": tipo[:40],
                         "carrera": carrera[:80], "curso": curso[:40]})
+
+
+def leer_fila_core(datos, eventos):
+    """Una fila del documento de las core -> un examen en "Core Curriculum · <facultad>" por cada facultad.
+    Celdas sin examen ("---", "no", "último día de clase") se saltan."""
+    nombre = " ".join(str(datos.get("nombre") or "").split())
+    celda = str(datos.get("fecha") or "")
+    fecha = leer_fecha(celda) if "fecha" in sin_tildes(celda) or isinstance(datos.get("fecha"), (date, datetime)) else None
+    if not nombre or not fecha:
+        return
+    hora = leer_hora(celda) or None
+    if nombre.startswith("#"):   # "#N/A": fila rota de la hoja
+        return
+    # Una línea por facultad; "Comunicación NO" quiere decir que no es para esa facultad
+    facultades = [" ".join(f.split()) for f in str(datos.get("facultad") or "").split("\n")
+                  if f.strip() and not re.search(r"\bNO$", f.strip())] or ["Todas"]
+    for facultad in facultades:
+        eventos.append({"fecha": fecha, "hora": hora, "nombre": nombre[:120], "tipo": "Examen",
+                        "carrera": carrera_core(facultad)[:80], "curso": "Todos los cursos"})
 
 
 def es_examen(tipo):
