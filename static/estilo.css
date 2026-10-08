@@ -218,10 +218,17 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   .nav-acciones { display: flex; }
 }
 
-/* Interruptor Universidad / Deporte. En el móvil, centrado entre el logo y las barras;
-   en escritorio, logo, interruptor, páginas y Mi perfil quedan a la misma distancia. */
-.nav-modo { flex: 1; display: flex; justify-content: center; }
-@media (min-width: 1024px) { .nav-modo { flex: none; } }
+/* Centro de la barra: interruptor Universidad / Deporte + páginas.
+   En el móvil, el interruptor queda centrado entre el logo y las barras.
+   En escritorio, el logo y los botones de la derecha ocupan lo mismo,
+   así que el grupo del centro queda centrado en la barra. */
+.nav-centro { flex: 1; display: flex; align-items: center; justify-content: center; }
+@media (min-width: 1024px) {
+  .logo, .nav-acciones { flex: 1 1 0; }
+  .nav-acciones { justify-content: flex-end; }
+  .nav-centro { flex: none; gap: clamp(24px, calc(37.5vw - 352px), 128px); }
+  .nav-acciones .boton { white-space: nowrap; }
+}
 /* Interruptor: píldora gris (como los segmentos) con una bolita blanca que se desliza */
 .interruptor-modo {
   position: relative; display: inline-grid; grid-template-columns: 1fr 1fr;

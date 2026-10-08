@@ -45,7 +45,8 @@
     <div class="nav-interior">
       <a href="{{ url_for('inicio') }}" class="logo">{{ texto.nombre_sitio }}</a>
 
-      <!-- Interruptor centrado en el hueco entre el logo y el menú (o las barras en el móvil) -->
+      <!-- Centro de la barra: interruptor + páginas, juntos y centrados -->
+      <div class="nav-centro">
       <div class="nav-modo">
         {% if session.usuario_id %}
           <!-- Interruptor Universidad / Deporte: cada calendario guarda sus datos aparte -->
@@ -68,6 +69,7 @@
           <a href="{{ url_for(ruta) }}" {% if request.endpoint == ruta %}class="activo" aria-current="page"{% endif %}>{{ nombre }}</a>
         {% endfor %}
       </nav>
+      </div>
 
       <!-- Botones de la derecha -->
       <div class="nav-acciones">
