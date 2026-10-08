@@ -189,7 +189,7 @@
   </div>
 </section>
 
-<!-- Vista de un día: todo lo que tienes de 8:00 a 20:00 -->
+<!-- Vista de un día: todo lo que tienes de 6:00 a 22:00 -->
 <dialog class="dia-vista" id="dia-vista" aria-labelledby="dia-vista-titulo">
   <div class="dia-vista-cabecera">
     <button type="button" class="boton boton-redondo boton-chico" data-dia-mover="-1" aria-label="Día anterior">←</button>
@@ -205,7 +205,7 @@
 (function () {
   var dialogo = document.getElementById("dia-vista");
   if (!dialogo) return;
-  var DESDE = 8, HASTA = 20;          // horas que se ven
+  var DESDE = {{ horas_dia[0] }}, HASTA = {{ horas_dia[1] }};   // horas que se ven (las mismas que el horario)
   var MESES = {{ texto_meses | tojson }}, DIAS = {{ dias | tojson }};
   var nombres = {% if modo == "deporte" %}{ actividad: "Actividad", clase: "Entreno", tarea: "Meta", "tarea-hecha": "Meta (cumplida)", evento: "Evento", examen: "Examen" }{% else %}{ actividad: "Actividad", clase: "Clase", tarea: "Entrega", "tarea-hecha": "Entrega (hecha)", evento: "Evento", examen: "Examen" }{% endif %};
   var abierto = null;                 // día que se está viendo
@@ -234,7 +234,7 @@
       DIAS[(fecha.getDay() + 6) % 7] + " " + dia + " de " + MESES[d.mes].toLowerCase();
     var delDia = d.agenda[dia] || { sin_hora: [], con_hora: [] };
 
-    // Lo que no tiene hora (entregas) o cae fuera de 8:00-20:00
+    // Lo que no tiene hora (entregas) o cae fuera de 6:00-22:00
     var sinHora = dialogo.querySelector(".dia-vista-sin-hora");
     sinHora.textContent = "";
     var dentro = [];

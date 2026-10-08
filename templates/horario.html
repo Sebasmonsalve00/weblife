@@ -31,11 +31,11 @@
   </div>
   <div class="campo">
     <label for="h-desde">Desde</label>
-    <input id="h-desde" type="time" name="hora_inicio" min="08:00" max="20:00" value="08:00" required>
+    <input id="h-desde" type="time" name="hora_inicio" min="{{ hora_desde }}" max="{{ hora_hasta }}" value="08:00" required>
   </div>
   <div class="campo">
     <label for="h-hasta">Hasta</label>
-    <input id="h-hasta" type="time" name="hora_fin" min="08:00" max="20:00" value="09:00" required>
+    <input id="h-hasta" type="time" name="hora_fin" min="{{ hora_desde }}" max="{{ hora_hasta }}" value="09:00" required>
   </div>
   {% if modo == "deporte" %}
   <div class="campo">
@@ -195,7 +195,7 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
 <div class="lg-8 horario-principal">
 
 
-<!-- Grilla: una columna por día, una fila por hora de 8:00 a 20:00 -->
+<!-- Grilla: una columna por día, una fila por hora de 6:00 a 22:00 -->
 <div class="grilla-contenedor reveal" data-zona="horario-grilla" data-zona-tambien="horario-panel horario-materias">
   <div class="grilla" style="grid-template-columns: 56px repeat({{ dias_visibles|length }}, minmax(110px, 1fr));">
     <div></div>
@@ -264,8 +264,8 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
       <div class="campo"><label for="e-categoria">Tipo</label>
         <select id="e-categoria" name="categoria">{% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}</select></div>
       {% endif %}
-      <div class="campo"><label for="e-desde">Desde</label><input id="e-desde" type="time" name="hora_inicio" min="08:00" max="20:00" required></div>
-      <div class="campo"><label for="e-hasta">Hasta</label><input id="e-hasta" type="time" name="hora_fin" min="08:00" max="20:00" required></div>
+      <div class="campo"><label for="e-desde">Desde</label><input id="e-desde" type="time" name="hora_inicio" min="{{ hora_desde }}" max="{{ hora_hasta }}" required></div>
+      <div class="campo"><label for="e-hasta">Hasta</label><input id="e-hasta" type="time" name="hora_fin" min="{{ hora_desde }}" max="{{ hora_hasta }}" required></div>
     </div>
     <button class="boton boton-primario editar-guardar">Guardar cambios</button>
   </form>

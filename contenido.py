@@ -43,7 +43,7 @@ PAGINAS = {
     "horario": {
         "etiqueta": "Universidad",
         "titulo": "Horario semanal",
-        "subtitulo": "Tus clases de 8:00 a 20:00, tu asistencia y las tareas que te dejan.",
+        "subtitulo": "Tus clases de 6:00 a 22:00, tu asistencia y las tareas que te dejan.",
     },
     "tareas": {
         "etiqueta": "Universidad",
@@ -72,7 +72,7 @@ PAGINAS_DEPORTE = {
     "horario": {
         "etiqueta": "Deporte",
         "titulo": "Horario de entrenos",
-        "subtitulo": "Tus entrenamientos de 8:00 a 20:00, si fuiste y lo que te toca hacer.",
+        "subtitulo": "Tus entrenamientos de 6:00 a 22:00, si fuiste y lo que te toca hacer.",
     },
     "tareas": {
         "etiqueta": "Deporte",

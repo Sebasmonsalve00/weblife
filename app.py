@@ -311,6 +311,9 @@ def datos_para_plantillas():
         "fondo": config_diseno.colores_fondo(request.endpoint, acento),
         "texto": contenido.todo(mi_modo()),
         "modo": mi_modo(),
+        # Horas que se ven en el horario y en la vista de un día del calendario ("06:00" a "22:00")
+        "hora_desde": f"{HORA_INICIO_DIA:02d}:00", "hora_hasta": f"{HORA_FIN_DIA:02d}:00",
+        "horas_dia": (HORA_INICIO_DIA, HORA_FIN_DIA),
     }
 
 
@@ -570,9 +573,9 @@ def inicio():
 #  UNIVERSIDAD: Horario semanal de clases
 # ------------------------------------------------------------
 
-# El horario se dibuja de 8:00 a 20:00. Cada hora mide 60 píxeles de alto.
-HORA_INICIO_DIA = 8
-HORA_FIN_DIA = 20
+# El horario (y la vista de un día del calendario) va de 6:00 a 22:00. Cada hora mide 60 píxeles de alto.
+HORA_INICIO_DIA = 6
+HORA_FIN_DIA = 22
 PIXELES_POR_HORA = 60
 
 
@@ -697,7 +700,7 @@ def horario():
         inicio = max(a_minutos(clase["hora_inicio"]), limite_arriba)
         fin = min(a_minutos(clase["hora_fin"]), limite_abajo)
         if fin <= inicio:
-            continue  # la clase queda fuera de 8:00-20:00, no se dibuja
+            continue  # la clase queda fuera de 6:00-22:00, no se dibuja
         por_dia[clase["dia"]].append({
             "clase": clase,
             "otro": es_otro,
@@ -1102,7 +1105,7 @@ def calendario_vista():
 
 
 def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales, dueno=None, otro=None, agenda=None):
-    """Lo que tienes cada día del mes, para la vista de un día (8:00 a 20:00).
+    """Lo que tienes cada día del mes, para la vista de un día (6:00 a 22:00).
     Devuelve {dia: {"sin_hora": [...], "con_hora": [...]}}. Cada cosa con hora
     lleva "inicio" y "fin" ("09:00"); las que no tienen hora van en "sin_hora".
     Con "dueno" y "otro" ("Uni" o "Deporte") suma a "agenda" lo del otro modo, marcado con "otro"."""

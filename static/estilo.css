@@ -699,8 +699,8 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .dia-vista-cerrar { margin-left: 4px; }
 .dia-vista-sin-hora { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .dia-item { display: flex; flex-direction: column; border-radius: 10px; padding: 6px 10px; font-size: 14px; }
-/* 13 líneas (8:00 a 20:00), 48px por hora */
-.dia-vista-horas { --alto-hora: 48px; position: relative; height: calc(12 * var(--alto-hora)); margin: 8px 0 16px 48px; }
+/* 17 líneas (6:00 a 22:00), 48px por hora */
+.dia-vista-horas { --alto-hora: 48px; position: relative; height: calc(16 * var(--alto-hora)); margin: 8px 0 16px 48px; }
 .dia-linea { position: absolute; left: 0; right: 0; top: calc(var(--fila) * var(--alto-hora)); border-top: 1px solid var(--borde); }
 .dia-linea span { position: absolute; left: -48px; top: -9px; font-size: 12px; color: var(--texto-secundario); font-variant-numeric: tabular-nums; }
 .dia-bloque {
