@@ -212,6 +212,8 @@ REGISTRAR = {
 MENSAJES = {
     "clase": "Clase agregada al horario.",
     "actividad_extra": "Actividad agregada al horario.",
+    "horario_subido": "Listo: {nuevas} clase(s) añadida(s) a tu horario ({materias} materia(s)). Ya salen en Tareas y Asistencia.",
+    "horario_vacio": "No encontré clases en el documento. Si es una página guardada, guárdala como \"Página web, un solo archivo\" con tu semana a la vista.",
     "clase_editada": "Cambios guardados.",
     "tarea": "Tarea guardada.",
     "meta": "Meta guardada.",

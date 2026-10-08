@@ -24,6 +24,7 @@ import config_diseno
 import contenido
 import examenes
 import importar_eventos
+import importar_horario
 
 # Creamos la aplicación web. "__name__" le dice a Flask dónde está este archivo.
 app = Flask(__name__)
@@ -734,6 +735,55 @@ def horario():
         dia_siguiente=(dia_panel + timedelta(days=1)).isoformat(),
         entrega_sugerida=(dia_panel + timedelta(days=7)).isoformat(),
     )
+
+
+@app.route("/universidad/horario/subir", methods=["POST"])
+def subir_horario():
+    """ "Sube tu horario": lee un CSV o Excel con tus clases y las pone en el horario.
+    Las materias nuevas salen solas en Tareas, Asistencia y "Mis materias" (todo sale de las clases)."""
+    archivo = request.files.get("archivo")
+    if not archivo or not archivo.filename:
+        flash(contenido.MENSAJES["campo_obligatorio"])
+        return redirect(url_for("horario"))
+    contenido_archivo = archivo.read(2 * 1024 * 1024 + 1)
+    if len(contenido_archivo) > 2 * 1024 * 1024:
+        flash(contenido.MENSAJES["eventos_grande"])
+        return redirect(url_for("horario"))
+    try:
+        clases, problemas = importar_horario.leer_horario(archivo.filename, contenido_archivo)
+    except Exception as error:   # documento roto o de otro tipo
+        flash(str(error) if isinstance(error, ValueError) else contenido.MENSAJES["horario_vacio"])
+        return redirect(url_for("horario"))
+    if not clases:
+        flash(contenido.MENSAJES["horario_vacio"] + (" " + problemas[0] if problemas else ""))
+        return redirect(url_for("horario"))
+
+    nuevas = 0
+    for clase in clases:
+        # Si ya tenías esa clase (misma materia, día y hora), no se repite
+        if consultar("SELECT id FROM clases WHERE usuario_id = ? AND lower(nombre) = lower(?) AND dia = ? "
+                     "AND hora_inicio = ?", (yo(), clase["nombre"], clase["dia"], clase["hora_inicio"])):
+            continue
+        modificar("INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala, usuario_id, tipo) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                  (clase["nombre"], clase["dia"], clase["hora_inicio"], clase["hora_fin"], clase["sala"], yo(),
+                   clase["tipo"]))
+        nuevas += 1
+    materias = len({c["nombre"].lower() for c in clases if not c["tipo"]})
+    mensaje = contenido.MENSAJES["horario_subido"].format(nuevas=nuevas, materias=materias)
+    if len(clases) > nuevas:
+        mensaje += contenido.MENSAJES["eventos_repetidos"].format(repetidos=len(clases) - nuevas)
+    if problemas:
+        mensaje += contenido.MENSAJES["eventos_problemas"].format(cuantos=len(problemas), primera=problemas[0])
+    flash(mensaje)
+    return redirect(url_for("horario"))
+
+
+@app.route("/universidad/horario/plantilla-horario.csv")
+def plantilla_horario():
+    """Un CSV de ejemplo para "Sube tu horario"."""
+    return Response("\ufeff" + importar_horario.PLANTILLA, mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=plantilla-horario.csv"})
 
 
 @app.route("/universidad/horario/editar/<int:id>", methods=["POST"])
