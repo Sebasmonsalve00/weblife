@@ -40,24 +40,36 @@
 
     {% if modo != "deporte" %}{# Los calendarios de eventos son solo de Universidad #}
     <div class="examenes-botones">
-    <!-- Añade tus eventos: subir una tabla (CSV o Excel) con fecha, hora, nombre y tipo -->
+    <!-- Añade tus eventos: subir el calendario oficial (CSV o Excel) -->
     <details class="examenes-mini">
       <summary class="boton boton-secundario boton-chico">Añade tus eventos <span class="flecha" aria-hidden="true">▾</span></summary>
-      <div class="examenes-panel vidrio">
-      <form method="post" action="{{ url_for('subir_eventos') }}" enctype="multipart/form-data" class="examenes-form">
-        <p class="nota-mini">Sube una tabla (CSV o Excel) con una fila por evento y estas columnas:
-          <b>fecha</b>, <b>hora</b>, <b>nombre</b>, <b>tipo</b> (examen, entrega...), <b>carrera</b> y <b>año</b>.
-          Puede traer varias carreras y años: se guardan todos.
-          <a href="{{ url_for('plantilla_eventos') }}">Descargar plantilla</a></p>
-        <label for="se-universidad">Universidad</label>
-        <input id="se-universidad" name="universidad" list="lista-universidades" required maxlength="80" placeholder="ej: Universidad de Navarra">
-        <label for="se-convocatoria">Convocatoria</label>
-        <input id="se-convocatoria" name="convocatoria" list="lista-convocatorias" required maxlength="80" placeholder="ej: Diciembre 2026">
-        <label for="se-archivo">Documento</label>
-        <input id="se-archivo" type="file" name="archivo" accept=".csv,.xlsx,.txt" required>
-        <button class="boton boton-primario boton-chico">Subir eventos</button>
-        <p class="nota-mini">Los calendarios que subes los pueden elegir también tus compañeros en "Seleccionar evento".</p>
-      </form>
+      <div class="examenes-panel panel-ancho vidrio">
+        <form method="post" action="{{ url_for('subir_eventos') }}" enctype="multipart/form-data" class="examenes-form">
+          <div class="panel-cabecera">
+            <b>Sube el calendario oficial</b>
+            <span class="nota-mini">Una tabla con una fila por evento. Puede traer varias carreras y años: se guardan todos.</span>
+          </div>
+          <ul class="columnas-doc" aria-label="Columnas del documento">
+            <li>fecha</li><li>hora</li><li>nombre</li><li>tipo</li><li>carrera</li><li>año</li>
+          </ul>
+          <div class="panel-dos">
+            <div class="campo ancho-completo">
+              <label for="se-universidad">Universidad</label>
+              <input id="se-universidad" name="universidad" list="lista-universidades" required maxlength="80" placeholder="ej: Universidad de Navarra">
+            </div>
+            <div class="campo ancho-completo">
+              <label for="se-convocatoria">Convocatoria</label>
+              <input id="se-convocatoria" name="convocatoria" list="lista-convocatorias" required maxlength="80" placeholder="ej: Diciembre 2026">
+            </div>
+          </div>
+          <label class="subir-archivo">
+            <input type="file" name="archivo" accept=".csv,.xlsx,.txt" required data-archivo>
+            <span class="subir-icono" aria-hidden="true">↑</span>
+            <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>CSV o Excel · hasta 2 MB</small></span>
+          </label>
+          <button class="boton boton-primario boton-chico">Subir eventos</button>
+          <a class="enlace-mini" href="{{ url_for('plantilla_eventos') }}">Descargar plantilla de ejemplo</a>
+        </form>
         {% if mis_calendarios %}
         <div class="manuales">
           <p class="examenes-actual">Subidos por ti</p>
@@ -75,30 +87,61 @@
     <datalist id="lista-universidades">{% for u in calendarios %}<option value="{{ u }}">{% endfor %}</datalist>
     <datalist id="lista-convocatorias">{% for c in convocatorias %}<option value="{{ c }}">{% endfor %}</datalist>
 
-    <!-- Seleccionar evento: elegir universidad, año, carrera y convocatoria para verlos en el calendario -->
+    <!-- Seleccionar evento: elegir universidad, año, carrera y convocatoria, y marcar los eventos a añadir -->
     <details class="examenes-mini">
       <summary class="boton boton-secundario boton-chico">Seleccionar evento <span class="flecha" aria-hidden="true">▾</span></summary>
-      <form method="post" action="{{ url_for('elegir_examenes') }}" class="examenes-panel vidrio" id="form-examenes">
-        {% if eleccion %}<p class="examenes-actual">Viendo: {{ eleccion.universidad }} · {{ eleccion.curso }} · {{ eleccion.carrera }} · {{ eleccion.convocatoria }}</p>{% endif %}
-        {% if calendarios %}
-        <label for="ex-universidad">Universidad</label>
-        <select id="ex-universidad" required>
-          {% for universidad in calendarios %}<option>{{ universidad }}</option>{% endfor %}
-        </select>
-        <label for="ex-curso">Año</label>
-        <select id="ex-curso" required></select>
-        <label for="ex-carrera">Carrera</label>
-        <select id="ex-carrera" required></select>
-        <label for="ex-convocatoria">Convocatoria</label>
-        <select id="ex-convocatoria" name="calendario" required></select>
-        <button class="boton boton-primario boton-chico" name="accion" value="ver">Añadir evento</button>
-        {% else %}
-        <p class="nota-mini">Todavía no hay eventos cargados. Súbelos con "Añade tus eventos".</p>
+      <div class="examenes-panel panel-ancho vidrio">
+        <form method="post" action="{{ url_for('elegir_examenes') }}" class="examenes-form" id="form-examenes">
+          <div class="panel-cabecera">
+            <b>Elige tus eventos</b>
+            <span class="nota-mini">Marca los que quieras y añádelos. Puedes repetir con otra carrera o año.</span>
+          </div>
+          {% if calendarios %}
+          <div class="panel-dos">
+            <div class="campo ancho-completo">
+              <label for="ex-universidad">Universidad</label>
+              <select id="ex-universidad">{% for universidad in calendarios %}<option>{{ universidad }}</option>{% endfor %}</select>
+            </div>
+            <div class="campo">
+              <label for="ex-convocatoria">Convocatoria</label>
+              <select id="ex-convocatoria"></select>
+            </div>
+            <div class="campo">
+              <label for="ex-curso">Año</label>
+              <select id="ex-curso"></select>
+            </div>
+            <div class="campo ancho-completo">
+              <label for="ex-carrera">Carrera</label>
+              <select id="ex-carrera"></select>
+            </div>
+          </div>
+          <div class="lista-eventos-cabecera">
+            <span class="etiqueta-campo" id="ex-cuantos">Eventos</span>
+            <button type="button" class="enlace-mini" data-marcar-todos>Desmarcar todos</button>
+          </div>
+          <div class="lista-eventos" id="ex-eventos" role="group" aria-labelledby="ex-cuantos"></div>
+          <button class="boton boton-primario boton-chico" name="accion" value="anadir">Añadir evento</button>
+          {% else %}
+          <p class="nota-mini">Todavía no hay eventos cargados. Súbelos con "Añade tus eventos".</p>
+          {% endif %}
+          {% if eleccion %}
+          <p class="examenes-actual">También ves todo: {{ eleccion.carrera }} · {{ eleccion.curso }} · {{ eleccion.convocatoria }}</p>
+          <button class="boton boton-secundario boton-chico" name="accion" value="quitar" formnovalidate>Dejar de verlo</button>
+          {% endif %}
+          {% if ocultos %}<button class="boton boton-secundario boton-chico" name="accion" value="mostrar_ocultos" formnovalidate>Volver a mostrar borrados ({{ ocultos }})</button>{% endif %}
+        </form>
+        {% if manuales %}
+        <div class="manuales">
+          <p class="examenes-actual">Añadidos a tu calendario</p>
+          {% for examen in manuales %}
+            <div class="manual-item">
+              <span>{{ examen.asignatura }} <small>{{ examen.fecha }}{% if examen.hora %} · {{ examen.hora }}{% endif %}{% if examen.tipo %} · {{ examen.tipo }}{% endif %}</small></span>
+              {{ boton_borrar(url_for('borrar_examen_manual', id=examen.id), "Quitar: " ~ examen.asignatura) }}
+            </div>
+          {% endfor %}
+        </div>
         {% endif %}
-        {% if eleccion %}<button class="boton boton-secundario boton-chico" name="accion" value="quitar" formnovalidate>Quitar</button>{% endif %}
-        {% if ocultos %}<button class="boton boton-secundario boton-chico" name="accion" value="mostrar_ocultos" formnovalidate>Volver a mostrar borrados ({{ ocultos }})</button>{% endif %}
-        <p class="nota-mini">{{ texto.nota_examenes }}</p>
-      </form>
+      </div>
     </details>
     </div>
     {% endif %}
@@ -261,41 +304,97 @@
 })();
 </script>
 {% if modo != "deporte" %}
-<!-- Seleccionar evento: cada lista cambia según lo elegido antes (universidad, año, carrera, convocatoria) -->
+<!-- Seleccionar evento: cada lista cambia según lo elegido antes, y abajo salen sus eventos para marcarlos -->
 <script>
 (function () {
-  var datos = {{ calendarios | tojson }};
+  var datos = {{ calendarios | tojson }};                 // universidad -> año -> carrera -> convocatoria -> número
+  var eventos = {{ eventos_por_calendario | tojson }};    // número -> [eventos]
   var universidad = document.getElementById("ex-universidad");
   if (!universidad) return;
+  var convocatoria = document.getElementById("ex-convocatoria");
   var curso = document.getElementById("ex-curso");
   var carrera = document.getElementById("ex-carrera");
-  var convocatoria = document.getElementById("ex-convocatoria");
-  function llenar(select, objeto, conValor) {
+  var lista = document.getElementById("ex-eventos");
+  var cuantos = document.getElementById("ex-cuantos");
+  var marcarTodos = document.querySelector("[data-marcar-todos]");
+
+  function llenar(select, nombres) {
+    var antes = select.value;
     select.innerHTML = "";
-    Object.keys(objeto || {}).forEach(function (nombre) {
+    nombres.forEach(function (nombre) {
       var opcion = document.createElement("option");
       opcion.textContent = nombre;
-      opcion.value = conValor ? objeto[nombre] : nombre;   // la convocatoria manda el número del calendario
       select.appendChild(opcion);
     });
+    if (nombres.indexOf(antes) !== -1) select.value = antes;   // si sigue existiendo, se queda
   }
-  function anio() { return datos[universidad.value] || {}; }
-  function cambiarCarrera() { llenar(convocatoria, (anio()[curso.value] || {})[carrera.value], true); }
-  function cambiarCurso() { llenar(carrera, anio()[curso.value]); cambiarCarrera(); }
-  function cambiarUniversidad() { llenar(curso, anio()); cambiarCurso(); }
+  function anios() { return datos[universidad.value] || {}; }
+  // Convocatorias de esa universidad (de cualquier año y carrera)
+  function convocatorias() {
+    var todas = [];
+    Object.values(anios()).forEach(function (carreras) {
+      Object.values(carreras).forEach(function (convs) {
+        Object.keys(convs).forEach(function (c) { if (todas.indexOf(c) === -1) todas.push(c); });
+      });
+    });
+    return todas;
+  }
+  // Años y carreras que tienen algo en esa convocatoria
+  function aniosCon() {
+    return Object.keys(anios()).filter(function (a) {
+      return Object.values(anios()[a]).some(function (convs) { return convocatoria.value in convs; });
+    });
+  }
+  function carrerasCon() {
+    var deAnio = anios()[curso.value] || {};
+    return Object.keys(deAnio).filter(function (c) { return convocatoria.value in deAnio[c]; });
+  }
+  function fechaCorta(f) { return f.slice(8, 10) + "/" + f.slice(5, 7); }
+  function pintarEventos() {
+    var numero = ((anios()[curso.value] || {})[carrera.value] || {})[convocatoria.value];
+    var deEste = eventos[numero] || [];
+    lista.innerHTML = "";
+    deEste.forEach(function (e) {
+      var fila = document.createElement("label");
+      fila.className = "evento-opcion";
+      var caja = document.createElement("input");
+      caja.type = "checkbox"; caja.name = "evento"; caja.value = e.id; caja.checked = true;
+      var texto = document.createElement("span");
+      var nombre = document.createElement("b"); nombre.textContent = e.nombre;
+      var detalle = document.createElement("small");
+      detalle.textContent = fechaCorta(e.fecha) + (e.hora ? " · " + e.hora : "") + (e.tipo ? " · " + e.tipo : "");
+      texto.appendChild(nombre); texto.appendChild(detalle);
+      fila.appendChild(caja); fila.appendChild(texto);
+      lista.appendChild(fila);
+    });
+    if (!deEste.length) lista.innerHTML = '<p class="nota-mini">No hay eventos con esta combinación.</p>';
+    cuantos.textContent = "Eventos (" + deEste.length + ")";
+    marcarTodos.textContent = "Desmarcar todos";
+  }
+  function cambiarCurso() { llenar(carrera, carrerasCon()); pintarEventos(); }
+  function cambiarConvocatoria() { llenar(curso, aniosCon()); cambiarCurso(); }
+  function cambiarUniversidad() { llenar(convocatoria, convocatorias()); cambiarConvocatoria(); }
   universidad.addEventListener("change", cambiarUniversidad);
+  convocatoria.addEventListener("change", cambiarConvocatoria);
   curso.addEventListener("change", cambiarCurso);
-  carrera.addEventListener("change", cambiarCarrera);
-  // Si ya elegiste uno, lo dejamos marcado.
-  var elegido = {{ ([eleccion.universidad, eleccion.curso, eleccion.carrera, eleccion.id] if eleccion else []) | tojson }};
-  if (elegido.length && datos[elegido[0]]) universidad.value = elegido[0];
+  carrera.addEventListener("change", pintarEventos);
+  marcarTodos.addEventListener("click", function () {
+    var cajas = lista.querySelectorAll("input[type=checkbox]");
+    var marcar = Array.prototype.some.call(cajas, function (c) { return !c.checked; });
+    cajas.forEach(function (c) { c.checked = marcar; });
+    marcarTodos.textContent = marcar ? "Desmarcar todos" : "Marcar todos";
+  });
   cambiarUniversidad();
-  if (elegido.length) {
-    curso.value = elegido[1]; cambiarCurso();
-    carrera.value = elegido[2]; cambiarCarrera();
-    convocatoria.value = elegido[3];
-  }
 })();
+
+// "Elegir documento": enseña el nombre del archivo elegido
+document.querySelectorAll("[data-archivo]").forEach(function (campo) {
+  campo.addEventListener("change", function () {
+    var nombre = campo.closest(".subir-archivo").querySelector("[data-archivo-nombre]");
+    nombre.textContent = campo.files.length ? campo.files[0].name : "Elegir documento";
+    campo.closest(".subir-archivo").classList.toggle("con-archivo", campo.files.length > 0);
+  });
+});
 
 // Al abrir un panel se cierra el otro
 (function () {

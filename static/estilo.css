@@ -730,6 +730,40 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .examenes-panel input { height: 40px; padding: 0 12px; font-size: 14px; margin-bottom: 4px; }
 .examenes-form { display: flex; flex-direction: column; gap: 6px; }
 .examenes-form[hidden] { display: none; }
+/* Paneles "Añade tus eventos" y "Seleccionar evento" */
+.examenes-panel.panel-ancho { width: min(360px, calc(100vw - 32px)); gap: 12px; }
+.examenes-panel .examenes-form { gap: 12px; }
+.examenes-panel .campo input, .examenes-panel .campo select { margin-bottom: 0; }
+.panel-cabecera { display: flex; flex-direction: column; gap: 2px; }
+.panel-cabecera b { font-size: 15px; }
+.panel-cabecera .nota-mini { margin: 0; }
+.panel-dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.panel-dos .ancho-completo { grid-column: 1 / -1; }
+.columnas-doc { display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.columnas-doc li { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--acento-suave); border: 1px solid var(--borde); }
+/* Elegir documento: una caja punteada en vez del botón del navegador */
+.subir-archivo { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px;
+  border: 1px dashed var(--borde-boton); border-radius: var(--radio-input); cursor: pointer;
+  transition: border-color var(--t-boton) ease, background var(--t-boton) ease; }
+.subir-archivo:hover, .subir-archivo:focus-within { border-color: var(--color-acento); background: var(--acento-suave); }
+.subir-archivo.con-archivo { border-style: solid; border-color: var(--color-acento); }
+.subir-archivo input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; margin: 0; padding: 0; }
+.subir-icono { width: 32px; height: 32px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%;
+  background: var(--acento-degradado); font-weight: 600; }
+.subir-texto { display: flex; flex-direction: column; min-width: 0; }
+.subir-texto b { font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subir-texto small { font-size: 12px; color: var(--texto-secundario); }
+.enlace-mini { align-self: center; font: inherit; font-size: 12px; color: var(--texto-secundario); background: none; border: 0;
+  padding: 0; cursor: pointer; text-decoration: underline; }
+.enlace-mini:hover { color: var(--color-texto); }
+/* Lista de eventos para marcar */
+.lista-eventos-cabecera { display: flex; justify-content: space-between; align-items: center; }
+.lista-eventos { max-height: 220px; overflow-y: auto; border: 1px solid var(--borde); border-radius: var(--radio-input); padding: 4px; }
+.evento-opcion { display: flex; gap: 10px; align-items: flex-start; padding: 6px 8px; border-radius: 8px; cursor: pointer; }
+.evento-opcion:hover { background: var(--acento-suave); }
+.examenes-panel .evento-opcion input { width: 16px; height: 16px; margin: 2px 0 0; padding: 0; flex-shrink: 0; accent-color: var(--color-texto); }
+.evento-opcion span { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
+.evento-opcion small { color: var(--texto-secundario); font-size: 12px; }
 /* Pestañas "De la lista" / "Escribir a mano" */
 .manuales { border-top: 1px solid var(--borde); margin-top: 8px; padding-top: 8px; max-height: 160px; overflow-y: auto; }
 .manual-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0; }

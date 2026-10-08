@@ -211,6 +211,11 @@ def crear_tablas():
         if "usuario_id" not in columnas:
             conexion.execute(f"ALTER TABLE {tabla} ADD COLUMN usuario_id INTEGER")
 
+    # Eventos que añadiste de "Seleccionar evento": guardan también su tipo (examen, entrega...)
+    columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(examenes_manuales)")]
+    if "tipo" not in columnas:
+        conexion.execute("ALTER TABLE examenes_manuales ADD COLUMN tipo TEXT")
+
     # "Añade tus eventos": calendarios de eventos (exámenes, entregas...) que suben los usuarios.
     # Son de todos: cualquiera puede elegirlos en "Seleccionar evento".
     conexion.executescript("""
@@ -922,12 +927,18 @@ def avisos_calendario():
         elif objetivo - ahora <= timedelta(days=7):
             aviso["titulo"] = f"{tipo}: {asignatura}"
             urgentes.append(aviso)
-    # Exámenes que agregaste con "Examen manual".
+    # Eventos que añadiste uno a uno en "Seleccionar evento" (o antes con "Examen manual").
     for examen in manuales:
         objetivo = datetime.fromisoformat(f"{examen['fecha']}T{examen['hora'] or '23:59'}")
-        if objetivo >= ahora:
-            examenes_proximos.append({"titulo": examen["asignatura"], "fecha": examen["fecha"],
-                                      "hora": examen["hora"], "objetivo": objetivo.isoformat(timespec="minutes")})
+        aviso = {"titulo": examen["asignatura"], "fecha": examen["fecha"], "hora": examen["hora"],
+                 "objetivo": objetivo.isoformat(timespec="minutes")}
+        if objetivo < ahora:
+            continue
+        if importar_eventos.es_examen(examen["tipo"]):
+            examenes_proximos.append(aviso)
+        elif objetivo - ahora <= timedelta(days=7):
+            aviso["titulo"] = f"{examen['tipo']}: {examen['asignatura']}"
+            urgentes.append(aviso)
     examenes_proximos.sort(key=lambda aviso: aviso["objetivo"])
 
     urgentes.sort(key=lambda aviso: aviso["objetivo"])
@@ -983,8 +994,10 @@ def calendario_vista():
     for examen in reversed(manuales):
         if examen["fecha"].startswith(f"{anio}-{mes:02d}-"):
             texto = f"{examen['hora']} {examen['asignatura']}" if examen["hora"] else examen["asignatura"]
+            es_examen = importar_eventos.es_examen(examen["tipo"])
             cosas_por_dia.setdefault(int(examen["fecha"][8:10]), []).insert(
-                0, {"texto": texto, "tipo": "examen", "manual_id": examen["id"]})
+                0, {"texto": texto if es_examen else f"{examen['tipo']}: {texto}",
+                    "tipo": "examen" if es_examen else "evento", "manual_id": examen["id"]})
 
     # Lo del OTRO modo (Uni en Deporte y al revés) también se ve en el calendario, solo para mirarlo:
     # sin botón de borrar y con su etiqueta. Los avisos de arriba siguen siendo solo de este modo.
@@ -1022,6 +1035,7 @@ def calendario_vista():
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
         calendarios=opciones_calendarios(), avisos=avisos_calendario(), eleccion=eleccion,
         manuales=manuales, convocatorias=examenes.CONVOCATORIAS,
+        eventos_por_calendario=eventos_por_calendario(),
         mis_calendarios=consultar("SELECT * FROM calendarios_eventos WHERE subido_por = ? ORDER BY id DESC",
                                   (mi_cuenta(),)),
         ocultos=cuantos_ocultos(eleccion), agenda=agenda, texto_meses=MESES,
@@ -1070,7 +1084,9 @@ def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales, du
             anotar(int(fecha[8:10]), asignatura, "examen" if examen else "evento", hora, detalle="" if examen else tipo)
     for examen in manuales:
         if examen["fecha"].startswith(prefijo):
-            anotar(int(examen["fecha"][8:10]), examen["asignatura"], "examen", examen["hora"])
+            es_examen = importar_eventos.es_examen(examen["tipo"])
+            anotar(int(examen["fecha"][8:10]), examen["asignatura"], "examen" if es_examen else "evento",
+                   examen["hora"], detalle="" if es_examen else examen["tipo"])
     for del_dia in agenda.values():
         del_dia["con_hora"].sort(key=lambda cosa: cosa["inicio"])
     return agenda
@@ -1129,6 +1145,17 @@ def opciones_calendarios():
     return opciones
 
 
+def eventos_por_calendario():
+    """Para "Seleccionar evento": {número de calendario: [eventos]} para elegirlos uno a uno."""
+    if mi_modo() == "deporte":
+        return {}
+    todos = {}
+    for e in consultar("SELECT * FROM eventos_calendario ORDER BY fecha, hora, nombre"):
+        todos.setdefault(e["calendario_id"], []).append(
+            {"id": e["id"], "nombre": e["nombre"], "fecha": e["fecha"], "hora": e["hora"] or "", "tipo": e["tipo"] or ""})
+    return todos
+
+
 def cuantos_ocultos(eleccion):
     """Cuántos exámenes del calendario elegido borraste (para poder volver a mostrarlos)."""
     if not eleccion:
@@ -1156,21 +1183,27 @@ def elegir_examenes():
         modificar("DELETE FROM examenes_ocultos WHERE usuario_id = ?", (yo(),))
         return redirect(request.referrer or url_for("calendario_vista"))
 
-    calendario_id = request.form.get("calendario", type=int)
-    lista = eventos_de(calendario_id) if calendario_id else []
-    if not lista:
+    # "Añadir evento": los eventos marcados se copian a tu calendario (como los exámenes manuales),
+    # así puedes juntar eventos de distintas carreras y años.
+    ids = [int(x) for x in request.form.getlist("evento") if x.isdigit()]
+    anadidos = []
+    for evento_id in ids:
+        fila = consultar("SELECT e.*, c.carrera, c.curso, c.convocatoria FROM eventos_calendario e "
+                         "JOIN calendarios_eventos c ON c.id = e.calendario_id WHERE e.id = ?", (evento_id,))
+        if not fila:
+            continue
+        e = fila[0]
+        if not consultar("SELECT id FROM examenes_manuales WHERE usuario_id = ? AND asignatura = ? AND fecha = ?",
+                         (yo(), e["nombre"], e["fecha"])):
+            modificar("INSERT INTO examenes_manuales (usuario_id, asignatura, fecha, hora, carrera, curso, convocatoria, "
+                      "tipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                      (yo(), e["nombre"], e["fecha"], e["hora"], e["carrera"], e["curso"], e["convocatoria"], e["tipo"]))
+        anadidos.append(e)
+    if not anadidos:
+        flash(contenido.MENSAJES["elige_evento"])
         return redirect(url_for("calendario_vista"))
-    modificar("UPDATE usuarios SET examenes_sel = ? WHERE id = ?", (str(calendario_id), mi_cuenta()))
-
-    # Antes los exámenes se copiaban como eventos: borramos esas copias para que no salgan dobles.
-    for calendario in examenes.CALENDARIOS.values():
-        for curso in calendario.values():
-            for convocatoria in curso.values():
-                for asignatura, fecha, _, _ in convocatoria:
-                    modificar("DELETE FROM eventos WHERE titulo = ? AND fecha = ? AND usuario_id = ?",
-                              (f"Examen: {asignatura}", fecha, yo()))
-
-    return ir_al_primero(lista)
+    flash(contenido.MENSAJES["eventos_anadidos"].format(cuantos=len(anadidos)))
+    return ir_al_primero(anadidos)
 
 
 def ir_al_primero(eventos):
