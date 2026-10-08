@@ -228,7 +228,7 @@ MENSAJES = {
     "objetivo": "Objetivo de calorías guardado.",
     "porcentajes_ajustados": "Los porcentajes no sumaban 100 %, así que los ajusté manteniendo la proporción.",
     "examen": "Examen agregado al calendario.",
-    "eventos_subidos": "Listo: {nuevos} evento(s) añadido(s) a {nombre}. Ya los ves en el calendario.",
+    "eventos_subidos": "Listo: {nuevos} evento(s) guardado(s) en {calendarios} carrera(s) y año(s). Elige el tuyo en \"Seleccionar evento\".",
     "eventos_repetidos": " ({repetidos} ya estaban y no se repitieron.)",
     "eventos_problemas": " Ojo: {cuantos} fila(s) no se entendieron ({primera})",
     "eventos_vacio": "No encontré eventos en el documento. Revisa que tenga fecha, hora, nombre y tipo.",

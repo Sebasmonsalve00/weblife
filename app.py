@@ -1021,7 +1021,7 @@ def calendario_vista():
         dias=DIAS_SEMANA, cosas_por_dia=cosas_por_dia,
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
         calendarios=opciones_calendarios(), avisos=avisos_calendario(), eleccion=eleccion,
-        manuales=manuales, cursos=examenes.CURSOS, convocatorias=examenes.CONVOCATORIAS,
+        manuales=manuales, convocatorias=examenes.CONVOCATORIAS,
         mis_calendarios=consultar("SELECT * FROM calendarios_eventos WHERE subido_por = ? ORDER BY id DESC",
                                   (mi_cuenta(),)),
         ocultos=cuantos_ocultos(eleccion), agenda=agenda, texto_meses=MESES,
@@ -1183,11 +1183,13 @@ def ir_al_primero(eventos):
 
 @app.route("/universidad/calendario/subir-eventos", methods=["POST"])
 def subir_eventos():
-    """ "Añade tus eventos": lee el documento (CSV o Excel) y guarda sus eventos en un calendario
-    de universidad, año, carrera y convocatoria. Después lo deja elegido para verlo ya."""
-    datos = {campo: request.form.get(campo, "").strip()[:80] for campo in ("universidad", "curso", "carrera", "convocatoria")}
+    """ "Añade tus eventos": lee el documento (CSV o Excel) y guarda todos sus eventos.
+    Tú pones la universidad y la convocatoria; la carrera y el año de cada evento vienen en el documento,
+    así que un mismo documento llena los calendarios de varias carreras y años a la vez."""
+    universidad = request.form.get("universidad", "").strip()[:80]
+    convocatoria = request.form.get("convocatoria", "").strip()[:80]
     archivo = request.files.get("archivo")
-    if not all(datos.values()) or not archivo or not archivo.filename:
+    if not universidad or not convocatoria or not archivo or not archivo.filename:
         flash(contenido.MENSAJES["campo_obligatorio"])
         return redirect(url_for("calendario_vista"))
     contenido_archivo = archivo.read(2 * 1024 * 1024 + 1)
@@ -1203,35 +1205,36 @@ def subir_eventos():
         flash(contenido.MENSAJES["eventos_vacio"] + (" " + problemas[0] if problemas else ""))
         return redirect(url_for("calendario_vista"))
 
-    # Si ese calendario ya existe (por ejemplo, lo subió un compañero), le sumamos los eventos que falten
-    clave = (datos["universidad"], datos["curso"], datos["carrera"], datos["convocatoria"])
-    existe = consultar("SELECT id FROM calendarios_eventos WHERE universidad = ? AND curso = ? AND carrera = ? "
-                       "AND convocatoria = ?", clave)
-    if existe:
-        calendario_id = existe[0]["id"]
-    else:
-        modificar("INSERT INTO calendarios_eventos (universidad, curso, carrera, convocatoria, subido_por, creado) "
-                  "VALUES (?, ?, ?, ?, ?, ?)", clave + (mi_cuenta(), date.today().isoformat()))
-        calendario_id = consultar("SELECT MAX(id) AS id FROM calendarios_eventos WHERE subido_por = ?",
-                                  (mi_cuenta(),))[0]["id"]
-    ya_estan = {(e["nombre"], e["fecha"]) for e in eventos_de(calendario_id)}
+    # Un calendario por cada carrera y año del documento. Si ya existe (por ejemplo, lo subió
+    # un compañero), le sumamos los eventos que falten.
     nuevos = 0
+    calendarios = {}   # (carrera, año) -> número del calendario
     for evento in eventos:
-        if (evento["nombre"], evento["fecha"]) in ya_estan:
-            continue
-        ya_estan.add((evento["nombre"], evento["fecha"]))
+        grupo = (evento["carrera"], evento["curso"])
+        if grupo not in calendarios:
+            clave = (universidad, evento["curso"], evento["carrera"], convocatoria)
+            existe = consultar("SELECT id FROM calendarios_eventos WHERE universidad = ? AND curso = ? "
+                               "AND carrera = ? AND convocatoria = ?", clave)
+            if not existe:
+                modificar("INSERT INTO calendarios_eventos (universidad, curso, carrera, convocatoria, subido_por, "
+                          "creado) VALUES (?, ?, ?, ?, ?, ?)", clave + (mi_cuenta(), date.today().isoformat()))
+                existe = consultar("SELECT MAX(id) AS id FROM calendarios_eventos WHERE subido_por = ?", (mi_cuenta(),))
+            calendarios[grupo] = existe[0]["id"]
+        calendario_id = calendarios[grupo]
+        if consultar("SELECT id FROM eventos_calendario WHERE calendario_id = ? AND nombre = ? AND fecha = ?",
+                     (calendario_id, evento["nombre"], evento["fecha"])):
+            continue   # ya estaba
         modificar("INSERT INTO eventos_calendario (calendario_id, nombre, fecha, hora, tipo) VALUES (?, ?, ?, ?, ?)",
                   (calendario_id, evento["nombre"], evento["fecha"], evento["hora"], evento["tipo"]))
         nuevos += 1
-    modificar("UPDATE usuarios SET examenes_sel = ? WHERE id = ?", (str(calendario_id), mi_cuenta()))
 
-    mensaje = contenido.MENSAJES["eventos_subidos"].format(nuevos=nuevos, nombre=f"{clave[2]} · {clave[1]} · {clave[3]}")
+    mensaje = contenido.MENSAJES["eventos_subidos"].format(nuevos=nuevos, calendarios=len(calendarios))
     if len(eventos) > nuevos:
         mensaje += contenido.MENSAJES["eventos_repetidos"].format(repetidos=len(eventos) - nuevos)
     if problemas:
         mensaje += contenido.MENSAJES["eventos_problemas"].format(cuantos=len(problemas), primera=problemas[0])
     flash(mensaje)
-    return ir_al_primero(eventos)
+    return redirect(url_for("calendario_vista"))
 
 
 @app.route("/universidad/calendario/plantilla-eventos.csv")

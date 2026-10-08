@@ -63,7 +63,6 @@ CALENDARIOS = {
 UNIVERSIDAD = "Universidad de Navarra"
 
 # Sugerencias para "Añade tus eventos" (puedes agregar más).
-CURSOS = ["1º Curso", "2º Curso", "3º Curso", "4º Curso"]
 CONVOCATORIAS = ["Diciembre 2026", "Mayo 2027", "Junio 2027"]
 
 

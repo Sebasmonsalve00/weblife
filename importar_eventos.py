@@ -2,19 +2,22 @@
 #  importar_eventos.py - Leer el documento de "Añade tus eventos"
 #
 #  El documento es una tabla (CSV o Excel) con una fila por evento:
-#      fecha | hora | nombre | tipo
-#      2026-12-02 | 16:00 | Corporate Communication | Examen
+#      fecha | hora | nombre | tipo | carrera | año
+#      2026-12-02 | 16:00 | Corporate Communication | Examen | Grado en Marketing | 2
+#  Un mismo documento puede traer varias carreras y varios años: se guardan todos.
 #  - fecha: "2026-12-02", "02/12/2026" o "02-12-2026" (o una celda de fecha en Excel)
 #  - hora: "16:00" o vacía si no tiene hora
 #  - tipo: qué es (Examen, Entrega, Presentación, Festivo...). Vacío = Examen.
+#  - carrera: "Grado en Marketing"...   - año: "2", "2º" o "2º Curso" (se guarda como "2º Curso")
 #  La primera fila puede tener los títulos de las columnas (en cualquier orden).
 # ============================================================
 
 import csv
 import io
+import re
 from datetime import date, datetime, time
 
-COLUMNAS = ("fecha", "hora", "nombre", "tipo")
+COLUMNAS = ("fecha", "hora", "nombre", "tipo", "carrera", "curso")
 
 # Otras formas de llamar a cada columna en la primera fila
 SINONIMOS = {
@@ -22,12 +25,16 @@ SINONIMOS = {
     "hora": "hora", "time": "hora",
     "nombre": "nombre", "evento": "nombre", "asignatura": "nombre", "materia": "nombre", "name": "nombre",
     "tipo": "tipo", "naturaleza": "tipo", "clase": "tipo", "type": "tipo",
+    "carrera": "carrera", "grado": "carrera", "titulación": "carrera", "titulacion": "carrera",
+    "estudios": "carrera", "degree": "carrera",
+    "año": "curso", "ano": "curso", "curso": "curso", "year": "curso", "año de carrera": "curso",
 }
 
 # Lo que se descarga con "Descargar plantilla"
-PLANTILLA = ("fecha;hora;nombre;tipo\n"
-             "2026-12-02;16:00;Corporate Communication;Examen\n"
-             "2026-12-10;;Trabajo final de Branding;Entrega\n")
+PLANTILLA = ("fecha;hora;nombre;tipo;carrera;año\n"
+             "2026-12-02;16:00;Corporate Communication;Examen;Grado en Marketing;2\n"
+             "2026-12-07;12:00;Brand Management;Examen;Grado en Marketing;3\n"
+             "2026-12-10;;Trabajo final de Branding;Entrega;Grado en Periodismo;2\n")
 
 
 def leer_fecha(valor):
@@ -60,6 +67,19 @@ def leer_hora(valor):
     return False
 
 
+def leer_curso(valor):
+    """Convierte el año en "2º Curso" (acepta 2, "2", "2º", "2º Curso", "Segundo"...)."""
+    if isinstance(valor, float) and valor.is_integer():
+        valor = int(valor)
+    texto = str(valor or "").strip()
+    numero = re.fullmatch(r"(\d)\s*(º|°|o|er|ro|do|to)?\.?\s*(curso|año)?", texto, re.IGNORECASE)
+    if numero:
+        return f"{numero.group(1)}º Curso"
+    palabras = {"primero": 1, "segundo": 2, "tercero": 3, "cuarto": 4, "quinto": 5, "sexto": 6}
+    primera = texto.lower().split(" ")[0] if texto else ""
+    return f"{palabras[primera]}º Curso" if primera in palabras else texto
+
+
 def filas_del_archivo(nombre_archivo, contenido):
     """Saca las filas (listas de celdas) de un CSV o de un Excel (.xlsx)."""
     if nombre_archivo.lower().endswith(".xlsx"):
@@ -79,7 +99,7 @@ def filas_del_archivo(nombre_archivo, contenido):
 
 def leer_eventos(nombre_archivo, contenido):
     """Lee el documento y devuelve (eventos, problemas).
-    eventos = [{"fecha", "hora", "nombre", "tipo"}, ...]; problemas = textos con las filas que no se entendieron."""
+    eventos = [{"fecha", "hora", "nombre", "tipo", "carrera", "curso"}, ...]; problemas = textos con las filas que no se entendieron."""
     filas = [fila for fila in filas_del_archivo(nombre_archivo, contenido)
              if any(str(celda or "").strip() for celda in fila)]
     if not filas:
@@ -102,10 +122,16 @@ def leer_eventos(nombre_archivo, contenido):
         hora = leer_hora(datos.get("hora"))
         nombre = str(datos.get("nombre") or "").strip()
         tipo = str(datos.get("tipo") or "").strip().capitalize() or "Examen"
+        carrera = str(datos.get("carrera") or "").strip()
+        curso = leer_curso(datos.get("curso"))
         if not fecha or not nombre or hora is False:
             problemas.append(f"Fila {numero}: falta la fecha o el nombre, o no se entiende la hora.")
             continue
-        eventos.append({"fecha": fecha, "hora": hora, "nombre": nombre[:120], "tipo": tipo[:40]})
+        if not carrera or not curso:
+            problemas.append(f"Fila {numero}: falta la carrera o el año.")
+            continue
+        eventos.append({"fecha": fecha, "hora": hora, "nombre": nombre[:120], "tipo": tipo[:40],
+                        "carrera": carrera[:80], "curso": curso[:40]})
     return eventos, problemas
 
 
