@@ -478,16 +478,25 @@ input:focus, select:focus, textarea:focus {
 
 /* ---------- Horario ---------- */
 .panel-dia { border-radius: var(--radio-tarjeta); padding: 20px; box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
-/* En móvil y tablet el orden es: horario, clases del día, agregar clase, mis materias */
+/* Columna izquierda: dos burbujas pequeñas (añadir clase, subir horario) y debajo el panel del día */
+.horario-lateral { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* En móvil y tablet el orden es: horario, agregar clase y subir horario, clases del día, mis materias */
 @media (max-width: 1023px) {
-  .horario-principal { display: contents; }
-  .horario-principal > * { grid-column: 1 / -1; min-width: 0; }
+  .horario-principal, .horario-lateral { display: contents; }
+  .horario-principal > *, .horario-lateral > * { grid-column: 1 / -1; min-width: 0; }
   .horario-principal > .grilla-contenedor { order: 1; }
-  .grid-12 > .panel-dia { order: 2; }
-  .horario-principal > .form-clase, .horario-principal > .aviso-error, .horario-principal > .subir-horario { order: 3; }
+  .horario-lateral > .form-clase, .horario-lateral > .aviso-error, .horario-lateral > .subir-horario { order: 2; }
+  .horario-lateral > .panel-dia { order: 3; }
   .horario-principal > .seccion { order: 4; margin-top: 0; }
 }
-@media (min-width: 1024px) { .panel-dia { position: sticky; top: 76px; } }
+.horario-lateral > .formulario { margin-bottom: 0; }
+.form-compacta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 18px; }
+.form-compacta .ancho { grid-column: 1 / -1; }
+.form-compacta-titulo, .subir-horario-texto b { margin: 0; font-size: 15px; font-weight: 600; }
+.form-compacta .campo { gap: 4px; }
+.form-compacta .campo label { font-size: 12px; }
+.form-compacta input, .form-compacta select { height: 40px; padding: 0 12px; font-size: 14px; line-height: 38px; }
+.form-compacta .boton-enviar, .formulario.form-compacta .boton-enviar { height: 40px; width: 100%; font-size: 14px; }
 .panel-titulo { display: flex; justify-content: space-between; align-items: center; text-align: center; margin-bottom: 12px; }
 .centro { text-align: center; margin: 4px auto 12px; }
 .panel-clase {
@@ -757,12 +766,11 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   padding: 0; cursor: pointer; text-decoration: underline; }
 .enlace-mini:hover { color: var(--color-texto); }
 /* Horario: subir el horario desde un documento */
-.subir-horario { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 16px; align-items: center; padding: 18px 24px; }
+.subir-horario { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
 .subir-horario-texto { display: flex; flex-direction: column; gap: 2px; }
-.subir-horario-texto b { font-weight: 600; }
 .subir-horario-texto small { font-size: 12px; color: var(--texto-secundario); }
-.subir-horario-botones { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-@media (max-width: 767px) { .subir-horario { grid-template-columns: 1fr; } }
+.subir-horario .subir-archivo { padding: 8px 10px; align-self: stretch; }
+.subir-horario-botones { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 /* Lista de eventos para marcar */
 .lista-eventos-cabecera { display: flex; justify-content: space-between; align-items: center; }
 .lista-eventos { max-height: 220px; overflow-y: auto; border: 1px solid var(--borde); border-radius: var(--radio-input); padding: 4px; }
@@ -1057,6 +1065,8 @@ html:not(.js) .carga { display: none; }
   transition: border-color var(--t-boton) ease, box-shadow var(--t-boton) ease;
 }
 .selector-boton:hover, .selector-boton:active { transform: none; }
+.form-compacta .selector-boton { height: 40px; padding: 0 10px 0 12px; font-size: 14px; }
+.form-compacta .selector-icono svg { width: 18px; height: 18px; }
 .selector-boton:focus-visible, .selector-boton[aria-expanded="true"] {
   outline: none; border-color: var(--color-acento); box-shadow: 0 0 0 4px var(--acento-degradado);
 }
