@@ -164,6 +164,32 @@
 </form>
 {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
 
+<!-- Subir el horario entero desde un documento (CSV o Excel) -->
+<form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal">
+  <div class="subir-horario-texto">
+    <b>{{ "Sube tus entrenos" if modo == "deporte" else "Sube tu horario" }}</b>
+    <small>Una fila por {{ "actividad" if modo == "deporte" else "clase" }} (día, desde, hasta, {{ "actividad" if modo == "deporte" else "materia" }}, aula) o la tabla con los días arriba y las horas a la izquierda.</small>
+  </div>
+  <label class="subir-archivo">
+    <input type="file" name="archivo" accept=".csv,.xlsx,.txt" required data-archivo>
+    <span class="subir-icono" aria-hidden="true">↑</span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>CSV o Excel · hasta 2 MB</small></span>
+  </label>
+  <div class="subir-horario-botones">
+    <button class="boton boton-primario boton-chico">Subir horario</button>
+    <a class="enlace-mini" href="{{ url_for('plantilla_horario') }}">Plantilla de ejemplo</a>
+  </div>
+</form>
+<script>
+document.querySelectorAll("[data-archivo]").forEach(function (campo) {
+  campo.addEventListener("change", function () {
+    var caja = campo.closest(".subir-archivo");
+    caja.querySelector("[data-archivo-nombre]").textContent = campo.files.length ? campo.files[0].name : "Elegir documento";
+    caja.classList.toggle("con-archivo", campo.files.length > 0);
+  });
+});
+</script>
+
 <!-- Grilla: una columna por día, una fila por hora de 8:00 a 20:00 -->
 <div class="grilla-contenedor reveal" data-zona="horario-grilla" data-zona-tambien="horario-panel horario-materias">
   <div class="grilla" style="grid-template-columns: 56px repeat({{ dias_visibles|length }}, minmax(110px, 1fr));">
