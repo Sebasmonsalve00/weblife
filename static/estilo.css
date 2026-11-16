@@ -855,6 +855,9 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 /* ---------- Páginas de entrar y crear cuenta ---------- */
 .entrar-cambio { margin: 20px 0 0; font-size: 14px; color: var(--texto-secundario); }
 .entrar-cambio a { color: var(--color-texto); font-weight: 600; }
+/* "¿Has olvidado tu contraseña?": pequeño y negro, debajo de la contraseña */
+.olvide-clave { align-self: flex-start; margin-top: 2px; font-size: 13px; color: var(--color-texto); text-decoration: none; }
+.olvide-clave:hover, .olvide-clave:focus-visible { text-decoration: underline; }
 .ayuda-campo { display: block; font-size: 13px; color: var(--texto-secundario); margin-top: 6px; }
 .entrar { max-width: 440px; margin: 15vh auto 64px; text-align: center; }
 .entrar form { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; text-align: left; }

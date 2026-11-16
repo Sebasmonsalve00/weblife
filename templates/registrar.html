@@ -25,6 +25,12 @@
       <input id="apellido" name="apellido" required maxlength="40" autocomplete="family-name" value="{{ request.form.apellido }}">
     </div>
     <div class="campo">
+      <label for="email">Correo</label>
+      <input id="email" type="email" name="email" required maxlength="120" autocomplete="email"
+             aria-describedby="ayuda-email" value="{{ request.form.email }}">
+      <small id="ayuda-email" class="ayuda-campo">{{ t.ayuda_email }}</small>
+    </div>
+    <div class="campo">
       <label for="nombre">Usuario</label>
       <input id="nombre" name="nombre" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._\-]{3,30}"
              autocomplete="username" aria-describedby="ayuda-nombre" value="{{ request.form.nombre }}">

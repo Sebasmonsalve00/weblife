@@ -17,6 +17,7 @@
     <div class="campo">
       <label for="clave">Contraseña</label>
       <input id="clave" type="password" name="clave" required autocomplete="current-password">
+      <a class="olvide-clave" href="{{ url_for('recuperar') }}">{{ t.olvide }}</a>
     </div>
     <button class="boton-enviar">{{ t.boton }}</button>
   </form>

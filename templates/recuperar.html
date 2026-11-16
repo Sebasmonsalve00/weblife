@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block titulo %}Recuperar contraseña{% endblock %}
+{% block menu %}{% endblock %}
+{% block pie %}{% endblock %}
+{% block contenido %}
+{% set t = texto.recuperar %}
+<div class="tarjeta entrar hero-entrada">
+  <p class="etiqueta-seccion">{{ texto.nombre_sitio }}</p>
+  <h1 class="titulo-seccion">{{ t.titulo }}</h1>
+  {% if enviado %}
+  <p class="subtitulo" role="status">{{ t.enviado }}</p>
+  {% else %}
+  <p class="subtitulo">{{ t.subtitulo }}</p>
+  <form method="post">
+    {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
+    <div class="campo">
+      <label for="email">Correo</label>
+      <input id="email" type="email" name="email" required autofocus maxlength="120" autocomplete="email" value="{{ request.form.email }}">
+      <small class="ayuda-campo">{{ t.sin_correo }}</small>
+    </div>
+    <button class="boton-enviar">{{ t.boton }}</button>
+  </form>
+  {% endif %}
+  <p class="entrar-cambio"><a href="{{ url_for('entrar') }}">{{ t.volver }}</a></p>
+</div>
+{% endblock %}

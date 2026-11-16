@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Contraseña nueva{% endblock %}
+{% block menu %}{% endblock %}
+{% block pie %}{% endblock %}
+{% block contenido %}
+{% set t = texto.recuperar %}
+<div class="tarjeta entrar hero-entrada">
+  <p class="etiqueta-seccion">{{ texto.nombre_sitio }}</p>
+  <h1 class="titulo-seccion">{{ t.nueva_titulo }}</h1>
+  {% if valido %}
+  <p class="subtitulo">{{ t.nueva_subtitulo }}</p>
+  <form method="post">
+    {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
+    <div class="campo">
+      <label for="clave">Contraseña nueva</label>
+      <input id="clave" type="password" name="clave" required minlength="8" autofocus autocomplete="new-password">
+    </div>
+    <div class="campo">
+      <label for="clave2">Repite la contraseña</label>
+      <input id="clave2" type="password" name="clave2" required minlength="8" autocomplete="new-password">
+    </div>
+    <button class="boton-enviar">{{ t.nueva_boton }}</button>
+  </form>
+  {% else %}
+  <p class="aviso-error" role="alert">{{ t.invalido }}</p>
+  <p class="entrar-cambio"><a href="{{ url_for('recuperar') }}">{{ t.pedir_otro }}</a></p>
+  {% endif %}
+</div>
+{% endblock %}

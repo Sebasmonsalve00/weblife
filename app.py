@@ -11,11 +11,15 @@ import calendar
 import hmac
 import os
 import re
+import smtplib
 import sqlite3
 import time
+from email.message import EmailMessage
 from datetime import date, datetime, timedelta
 
 from flask import Flask, Response, flash, redirect, render_template, request, session, url_for
+# Para crear enlaces "firmados" que caducan (los de recuperar la contraseña). Viene con Flask.
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 # Herramientas de Flask para guardar contraseñas cifradas (nunca guardamos la contraseña tal cual).
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -52,6 +56,20 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"           # protege los formulario
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = bool(CODIGO)      # en internet, la cookie solo viaja por https
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)  # recordarte 30 días
+
+# ------------------------------------------------------------
+#  Correo para "¿Has olvidado tu contraseña?"
+#  La web manda el correo desde una cuenta de Gmail. También se leen de
+#  variables de entorno (en PythonAnywhere, en el archivo WSGI):
+#  - WEBLIFE_CORREO: la dirección de Gmail que envía (ej. "weblife.app@gmail.com").
+#  - WEBLIFE_CORREO_CLAVE: la "contraseña de aplicación" de 16 letras de Google
+#    (NO la contraseña normal del Gmail).
+#  Si no existen (en tu computador), el enlace se imprime en la terminal.
+#  La cuenta gratis de PythonAnywhere solo deja salir correo por smtp.gmail.com:587.
+# ------------------------------------------------------------
+CORREO = os.environ.get("WEBLIFE_CORREO", "")
+CORREO_CLAVE = os.environ.get("WEBLIFE_CORREO_CLAVE", "").replace(" ", "")
+MINUTOS_ENLACE = 60   # el enlace para cambiar la contraseña caduca en 1 hora
 
 # Nombres en español (Python los da en inglés por defecto).
 DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
@@ -147,7 +165,7 @@ def crear_tablas():
 
     # Las cuentas creadas antes no tenían nombre y apellido: agregamos esas columnas.
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(usuarios)")]
-    for columna in ("nombre_real", "apellido", "examenes_sel", "color_acento", "modo"):
+    for columna in ("nombre_real", "apellido", "examenes_sel", "color_acento", "modo", "email"):
         if columna not in columnas:
             conexion.execute(f"ALTER TABLE usuarios ADD COLUMN {columna} TEXT")
 
@@ -368,7 +386,7 @@ def con_categoria(texto, categoria):
 @app.before_request
 def pedir_sesion():
     """Se ejecuta antes de cada página: si no has iniciado sesión, te manda a "Entrar"."""
-    if request.endpoint in ("entrar", "registrar", "static"):
+    if request.endpoint in ("entrar", "registrar", "recuperar", "restablecer", "static"):
         return None
     if session.get("usuario_id"):
         # Comprobamos que la cuenta sigue existiendo (por si se borró).
@@ -406,6 +424,7 @@ def registrar():
         nombre = request.form["nombre"].strip()
         nombre_real = request.form["nombre_real"].strip()
         apellido = request.form["apellido"].strip()
+        email = request.form.get("email", "").strip().lower()
         clave = request.form["clave"]
         codigo = request.form.get("codigo", "")
         textos = contenido.REGISTRAR
@@ -416,6 +435,10 @@ def registrar():
             error = textos["error_nombre_real"]
         elif not re.fullmatch(r"[A-Za-z0-9._-]{3,30}", nombre):
             error = textos["error_nombre"]
+        elif not email_valido(email):
+            error = textos["error_email"]
+        elif email_usado(email):
+            error = textos["error_email_usado"]
         elif len(clave) < 8:
             error = textos["error_clave_corta"]
         elif clave != request.form["clave2"]:
@@ -423,9 +446,9 @@ def registrar():
         elif consultar("SELECT id FROM usuarios WHERE nombre = ?", (nombre,)):
             error = textos["error_nombre_usado"]
         else:
-            modificar("INSERT INTO usuarios (nombre, nombre_real, apellido, clave_hash, creado) "
-                      "VALUES (?, ?, ?, ?, ?)",
-                      (nombre, nombre_real, apellido, generate_password_hash(clave), date.today().isoformat()))
+            modificar("INSERT INTO usuarios (nombre, nombre_real, apellido, email, clave_hash, creado) "
+                      "VALUES (?, ?, ?, ?, ?, ?)",
+                      (nombre, nombre_real, apellido, email, generate_password_hash(clave), date.today().isoformat()))
             usuario = consultar("SELECT * FROM usuarios WHERE nombre = ?", (nombre,))[0]
             # La primera cuenta se queda con los datos que había antes de las cuentas.
             if consultar("SELECT COUNT(*) AS n FROM usuarios")[0]["n"] == 1:
@@ -437,10 +460,117 @@ def registrar():
     return render_template("registrar.html", error=error, pide_codigo=bool(CODIGO))
 
 
+def email_valido(email):
+    """Comprueba que parece un correo: algo@algo.algo (sin espacios)."""
+    return len(email) <= 120 and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) is not None
+
+
+def email_usado(email, menos=None):
+    """¿Ya hay otra cuenta con ese correo? ("menos" = mi propia cuenta, que no cuenta)."""
+    filas = consultar("SELECT id FROM usuarios WHERE lower(email) = ?", (email.lower(),))
+    return any(fila["id"] != menos for fila in filas)
+
+
+def firmador():
+    """Crea y lee los enlaces de recuperar la contraseña, firmados con la clave secreta
+    de la web: nadie puede inventarse uno ni cambiarle el número de cuenta."""
+    return URLSafeTimedSerializer(app.secret_key, salt="recuperar-clave")
+
+
+def crear_enlace(usuario):
+    # Metemos un trozo de la contraseña cifrada actual: cuando la cambies, ese trozo
+    # cambia y el enlace deja de servir (así cada enlace funciona una sola vez).
+    datos = {"id": usuario["id"], "h": usuario["clave_hash"][-12:]}
+    return url_for("restablecer", token=firmador().dumps(datos), _external=True,
+                   _scheme="https" if CODIGO else request.scheme)
+
+
+def leer_enlace(token):
+    """Devuelve la cuenta del enlace, o None si es falso, ya se usó o caducó."""
+    try:
+        datos = firmador().loads(token, max_age=MINUTOS_ENLACE * 60)
+    except (SignatureExpired, BadSignature):
+        return None
+    filas = consultar("SELECT * FROM usuarios WHERE id = ?", (datos.get("id"),))
+    if filas and filas[0]["clave_hash"][-12:] == datos.get("h"):
+        return filas[0]
+    return None
+
+
+def enviar_correo(para, asunto, texto):
+    """Manda un correo con Gmail. Devuelve True si salió bien."""
+    if not (CORREO and CORREO_CLAVE):
+        # En tu computador, sin Gmail configurado: lo mostramos en la terminal.
+        print(f"\n--- Correo para {para} ---\n{asunto}\n\n{texto}\n---------------\n")
+        return not CODIGO   # en internet sin configurar, avisamos de que no se pudo
+    mensaje = EmailMessage()
+    mensaje["From"] = f"weblife <{CORREO}>"
+    mensaje["To"] = para
+    mensaje["Subject"] = asunto
+    mensaje.set_content(texto)
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as servidor:
+            servidor.starttls()
+            servidor.login(CORREO, CORREO_CLAVE)
+            servidor.send_message(mensaje)
+        return True
+    except (smtplib.SMTPException, OSError) as error:
+        print("No se pudo enviar el correo:", error)   # sale en el "error log" de PythonAnywhere
+        return False
+
+
+@app.route("/recuperar", methods=["GET", "POST"])
+def recuperar():
+    """"¿Has olvidado tu contraseña?": escribes tu correo y te llega un enlace."""
+    textos = contenido.RECUPERAR
+    enviado = False
+    error = None
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        time.sleep(1)  # frena a quien pruebe muchos correos
+        if not email_valido(email):
+            error = textos["error_email"]
+        else:
+            filas = consultar("SELECT * FROM usuarios WHERE lower(email) = ?", (email,))
+            if filas:
+                usuario = filas[0]
+                texto = textos["correo_texto"].format(
+                    nombre=usuario["nombre_real"] or usuario["nombre"], usuario=usuario["nombre"],
+                    enlace=crear_enlace(usuario), minutos=MINUTOS_ENLACE)
+                if not enviar_correo(email, textos["correo_asunto"], texto):
+                    error = textos["error_envio"]
+            # Decimos lo mismo exista o no la cuenta, para no revelar qué correos están registrados.
+            enviado = error is None
+    return render_template("recuperar.html", enviado=enviado, error=error)
+
+
+@app.route("/restablecer/<token>", methods=["GET", "POST"])
+def restablecer(token):
+    """Página del enlace del correo: eliges una contraseña nueva."""
+    textos = contenido.RECUPERAR
+    usuario = leer_enlace(token)
+    error = None
+    if usuario and request.method == "POST":
+        nueva = request.form.get("clave", "")
+        if len(nueva) < 8:
+            error = contenido.REGISTRAR["error_clave_corta"]
+        elif nueva != request.form.get("clave2", ""):
+            error = contenido.REGISTRAR["error_claves_distintas"]
+        else:
+            modificar("UPDATE usuarios SET clave_hash = ? WHERE id = ?",
+                      (generate_password_hash(nueva), usuario["id"]))
+            usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (usuario["id"],))[0]
+            iniciar_sesion(usuario)
+            flash(textos["listo"])
+            return redirect(url_for("inicio"))
+    return render_template("restablecer.html", valido=usuario is not None, error=error)
+
+
 @app.route("/cuenta", methods=["GET", "POST"])
 def cuenta():
-    """Mis datos: cambiar nombre y apellido, o cambiar la contraseña."""
+    """Mis datos: cambiar nombre y apellido, el correo o la contraseña."""
     error_clave = None
+    error_email = None
     if request.method == "POST" and request.form.get("accion") == "clave":
         actual = request.form.get("clave_actual", "")
         nueva = request.form.get("clave_nueva", "")
@@ -456,6 +586,16 @@ def cuenta():
             modificar("UPDATE usuarios SET clave_hash = ? WHERE id = ?", (generate_password_hash(nueva), mi_cuenta()))
             flash(contenido.MENSAJES["clave"])
             return redirect(url_for("perfil"))
+    elif request.method == "POST" and request.form.get("accion") == "email":
+        email = request.form.get("email", "").strip().lower()
+        if not email_valido(email):
+            error_email = contenido.REGISTRAR["error_email"]
+        elif email_usado(email, menos=mi_cuenta()):
+            error_email = contenido.REGISTRAR["error_email_usado"]
+        else:
+            modificar("UPDATE usuarios SET email = ? WHERE id = ?", (email, mi_cuenta()))
+            flash(contenido.MENSAJES["email"])
+            return redirect(url_for("perfil"))
     elif request.method == "POST":
         nombre_real = request.form["nombre_real"].strip()[:40]
         apellido = request.form["apellido"].strip()[:40]
@@ -466,7 +606,7 @@ def cuenta():
             flash(contenido.MENSAJES["cuenta"])
             return redirect(url_for("perfil"))
     usuario = consultar("SELECT * FROM usuarios WHERE id = ?", (mi_cuenta(),))[0]
-    return render_template("cuenta.html", usuario=usuario, error_clave=error_clave)
+    return render_template("cuenta.html", usuario=usuario, error_clave=error_clave, error_email=error_email)
 
 
 @app.route("/perfil")

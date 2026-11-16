@@ -48,6 +48,10 @@ os.environ["WEBLIFE_CODIGO"] = "escribe-aqui-tu-codigo"
 # El texto largo que generaste en el paso 2
 os.environ["WEBLIFE_SECRETO"] = "pega-aqui-el-secreto"
 
+# Correo para "¿Has olvidado tu contraseña?" (opcional, ver "Recuperar contraseña" abajo)
+os.environ["WEBLIFE_CORREO"] = "tu-cuenta@gmail.com"
+os.environ["WEBLIFE_CORREO_CLAVE"] = "pega-aqui-la-contrasena-de-aplicacion"
+
 # Tu zona horaria, para que "hoy" sea tu día y no el del servidor.
 # Ejemplos: America/Santiago, America/Bogota, America/Mexico_City, Europe/Madrid
 os.environ["TZ"] = "Europe/Madrid"
@@ -65,6 +69,19 @@ from app import app as application
 2. En la sección **Security**, activa **Force HTTPS**.
 3. Arriba, haz clic en el botón verde **Reload**.
 4. Abre `https://TU-USUARIO.pythonanywhere.com`, pulsa **Crear una cuenta** y usa tu código. 🎉
+
+## Recuperar contraseña por correo
+
+La web manda el enlace de "¿Has olvidado tu contraseña?" desde una cuenta de Gmail.
+La cuenta gratis de PythonAnywhere solo permite enviar correo por Gmail (smtp.gmail.com, puerto 587).
+
+1. En esa cuenta de Gmail activa la **verificación en dos pasos** (myaccount.google.com → Seguridad).
+2. Entra en **myaccount.google.com/apppasswords**, crea una contraseña de aplicación llamada `weblife`
+   y copia las 16 letras que te da Google.
+3. Pon el correo y esas 16 letras en `WEBLIFE_CORREO` y `WEBLIFE_CORREO_CLAVE` del archivo WSGI, **Save** y **Reload**.
+
+Nunca escribas esa contraseña en el código ni en GitHub: solo en el archivo WSGI.
+Las cuentas creadas antes no tienen correo: cada persona lo añade en **Mi perfil → Mis datos**.
 
 ## Cosas que debes saber
 
