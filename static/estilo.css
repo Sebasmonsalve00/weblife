@@ -521,7 +521,9 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .mini-lista li { margin-top: 4px; }
 
 .grilla-contenedor { border-radius: var(--radio-tarjeta); padding: 20px; overflow-x: auto; box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
-.grilla { display: grid; gap: 0 6px; min-width: 600px; }
+/* Columnas: la de las horas y una por día (--dias lo pone horario.html) */
+.grilla { display: grid; gap: 0 6px; min-width: 600px;
+  grid-template-columns: var(--col-horas, 56px) repeat(var(--dias, 5), minmax(var(--col-dia, 110px), 1fr)); }
 .grilla-dia { text-align: center; font-weight: 600; font-size: 14px; padding-bottom: 10px; }
 .grilla-horas { position: relative; }
 .grilla-horas span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 0.8125rem; color: var(--texto-secundario); }
@@ -675,10 +677,6 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   .avisos { position: fixed; left: 16px; top: 80px; z-index: 30; width: 240px; margin: 0;
             max-height: calc(100vh - 96px); overflow-y: auto; }
   .aviso-caja { max-height: 32vh; }
-  /* Con el scroll continuo, los avisos se desvanecen y desenfocan al pasar a otra página
-     (--avisos-visible va de 1 a 0 siguiendo el scroll, lo calcula pagina-siguiente.js) */
-  .avisos { opacity: var(--avisos-visible, 1); filter: blur(calc((1 - var(--avisos-visible, 1)) * 12px)); }
-  .avisos.avisos-fuera { visibility: hidden; }
 }
 /* Si la pantalla no es muy ancha, corremos el contenido para que los avisos no lo tapen */
 @media (min-width: 1024px) and (max-width: 1759px) {
@@ -923,30 +921,10 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 ::view-transition-old(menu) { display: none; }
 
 /* ---------- Enlace "Siguiente" (encima del footer, discreto) ---------- */
-.siguiente {
-  display: block; text-align: center; padding: 8px 24px 32px;
-  color: var(--texto-secundario); text-decoration: none; font-size: 14px;
-}
-.siguiente b { color: var(--color-texto); font-weight: 600; }
-.siguiente:hover b { text-decoration: underline; }
-/* Scroll continuo: cada página es un tramo y la siguiente aparece debajo.
-   El enlace "Siguiente" queda entre las dos como separador. */
-/* Transición entre páginas: la actual se queda quieta (sticky, la colocación la
-   calcula pagina-siguiente.js) y la siguiente sube por encima, como una hoja.
-   Mientras sube, lo de la página de debajo se difumina y desaparece (--cubierto de 0 a 1). */
-/* Las variables que pagina-siguiente.js cambia en cada cuadro no se heredan: así el
-   navegador solo recalcula el tramo y lo que las pide (con "inherit"), no toda la página */
-@property --cubierto { syntax: "<number>"; inherits: false; initial-value: 0; }
-@property --desfase-burbujas { syntax: "<length>"; inherits: false; initial-value: 0px; }
+/* Cada página va en un "tramo", que lleva su fondo de burbujas */
 .tramo { position: relative; isolation: isolate; background: var(--color-fondo); }
-/* Cada página ocupa al menos toda la pantalla: las cortas (como Pendientes) la llenan
-   entera antes de que la siguiente empiece a subir */
+/* Cada página ocupa al menos toda la pantalla */
 .tramo { min-height: 100vh; min-height: 100svh; }
-.tramo.pegado { position: sticky; }
-.tramo + .tramo {
-  border-radius: 32px 32px 0 0;
-  box-shadow: 0 -12px 40px rgba(29, 29, 31, 0.08);
-}
 
 /* ---------- Fondo de burbujas ----------
    Burbujas difuminadas juntas sobre el blanco de la paleta. Su color va del celeste
@@ -984,29 +962,9 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
   /* Todo el ancho, y se repite hacia abajo cada 1000px (las burbujas no tocan los bordes) */
   -webkit-mask-size: 100% 1000px; mask-size: 100% 1000px;
   -webkit-mask-repeat: repeat-y; mask-repeat: repeat-y;
-  /* Las burbujas van con la página al hacer scroll. Cuando la página se queda quieta
-     (mientras sube la siguiente), pagina-siguiente.js las sigue moviendo con --desfase-burbujas */
-  /* Se mueven con transform (no con mask-position): así el navegador pinta las burbujas
-     una sola vez y solo desplaza la capa, en vez de repintarlas en cada cuadro. */
-  --desfase-burbujas: inherit;
-  transform: translateY(var(--desfase-burbujas));
-  will-change: transform;
+  /* En su propia capa: el navegador pinta las burbujas una vez y al bajar solo la desplaza */
+  transform: translateZ(0);
 }
-.tramo + .tramo.pegado { position: sticky; }
-/* (Los avisos fijos del calendario van en una caja con display: contents, así que
-   no les afecta: tienen su propio desvanecido) */
-.tramo > * {
-  --cubierto: inherit;
-  opacity: calc(1 - var(--cubierto));
-  transform: scale(calc(1 - var(--cubierto) * 0.04));
-  transform-origin: 50% 100%;
-}
-/* Mientras la tapa la siguiente, va en su propia capa: el navegador no la repinta,
-   solo cambia su transparencia y su tamaño (sin difuminado: era lo que más trababa) */
-.tramo.cubriendo > * { will-change: opacity, transform; }
-/* Sin efecto mientras no la tapa nada (transform cambia cómo se colocan las cosas fijas) */
-.tramo:not(.cubriendo) > * { transform: none; }
-.tramo.tapado { visibility: hidden; }
 /* El footer pasa por encima de la última página */
 .footer { position: relative; z-index: 1; }
 
@@ -1046,8 +1004,6 @@ html:not(.js) .carga { display: none; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js .reveal, .js .hero-entrada > * { opacity: 1 !important; transform: none !important; }
   .carga { display: none; }
-  .tramo.pegado { position: relative; top: auto !important; }
-  .tramo > * { opacity: 1 !important; filter: none !important; transform: none !important; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   .scroll-section { height: auto; }
   .scroll-sticky { position: static; height: auto; }
@@ -1219,3 +1175,126 @@ html:not(.js) .carga { display: none; }
 /* Inicio: aviso a las cuentas que aún no tienen correo */
 .aviso-correo { font-size: 14px; margin-top: 12px; }
 .aviso-correo .enlace-flecha { margin-left: 4px; }
+
+
+/* ============================================================
+   MÓVIL: letras, toques y deslizamiento
+   Todo lo de aquí abajo afina la web en el teléfono (y un poco la tablet).
+   ============================================================ */
+
+/* ---------- Toques ---------- */
+/* Tirar hacia abajo estando arriba del todo ya no recarga la página (pasaba sin querer al deslizar) */
+html { overscroll-behavior-y: none; }
+/* Sin el destello gris al tocar, y sin la espera del "doble toque para ampliar" */
+a, button, summary, label, input, select, .bloque, .calendario td { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+/* En pantallas táctiles no hay ratón: el "crecer al pasar por encima" se quedaba pegado tras tocar */
+@media (hover: none) {
+  button:hover, .boton:hover, .bloque[data-editar]:hover, .tarjeta-interactiva:hover { transform: none; }
+  .bloque[data-editar]:hover, .tarjeta-interactiva:hover { box-shadow: none; }
+  button:active, .boton:active { transform: scale(0.97); }
+}
+
+/* El mensaje de "guardado" cuando la página vuelve a donde estabas: flota abajo y se va solo */
+.aviso-exito.flotante {
+  position: fixed; left: 16px; right: 16px; bottom: 24px; z-index: 70; margin: 0; max-width: 420px; margin-inline: auto;
+  background: var(--color-fondo); border-radius: 999px; padding: 10px 18px; font-size: 14px; text-align: center;
+  transition: opacity 300ms var(--easing), transform 300ms var(--easing);
+}
+.aviso-exito.flotante.oculto { opacity: 0; transform: translateY(12px); pointer-events: none; }
+
+/* Hoy, marcado en la cabecera del horario */
+.grilla-dia span { display: inline-block; padding: 2px 10px; border-radius: 999px; }
+.grilla-dia.hoy span { background: var(--color-texto); color: var(--color-fondo); }
+.editar-borrar { width: 100%; height: 44px; margin-top: 8px; }
+/* Lo que no cabe en la casilla del mes (solo en el móvil) y la lista para quitar cosas del día */
+.mas-cosas, .dia-vista-borrar { display: none; }
+
+/* ---------- Horario y calendario en móvil y tablet: deslizar suave ---------- */
+@media (max-width: 1023px) {
+  /* El borde de cristal lleva un resplandor que el teléfono repinta al deslizar: fuera */
+  .vidrio::after, .tarjeta::after, .formulario::after, .nav::after, .menu-movil::after, .lista li::after,
+  .panel-dia::after, .resumen-materias::after, .aviso-exito::after, .aviso-error::after, .aviso-flotante::after,
+  .dia-vista::after { filter: none; }
+
+  /* La barra de arriba, opaca: lo que pasa por detrás ya no se transparenta entre los botones */
+  .sin-cristal .nav { background: var(--color-fondo); }
+
+  /* Horario: se desliza de lado día a día, con las horas siempre a la vista */
+  .grilla-contenedor {
+    --col-horas: 46px; --col-dia: 118px;
+    padding: 14px 12px 14px 0;
+    scroll-snap-type: x proximity; scroll-padding-left: calc(var(--col-horas) + 6px);
+    overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .grilla-contenedor::-webkit-scrollbar { display: none; }
+  .grilla { width: max-content; min-width: 100%; }
+  .grilla-dia { scroll-snap-align: start; font-size: 13px; }
+  .grilla-esquina, .grilla-horas {
+    position: sticky; left: 0; z-index: 3;
+    background: var(--fondo-horas, #F1F4FB);
+    /* tapa también el hueco entre columnas, para que los bloques no asomen al pasar por debajo */
+    box-shadow: 6px 0 0 var(--fondo-horas, #F1F4FB);
+  }
+  .grilla-horas span { right: 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
+  /* Los bloques: letra más pequeña y todo el ancho para el nombre (se borra desde "Editar") */
+  .bloque { padding: 5px 7px; font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
+  .bloque > form { display: none; }
+  .bloque span { font-size: 11px; }
+}
+@media (min-width: 1024px) { .editar-borrar { display: none; } }
+
+/* ---------- Teléfono ---------- */
+@media (max-width: 639px) {
+  /* -- Letras: una escala corta y ordenada (32 / 24 / 17 / 16 / 14 / 13) -- */
+  body { line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3, .hero-titulo, .titulo-seccion { text-wrap: balance; }
+  .hero-titulo { font-size: 2.5rem; line-height: 1.08; margin-bottom: 16px; }
+  h1.titulo-seccion { font-size: 2rem; line-height: 1.12; letter-spacing: -0.025em; margin-bottom: 8px; }
+  h2, h2.titulo-seccion { font-size: 1.5rem; line-height: 1.2; letter-spacing: -0.02em; }
+  h3, .titulo-tarjeta { font-size: 1.0625rem; line-height: 1.3; }
+  .subtitulo { font-size: 1.0625rem; line-height: 1.45; }
+  .etiqueta-seccion { font-size: 0.75rem; letter-spacing: 0.1em; margin-bottom: 6px; }
+  .encabezado { padding-top: 32px; margin-bottom: 24px; }
+  .seccion { margin-top: 48px; }
+  .tramo-cuerpo > .titulo-seccion:not(:first-child), .tramo-cuerpo > .panel-titulo:not(:first-child) { margin-top: 48px; margin-bottom: 16px; }
+  small, .texto-chico, .nota, .mensaje-campo { font-size: 0.8125rem; line-height: 1.45; }
+  .campo label, .etiqueta-campo, .form-compacta .campo label { font-size: 0.8125rem; }
+  details summary, .opcion, .aviso-item, .dia-item, .actividad-guardada { font-size: 0.875rem; }
+  .menu-movil nav a:not(.boton) { font-size: 1.625rem; line-height: 1.25; padding: 4px 0; }
+  .numero { font-size: 2rem; }
+  /* Menos aire dentro de las tarjetas: en el teléfono cada punto cuenta */
+  .tarjeta { padding: 20px; }
+  .formulario { padding: 20px; }
+  .panel-dia { padding: 16px; }
+  /* Al escribir, el iPhone amplía la página si la letra del campo es menor de 16px: siempre 16 */
+  input, select, textarea, .form-compacta input, .form-compacta select, .examenes-panel select, .examenes-panel input,
+  .selector-boton, .form-compacta .selector-boton { font-size: 16px; }
+  /* Mis materias: el nombre a la izquierda y las horas en una sola línea */
+  .resumen-materias li { padding: 12px 18px; font-size: 0.9375rem; align-items: baseline; }
+  .resumen-materias li b { white-space: nowrap; font-weight: 600; }
+
+  /* -- Calendario: el mes entero cabe en la pantalla, sin deslizar de lado -- */
+  .mes-navegacion { display: grid; grid-template-columns: 44px 1fr 44px; gap: 8px 8px; }
+  .mes-navegacion h2 { text-align: center; font-size: 1.25rem; }
+  .examenes-botones { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 0; }
+  .examenes-mini > summary { width: 100%; justify-content: center; padding-left: 10px; padding-right: 10px; font-size: 13px; white-space: nowrap; }
+  .leyenda { margin-top: 12px; }
+  .calendario-contenedor { padding: 6px; overflow-x: visible; }
+  .calendario { min-width: 0; border-spacing: 2px; }
+  .calendario th { padding: 6px 0 4px; font-size: 11px; letter-spacing: 0.02em; }
+  .calendario th abbr { text-decoration: none; }
+  .calendario td { height: 72px; padding: 3px 2px; border-radius: 10px; font-size: 10px; line-height: 1.3; }
+  .calendario .num { display: block; width: 22px; height: 22px; margin: 0 auto 1px; padding: 0; border-radius: 50%; font-size: 12px; line-height: 22px; text-align: center; }
+  .calendario td.hoy .num { background: var(--color-texto); color: var(--color-fondo); }
+  .calendario .item { display: block; margin-top: 2px; padding: 1px 3px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: clip; border-width: 0.5px; }
+  .calendario .item form, .calendario .item .item-modo { display: none; }
+  .calendario .item:nth-of-type(n+4) { display: none; }
+  .mas-cosas { display: block; margin-top: 1px; text-align: center; font-size: 10px; font-weight: 600; color: var(--texto-secundario); }
+  /* Vista de un día: lista para quitar cosas */
+  .dia-vista { padding: 16px; }
+  .dia-vista-borrar:not([hidden]) { display: block; border-top: 1px solid var(--borde); margin-top: 4px; padding-top: 10px; }
+  .dia-vista-borrar-titulo { margin: 0 0 4px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-secundario); }
+  .dia-vista-borrar-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 0.875rem; }
+  .dia-vista-borrar-fila .boton-icono { flex-shrink: 0; }
+}

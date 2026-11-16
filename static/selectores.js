@@ -6,7 +6,7 @@
 //  tarjeta de cristal con el mes (fechas) o con dos columnas de horas y
 //  minutos (horas). El <input type="date"> o "time" de siempre sigue ahí,
 //  escondido: es el que se envía con el formulario, así que nada más cambia.
-//  Funciona también con lo que aparece después (scroll continuo, zonas).
+//  Funciona también con lo que aparece después (zonas).
 // ============================================================
 
 (function () {

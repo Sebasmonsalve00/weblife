@@ -100,7 +100,6 @@ EFECTOS = {
     "motor_scroll": True,          # scroll-engine.js: secciones .scroll-section y atributos data-anim
     "titulares_por_palabra": True, # titulares que se encienden palabra por palabra al bajar
     "transiciones_pagina": True,   # fundido suave al cambiar de página (View Transitions)
-    "pagina_siguiente": True,      # scroll continuo: la página siguiente aparece debajo al bajar
     "microinteracciones": True,    # botones que crecen/se encogen, tarjetas que suben
     # Difuminar lo que hay detrás de cada tarjeta (backdrop-filter). Es lo que más
     # frena la web al hacer scroll, y detrás solo hay burbujas ya borrosas, así que
@@ -121,9 +120,9 @@ TRANSICIONES = {
     "fundido": 700,      # la página se apaga y la nueva se aclara (en ms)
 }
 
-# Orden de páginas para el scroll continuo. Son los nombres de las rutas de app.py.
-# Inicio (la bienvenida) va aparte: solo se llega con el botón "weblife".
-# La última no lleva a ninguna. El nombre que se muestra sale del menú de contenido.py.
+# Orden de las páginas (los nombres de las rutas de app.py). Solo sirve para el color
+# del fondo: va del celeste en la primera al casi blanco en la última.
+# De una página a otra se pasa únicamente desde el menú.
 ORDEN_PAGINAS = ["horario", "tareas", "pendientes", "calendario_vista", "asistencia"]
 
 # Fondo de burbujas: del celeste (acento) de la primera página al blanco (fondo)
@@ -152,15 +151,6 @@ def colores_fondo(ruta, acento=None):
         return {"arriba": color(0), "abajo": color(0)}
     return {"arriba": color(posicion / total), "abajo": color((posicion + 1) / total)}
 
-
-PAGINA_SIGUIENTE = {
-    "anterior": True,   # al subir arriba del todo, la página anterior aparece encima
-    "precarga": 1.5,    # cuántas pantallas antes del final se carga la página siguiente
-    # Tope: al llegar al final de una página el scroll se detiene. Para pasar a la
-    # siguiente hay que soltar y volver a hacer scroll. Lo mismo cuando la página
-    # nueva termina de entrar, y al subir.
-    "tope": True,
-}
 
 # ---- 6. Layout ----
 CONTENEDOR = {
@@ -252,32 +242,4 @@ def valores_js():
         "menuRetraso": ANIMACION["menu_movil_retraso"],
         "efectos": EFECTOS,
         "palabraInicial": SCROLL["opacidad_inicial_palabras"],
-        "siguiente": {
-            "anterior": PAGINA_SIGUIENTE["anterior"],
-            "precarga": PAGINA_SIGUIENTE["precarga"],
-            "tope": PAGINA_SIGUIENTE["tope"],
-        },
     }
-
-
-def pagina_vecina(ruta_actual, menu, paso):
-    """(nombre, ruta) de la página a "paso" posiciones (+1 siguiente, -1 anterior), o None."""
-    if ruta_actual not in ORDEN_PAGINAS:
-        return None
-    posicion = ORDEN_PAGINAS.index(ruta_actual) + paso
-    if not 0 <= posicion < len(ORDEN_PAGINAS):
-        return None
-    ruta = ORDEN_PAGINAS[posicion]
-    nombres = dict((r, n) for n, r in menu)
-    nombres.setdefault("inicio", "Inicio")
-    return nombres.get(ruta, ruta), ruta
-
-
-def pagina_siguiente(ruta_actual, menu):
-    """La página que sigue a la actual (o None si es la última)."""
-    return pagina_vecina(ruta_actual, menu, 1)
-
-
-def pagina_anterior(ruta_actual, menu):
-    """La página anterior a la actual (o None si es la primera)."""
-    return pagina_vecina(ruta_actual, menu, -1)

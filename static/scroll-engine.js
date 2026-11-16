@@ -200,7 +200,7 @@
   // Con "reducir movimiento" o sin IntersectionObserver no se anima nada:
   // las secciones quedan a su altura natural (lo hace el CSS) y todo el texto se ve.
   // Prepara las secciones y titulares que hay dentro de "raiz" (la página, o un
-  // trozo añadido luego por el scroll continuo).
+  // trozo que se cambia luego sin recargar).
   function preparar(raiz) {
     if (sinMovimiento || !vigilante) return;
     if (efectos.motor_scroll !== false) {
