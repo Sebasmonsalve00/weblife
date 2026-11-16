@@ -698,9 +698,12 @@ def inicio():
     pendientes = consultar(
         "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega LIMIT 5", (yo(),))
     asistencia = resumen_asistencia()
+    # Cuentas sin correo (creadas antes de pedirlo): les avisamos para que puedan recuperar la contraseña.
+    sin_correo = not consultar("SELECT email FROM usuarios WHERE id = ?", (mi_cuenta(),))[0]["email"]
 
     return render_template(
         "inicio.html",
+        sin_correo=sin_correo,
         hoy=hoy_texto,
         dia_nombre=DIAS_SEMANA[hoy.weekday()],
         clases_hoy=clases_hoy,
