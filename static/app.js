@@ -5,6 +5,7 @@
 //  3. Animaciones al hacer scroll (.reveal)
 //  4. Validación en vivo de los formularios
 //  5. Interruptor Universidad / Deporte del header
+//  6. Después de guardar, la página vuelve al punto donde estabas
 //  Los tiempos vienen de config_diseno.py (window.WEBLIFE).
 // ============================================================
 
@@ -137,16 +138,45 @@
   };
 
   // Preparamos la página, y dejamos la función a mano para el contenido que
-  // se añade luego (el scroll continuo añade la página siguiente debajo).
+  // se añade luego (zonas.js cambia trozos de la página sin recargarla).
   var preparar = function (raiz) {
     prepararReveal(raiz);
     prepararFormularios(raiz);
   };
   preparar(document);
 
+  // ---------- 6. Volver al mismo sitio después de guardar ----------
+  // Algunos formularios todavía recargan la página al enviarse. Para que no te
+  // devuelvan arriba del todo (en el móvil se nota mucho), apuntamos por dónde ibas
+  // y, si vuelve la misma página, la dejamos en ese mismo punto.
+  var CLAVE_SITIO = "weblife-sitio";
+  var apuntarSitio = function () {
+    try {
+      sessionStorage.setItem(CLAVE_SITIO, JSON.stringify({ ruta: location.pathname, y: window.scrollY, cuando: Date.now() }));
+    } catch (error) { /* sin almacenamiento: se recarga como siempre */ }
+  };
+  try {
+    var sitio = JSON.parse(sessionStorage.getItem(CLAVE_SITIO) || "null");
+    sessionStorage.removeItem(CLAVE_SITIO);
+    if (sitio && sitio.ruta === location.pathname && Date.now() - sitio.cuando < 15000 && !location.hash) {
+      window.scrollTo(0, sitio.y);
+      // El mensaje de "guardado" está arriba de la página: lo mostramos abajo, flotando
+      var guardado = document.querySelector(".aviso-exito");
+      if (guardado && sitio.y > 120) {
+        document.body.appendChild(guardado);   // fuera de la página, para que quede por encima de todo
+        guardado.classList.add("flotante");
+        setTimeout(function () { guardado.classList.add("oculto"); }, 2800);
+      }
+    }
+  } catch (error) { /* da igual */ }
+  // (window escucha después que zonas.js: si él ya lo envió sin recargar, no apuntamos nada)
+  window.addEventListener("submit", function (e) {
+    if (!e.defaultPrevented) apuntarSitio();
+  });
+
   // ---------- 5. Interruptor Universidad / Deporte ----------
   // La bolita se desliza primero y luego se envía el cambio. Volvemos a la página
-  // que estás viendo (con el scroll continuo la dirección puede haber cambiado).
+  // que estás viendo.
   var formModo = document.getElementById("form-modo");
   if (formModo) {
     formModo.addEventListener("submit", function (e) {
@@ -155,6 +185,7 @@
       var interruptor = formModo.querySelector(".interruptor-modo");
       interruptor.setAttribute("aria-checked", interruptor.getAttribute("aria-checked") === "true" ? "false" : "true");
       interruptor.disabled = true;
+      apuntarSitio();   // al cambiar de modo sigues en el mismo punto de la página
       setTimeout(function () { formModo.submit(); }, sinMovimiento ? 0 : 220);
     });
   }

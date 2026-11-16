@@ -150,7 +150,7 @@
 
   <div class="calendario-contenedor" id="mes-calendario" data-anio="{{ anio }}" data-mes="{{ mes }}">
     <!-- Lo de cada día, para la vista de un día (se abre al pulsar una fecha) -->
-    <script type="application/json" class="agenda-datos">{{ agenda | tojson }}</script>
+    <script type="application/json" class="agenda-datos" data-zona="agenda-mes">{{ agenda | tojson }}</script>
     <table class="calendario">
       <thead><tr>{% for nombre in dias %}<th scope="col"><abbr title="{{ nombre }}">{{ nombre[:3] }}</abbr></th>{% endfor %}</tr></thead>
       <tbody>
@@ -160,9 +160,10 @@
             {% if dia == 0 %}
               <td class="fuera"></td>
             {% else %}
-              <td class="{{ 'hoy' if (anio, mes, dia) == (hoy.year, hoy.month, hoy.day) }}" data-zona="dia-{{ anio }}-{{ mes }}-{{ dia }}">
+              <td class="{{ 'hoy' if (anio, mes, dia) == (hoy.year, hoy.month, hoy.day) }}" data-zona="dia-{{ anio }}-{{ mes }}-{{ dia }}" data-zona-tambien="agenda-mes">
                 <button type="button" class="num" data-dia="{{ dia }}" aria-label="Ver el {{ dia }} de {{ nombre_mes }} hora a hora">{{ dia }}</button>
-                {% for cosa in cosas_por_dia.get(dia, []) %}
+                {% set cosas = cosas_por_dia.get(dia, []) %}
+                {% for cosa in cosas %}
                   <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }} {{ 'otro-modo modo-' ~ cosa.otro|lower if cosa.otro }}"{% if cosa.otro %} title="{{ cosa.otro }}"{% endif %}>
                     <span>{% if cosa.otro %}<em class="item-modo">{{ cosa.otro }}</em> {% endif %}{{ cosa.texto }}</span>
                     {% if cosa.otro %}{# del otro modo: solo para verlo, sin borrar #}
@@ -179,6 +180,8 @@
                     {% endif %}
                   </div>
                 {% endfor %}
+                {# En el móvil caben 3 por casilla: el resto se ve al tocar el día #}
+                {% if cosas|length > 3 %}<span class="mas-cosas" aria-hidden="true">+{{ cosas|length - 3 }}</span>{% endif %}
               </td>
             {% endif %}
           {% endfor %}
@@ -199,6 +202,8 @@
   </div>
   <div class="dia-vista-sin-hora"></div>
   <div class="dia-vista-horas"></div>
+  <!-- En el móvil, lo que se puede quitar del día se quita desde aquí (en la casilla no cabe la ✕) -->
+  <div class="dia-vista-borrar" hidden></div>
   <p class="leyenda dia-vista-leyenda"><span><span class="punto clase"></span>{{ texto.p.clase }}</span> <span><span class="punto tarea"></span>{{ texto.p.tarea }}</span> <span><span class="punto evento"></span>evento</span>{% if modo != "deporte" %} <span><span class="punto examen"></span>examen</span>{% endif %}</p>
 </dialog>
 <script>
@@ -281,6 +286,32 @@
     });
     cerrarGrupo();
     if (!dentro.length && !fuera.length) sinHora.appendChild(crear("p", "vacio", "No tienes nada este día."));
+    pintarBorrables(dia);
+  }
+
+  // Lista de lo que se puede quitar ese día: cada ✕ envía el formulario de su casilla
+  function pintarBorrables(dia) {
+    var caja = dialogo.querySelector(".dia-vista-borrar");
+    caja.textContent = "";
+    var num = document.querySelector('#mes-calendario .num[data-dia="' + dia + '"]');
+    var formularios = num ? num.closest("td").querySelectorAll(".item form") : [];
+    caja.hidden = !formularios.length;
+    if (!formularios.length) return;
+    caja.appendChild(crear("p", "dia-vista-borrar-titulo", "Quitar del calendario"));
+    formularios.forEach(function (form) {
+      var fila = crear("div", "dia-vista-borrar-fila");
+      fila.appendChild(crear("span", "", form.closest(".item").querySelector("span").textContent.trim()));
+      var boton = crear("button", "boton-icono", "✕");
+      boton.type = "button";
+      boton.setAttribute("aria-label", form.querySelector("button").getAttribute("aria-label") || "Borrar");
+      boton.addEventListener("click", function () {
+        // Cuando zonas.js termina de borrar, repintamos el día con lo que queda
+        form.addEventListener("zonas:hecho", function () { pintar(abierto); });
+        if (form.requestSubmit) form.requestSubmit(); else form.submit();
+      });
+      fila.appendChild(boton);
+      caja.appendChild(fila);
+    });
   }
 
   // Abrir al pulsar una fecha (o cualquier hueco de su casilla)
@@ -451,7 +482,6 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
     });
   });
   // Botones atrás/adelante del navegador
-  // (solo si estamos en el calendario: con el scroll continuo puede estar debajo de otra página)
   if (location.pathname === "{{ request.path }}") history.replaceState({ mes: location.href }, "", location.href);
   window.addEventListener("popstate", function (e) {
     if (e.state && e.state.mes) cambiarMes(e.state.mes, false);

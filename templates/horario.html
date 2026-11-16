@@ -3,7 +3,7 @@
 {% block titulo %}{{ texto.paginas.horario.titulo }}{% endblock %}
 {% block contenido %}
 {# El subtítulo cambia según el día que eliges en el panel (flechas ← →) #}
-{{ encabezado({"etiqueta": texto.paginas.horario.etiqueta, "titulo": texto.paginas.horario.titulo, "subtitulo": subtitulo_dia}) }}
+<div data-zona="horario-encabezado">{{ encabezado({"etiqueta": texto.paginas.horario.etiqueta, "titulo": texto.paginas.horario.titulo, "subtitulo": subtitulo_dia}) }}</div>
 
 <div class="grid-12">
 
@@ -91,14 +91,14 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
 <!-- Panel del día: clases del día, asistencia y tareas rápidas -->
 <aside class="panel-dia reveal" aria-label="Clases del día" data-zona="horario-panel">
   <div class="panel-titulo">
-    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_anterior) }}" aria-label="Día anterior">←</a>
+    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_anterior) }}" data-actualiza="horario-panel horario-encabezado" aria-label="Día anterior">←</a>
     <div>
       <b>{{ "Hoy" if es_hoy else nombre_dia_panel }}</b><br>
       <small>{{ nombre_dia_panel }} {{ dia_panel }}</small>
     </div>
-    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_siguiente) }}" aria-label="Día siguiente">→</a>
+    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_siguiente) }}" data-actualiza="horario-panel horario-encabezado" aria-label="Día siguiente">→</a>
   </div>
-  {% if not es_hoy %}<p class="centro"><a href="{{ url_for('horario') }}">Volver a hoy</a></p>{% endif %}
+  {% if not es_hoy %}<p class="centro"><a href="{{ url_for('horario') }}" data-actualiza="horario-panel horario-encabezado">Volver a hoy</a></p>{% endif %}
 
   {% for item in panel %}
     {% set clase = item.clase %}
@@ -199,9 +199,10 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
 
 <!-- Grilla: una columna por día, una fila por hora de 6:00 a 22:00 -->
 <div class="grilla-contenedor reveal" data-zona="horario-grilla" data-zona-tambien="horario-panel horario-materias">
-  <div class="grilla" style="grid-template-columns: 56px repeat({{ dias_visibles|length }}, minmax(110px, 1fr));">
-    <div></div>
-    {% for d in dias_visibles %}<div class="grilla-dia">{{ dias[d] }}</div>{% endfor %}
+  {# Las columnas se reparten en estilo.css (.grilla) según --dias #}
+  <div class="grilla" style="--dias: {{ dias_visibles|length }};">
+    <div class="grilla-esquina"></div>
+    {% for d in dias_visibles %}<div class="grilla-dia {{ 'hoy' if d == dia_hoy }}" data-dia="{{ d }}"><span>{{ dias[d] }}</span></div>{% endfor %}
 
     <!-- Columna con las horas -->
     <div class="grilla-horas" style="height: {{ alto_total }}px" aria-hidden="true">
@@ -228,7 +229,7 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
           {% else %}
           <div class="bloque {{ 'bloque-actividad' if es_actividad }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px; {{ lugar }}"
                role="button" tabindex="0" aria-label="Editar {{ item.clase.nombre }} ({{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }})" title="{{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }}"
-               data-editar="{{ url_for('editar_clase', id=item.clase.id) }}" data-nombre="{{ item.clase.nombre }}"
+               data-editar="{{ url_for('editar_clase', id=item.clase.id) }}" data-borrar="{{ url_for('borrar_clase', id=item.clase.id) }}" data-nombre="{{ item.clase.nombre }}"
                data-dia="{{ item.clase.dia }}" data-sala="{{ item.clase.sala or '' }}" data-tipo="{{ item.clase.tipo or 'clase' }}"
                data-desde="{{ item.clase.hora_inicio }}" data-hasta="{{ item.clase.hora_fin }}" data-categoria="{{ item.clase.categoria or '' }}">
             <b>{{ item.clase.nombre }}</b>
@@ -270,6 +271,9 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
       <div class="campo"><label for="e-hasta">Hasta</label><input id="e-hasta" type="time" name="hora_fin" min="{{ hora_desde }}" max="{{ hora_hasta }}" required></div>
     </div>
     <button class="boton boton-primario editar-guardar">Guardar cambios</button>
+    <!-- Borrar desde aquí (en el móvil la ✕ del bloque no cabe) -->
+    <button class="boton boton-secundario editar-borrar" data-editar-borrar formnovalidate
+            onclick="return confirm('¿Borrar esto del horario?')">Borrar del horario</button>
   </form>
 </dialog>
 <script>
@@ -282,6 +286,7 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
     if (!dialogo) return;
     var form = dialogo.querySelector("form"), d = bloque.dataset;
     form.action = d.editar;
+    form.querySelector("[data-editar-borrar]").setAttribute("formaction", d.borrar);
     form.nombre.value = d.nombre; form.dia.value = d.dia; form.sala.value = d.sala;
     form.hora_inicio.value = d.desde; form.hora_fin.value = d.hasta;
     if (form.categoria) form.categoria.value = d.categoria || form.categoria.options[0].value;
@@ -305,6 +310,13 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
   });
   document.addEventListener("change", function (e) {
     if (e.target.name === "tipo" && e.target.closest(".editar-clase")) marcarSegmento(e.target.form);
+  });
+  // En el móvil el horario se desliza de lado: al entrar lo dejamos en el día de hoy
+  document.querySelectorAll(".grilla-contenedor").forEach(function (caja) {
+    var dia = caja.querySelector(".grilla-dia.hoy");
+    if (!dia) return;
+    var horas = caja.querySelector(".grilla-esquina");
+    if (caja.scrollWidth > caja.clientWidth) caja.scrollLeft = dia.offsetLeft - (horas ? horas.offsetWidth : 0) - 8;
   });
   // Cuando se guardó (zonas.js avisa), cerramos la ventana
   document.addEventListener("zonas:hecho", function (e) {

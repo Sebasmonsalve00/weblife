@@ -2,7 +2,6 @@
 
 ## Archivos nuevos
 - **static/scroll-engine.js**: motor de scroll. Calcula el progreso (0 a 1) de cada `.scroll-section`, lo pone en `--progress` y mueve los elementos con `data-anim` (opacity, translateY, translateX, scale, blur) con la curva cubic-bezier(0.16, 1, 0.3, 1). Usa requestAnimationFrame e IntersectionObserver. También enciende palabra por palabra los titulares con `data-revelar-palabras`.
-- **static/pagina-siguiente.js**: scroll continuo entre páginas. Al subir del todo arriba vuelves a la página anterior (se abre por el final y entra desde arriba). Al llegar al final de la página y seguir bajando (rueda, trackpad o dedo) la página se va apagando y se pasa a la siguiente con un fundido (el footer no se mueve). Se cancela si paras 600ms o subes. No funciona con el menú o un panel abierto, ni con el cursor en un campo. Precarga la página siguiente cuando ves el footer.
 
 ## Archivos modificados
 - **config_diseno.py**: `EFECTOS` (encender o apagar cada efecto), `SCROLL` (alturas 200/300/400vh, curva, opacidad inicial de las palabras), `TRANSICIONES` (fundido de 700ms), `ORDEN_PAGINAS` (Inicio → Horario → Tareas → Pendientes → Calendario → Asistencia) y `PAGINA_SIGUIENTE` (umbrales de 180px y 90px, `anterior` para encender o apagar la vuelta hacia arriba, esperas).
@@ -20,3 +19,6 @@ Portada con secuencia de imágenes (2), secciones de producto con revelado (3), 
 - Secuencia de imágenes: 120 fotogramas WebP, `frame_001.webp` a `frame_120.webp`, 1920×1080 para ordenador y 960×540 para móvil, de unos 40–80 KB cada uno.
 - Primer y último fotograma (startframe y endframe) aparte, en WebP o JPG, al mismo tamaño.
 - O en su lugar un vídeo MP4 (H.264) silencioso de 1920×1080 con un fotograma clave cada 1–2 cuadros.
+
+## Noviembre 2026: sin scroll continuo
+- Se quitó el scroll continuo entre páginas (`static/pagina-siguiente.js`, `PAGINA_SIGUIENTE` y el enlace "Siguiente"). Ahora se cambia de página solo desde el menú: los enlaces de arriba en escritorio y las rayitas en el móvil. `ORDEN_PAGINAS` se queda, pero solo para el color del fondo.
