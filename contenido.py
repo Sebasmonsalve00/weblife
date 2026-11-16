@@ -151,6 +151,8 @@ INICIO = {
     "boton_secundario": {"texto": "Ver horario", "ruta": "horario"},
     "titulo_resumen": "Tu día",
     "anadir_nombre": "Añade tu nombre",
+    "sin_correo": "Tu cuenta no tiene correo: sin él no podrás recuperar tu contraseña si la olvidas.",
+    "anadir_correo": "Añadir mi correo",
 }
 
 # ---- Página de contraseña ----

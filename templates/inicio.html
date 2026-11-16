@@ -18,6 +18,8 @@
     <p class="subtitulo">{{ t.subtitulo }}</p>
     {# Cuentas creadas antes de pedir el nombre: les ofrecemos añadirlo #}
     {% if not session.nombre_real %}<p>{{ enlace_flecha(t.anadir_nombre, url_for('cuenta')) }}</p>{% endif %}
+    {# Cuentas sin correo: sin él no pueden recuperar la contraseña si la olvidan #}
+    {% if sin_correo %}<p class="aviso-correo">{{ t.sin_correo }} {{ enlace_flecha(t.anadir_correo, url_for('cuenta') ~ '#correo') }}</p>{% endif %}
     <div class="hero-botones">
       <a href="{{ url_for(t.boton_principal.ruta) }}" class="boton boton-primario">{{ t.boton_principal.texto }}</a>
       <a href="{{ url_for(t.boton_secundario.ruta) }}" class="boton boton-secundario">{{ t.boton_secundario.texto }}</a>
