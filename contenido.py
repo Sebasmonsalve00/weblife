@@ -161,13 +161,40 @@ ENTRAR = {
     "error": "Usuario o contraseña incorrectos.",
     "sin_cuenta": "¿No tienes cuenta?",
     "ir_registro": "Crear una cuenta",
+    "olvide": "¿Has olvidado tu contraseña?",
+}
+
+# ---- Recuperar la contraseña por correo ----
+RECUPERAR = {
+    "titulo": "Recupera tu contraseña",
+    "subtitulo": "Escribe el correo de tu cuenta y te mandamos un enlace para elegir una contraseña nueva.",
+    "boton": "Enviar enlace",
+    "enviado": "Si hay una cuenta con ese correo, te acabamos de mandar un enlace. Mira también en la carpeta de spam.",
+    "sin_correo": "¿Tu cuenta es de antes y no tiene correo? Pídele a quien te invitó que te ayude.",
+    "error_email": "Escribe un correo válido.",
+    "error_envio": "No pudimos enviar el correo ahora mismo. Inténtalo otra vez en unos minutos.",
+    "volver": "Volver a Entrar",
+    "correo_asunto": "weblife: cambia tu contraseña",
+    "correo_texto": (
+        "Hola, {nombre}:\n\n"
+        "Alguien (seguramente tú) pidió cambiar la contraseña de tu cuenta de weblife ({usuario}).\n\n"
+        "Para elegir una contraseña nueva, abre este enlace:\n{enlace}\n\n"
+        "El enlace sirve una sola vez y caduca en {minutos} minutos.\n"
+        "Si no lo pediste tú, ignora este correo: tu contraseña no cambia.\n"
+    ),
+    "nueva_titulo": "Elige una contraseña nueva",
+    "nueva_subtitulo": "Mínimo 8 caracteres.",
+    "nueva_boton": "Guardar contraseña",
+    "invalido": "Este enlace ya no sirve: caducó o ya se usó. Pide uno nuevo.",
+    "pedir_otro": "Pedir otro enlace",
+    "listo": "Contraseña cambiada. Ya has entrado con la nueva.",
 }
 
 # ---- Página "Mi cuenta" ----
 CUENTA = {
     "etiqueta": "Mi perfil",
     "titulo": "Mis datos",
-    "subtitulo": "Cambia tu nombre o tu contraseña.",
+    "subtitulo": "Cambia tu nombre, tu correo o tu contraseña.",
 }
 
 # ---- Página "Mi perfil" ----
@@ -203,6 +230,9 @@ REGISTRAR = {
     "error_nombre_real": "Escribe tu nombre y tu apellido.",
     "error_nombre": "El usuario debe tener de 3 a 30 letras o números, sin espacios.",
     "error_nombre_usado": "Ese usuario ya existe. Elige otro.",
+    "ayuda_email": "Solo lo usamos para recuperar tu contraseña si la olvidas.",
+    "error_email": "Escribe un correo válido (por ejemplo, nombre@gmail.com).",
+    "error_email_usado": "Ya hay una cuenta con ese correo.",
     "error_clave_corta": "La contraseña debe tener al menos 8 caracteres.",
     "error_claves_distintas": "Las dos contraseñas no coinciden.",
     "bienvenida": "¡Cuenta creada! Empieza agregando tus clases en el horario.",
@@ -224,6 +254,7 @@ MENSAJES = {
     "modo_deporte": "Ahora usas el calendario de Deporte. Sus datos van aparte de los de Universidad.",
     "actividad_tarea": "Actividad guardada y tarea marcada como hecha.",
     "cuenta": "Nombre guardado.",
+    "email": "Correo guardado.",
     "clave": "Contraseña cambiada.",
     "evento": "Evento agregado al calendario.",
     "comida": "Alimento añadido.",
@@ -274,6 +305,7 @@ def todo(modo="universidad"):
         "inicio": INICIO,
         "entrar": ENTRAR,
         "registrar": REGISTRAR,
+        "recuperar": RECUPERAR,
         "cuenta": CUENTA,
         "perfil": PERFIL,
         "avances": AVANCES,
