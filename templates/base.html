@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Icono de la pestaña (un círculo con el color de acento, sin archivo aparte) -->
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23{{ acento[1:] }}%27/%3E%3C/svg%3E">
+  <!-- App instalable (PWA): nombre, icono y colores al añadirla a la pantalla de inicio -->
+  <link rel="manifest" href="{{ url_for('manifiesto') }}">
+  <meta name="theme-color" content="#F5F5F7">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='iconos/apple-touch-icon.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="{{ texto.nombre_sitio }}">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>{% block titulo %}{{ texto.nombre_sitio }}{% endblock %}</title>
 
   <!-- Fuente Inter desde Google Fonts -->
@@ -180,5 +188,13 @@
   <script src="{{ url_for('static', filename='zonas.js') }}" defer></script>
   <!-- Calendario y horas con el estilo de la web (en vez de los del navegador) -->
   <script src="{{ url_for('static', filename='selectores.js') }}" defer></script>
+  <!-- App instalable: registra el service worker (ver static/sw.js) -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("{{ url_for('service_worker') }}").catch(function () {});
+      });
+    }
+  </script>
 </body>
 </html>

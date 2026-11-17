@@ -17,7 +17,7 @@ import time
 from email.message import EmailMessage
 from datetime import date, datetime, timedelta
 
-from flask import Flask, Response, flash, redirect, render_template, request, session, url_for
+from flask import Flask, Response, flash, jsonify, send_from_directory, redirect, render_template, request, session, url_for
 # Para crear enlaces "firmados" que caducan (los de recuperar la contraseña). Viene con Flask.
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 # Herramientas de Flask para guardar contraseñas cifradas (nunca guardamos la contraseña tal cual).
@@ -385,7 +385,8 @@ def con_categoria(texto, categoria):
 @app.before_request
 def pedir_sesion():
     """Se ejecuta antes de cada página: si no has iniciado sesión, te manda a "Entrar"."""
-    if request.endpoint in ("entrar", "registrar", "recuperar", "restablecer", "static"):
+    if request.endpoint in ("entrar", "registrar", "recuperar", "restablecer", "static",
+                            "manifiesto", "service_worker"):
         return None
     if session.get("usuario_id"):
         # Comprobamos que la cuenta sigue existiendo (por si se borró).
@@ -393,6 +394,40 @@ def pedir_sesion():
             return None
         session.clear()
     return redirect(url_for("entrar"))
+
+
+# ---------- App instalable (PWA) ----------
+# El "manifiesto" le dice al móvil el nombre, el icono y los colores de la app.
+@app.route("/manifest.webmanifest")
+def manifiesto():
+    datos = {
+        "name": contenido.NOMBRE_SITIO,
+        "short_name": contenido.NOMBRE_SITIO,
+        "id": "/",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",          # sin barra del navegador, como una app
+        "lang": "es",
+        "background_color": config_diseno.COLORES["fondo"],
+        "theme_color": config_diseno.COLORES["fondo"],
+        "icons": [
+            {"src": url_for("static", filename="iconos/icono-192.png"), "sizes": "192x192", "type": "image/png"},
+            {"src": url_for("static", filename="iconos/icono-512.png"), "sizes": "512x512", "type": "image/png"},
+            {"src": url_for("static", filename="iconos/icono-maskable-512.png"), "sizes": "512x512",
+             "type": "image/png", "purpose": "maskable"},
+        ],
+    }
+    respuesta = jsonify(datos)
+    respuesta.mimetype = "application/manifest+json"
+    return respuesta
+
+
+# El service worker tiene que servirse desde la raíz ("/sw.js") para funcionar en toda la web.
+@app.route("/sw.js")
+def service_worker():
+    respuesta = send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript", max_age=0)
+    respuesta.headers["Cache-Control"] = "no-cache"   # así el móvil siempre coge la última versión
+    return respuesta
 
 
 def iniciar_sesion(usuario):
