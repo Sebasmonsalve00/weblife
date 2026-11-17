@@ -2,15 +2,19 @@
 Uso: python3 herramientas/crear_iconos.py  (necesita Pillow: pip3 install --user pillow)
 
 Hay tres diseños; cambia DISENO y vuelve a ejecutarlo:
-  "A": fondo claro con las manchas de color de la web y una "w" de trazo redondeado.
+  "A": estilo Apple: fondo claro con manchas del azul de la web y una "w" en Inter Bold
+       (la misma letra que el logo de la web).
   "B": tarjeta de cristal sobre un degradado pastel.
   "C": fondo oscuro con la "w" en degradado pastel y un punto.
 """
 import os
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 DISENO = "A"
 CARPETA = os.path.join(os.path.dirname(__file__), "..", "static", "iconos")
+
+# Inter, la letra de la web. Si no está en tu ordenador, descárgala de Google Fonts y pon aquí la ruta.
+FUENTE_INTER = "/usr/share/fonts/opentype/inter/Inter-Bold.otf"
 
 S = 1024   # dibujamos grande y luego reducimos, para que los bordes queden suaves
 FONDO = (245, 245, 247)     # #F5F5F7, el fondo de la web
@@ -42,8 +46,29 @@ def w_trazo(d, color, grosor, y0=330, y1=700, x0=250, x1=774, ymedio=430):
 
 
 def diseno_a():
-    img = manchas(FONDO, [(220, 230, 420, AZUL, 1), (860, 820, 380, LILA, 0.8), (900, 150, 260, CELESTE, 0.7)])
-    w_trazo(ImageDraw.Draw(img), TEXTO, 96)
+    # Fondo casi blanco que baja suave al gris de la web, como los iconos de Apple
+    img = Image.new("RGB", (S, S))
+    d = ImageDraw.Draw(img)
+    for y in range(S):
+        t = y / S
+        d.line((0, y, S, y), fill=tuple(int(255 + (f - 255) * t) for f in FONDO))
+    # Manchas de un solo color: el azul por defecto (#A8C5FF)
+    img = manchas_sobre(img, [(170, 180, 430, 0.95), (900, 880, 420, 0.75)], AZUL)
+    # La "w" en Inter Bold, con el mismo espaciado apretado que el logo
+    fuente = ImageFont.truetype(FUENTE_INTER, int(S * 0.56))
+    caja = d.textbbox((0, 0), "w", font=fuente)
+    x = (S - (caja[2] - caja[0])) / 2 - caja[0]
+    y = (S - (caja[3] - caja[1])) / 2 - caja[1]
+    ImageDraw.Draw(img).text((x, y), "w", font=fuente, fill=TEXTO)
+    return img
+
+
+def manchas_sobre(img, lista, color):
+    for cx, cy, r, fuerza in lista:
+        m = Image.new("L", (S, S), 0)
+        ImageDraw.Draw(m).ellipse((cx - r, cy - r, cx + r, cy + r), fill=int(255 * fuerza))
+        m = m.filter(ImageFilter.GaussianBlur(r * 0.5))
+        img = Image.composite(Image.new("RGB", (S, S), color), img, m)
     return img
 
 
