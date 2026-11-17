@@ -286,13 +286,89 @@
 
   window.leerFotoHorario = leerFoto;   // para las pruebas
 
+  // ---- Ayudas para cualquier formulario que acepte fotos ----
+  function esImagen(archivo) {
+    return /^image\//.test(archivo.type) || /\.(png|jpe?g|gif|webp)$/i.test(archivo.name);
+  }
+
+  // Claude acepta fotos de hasta 5 MB: si es más grande, la pasamos a JPG más pequeño
+  function achicar(archivo) {
+    if (archivo.size <= 4.5 * 1024 * 1024) return Promise.resolve(archivo);
+    return abrirImagen(archivo).then(function (img) {
+      var escala = Math.min(1, 2400 / Math.max(img.width, img.height));
+      var lienzo = document.createElement("canvas");
+      lienzo.width = Math.round(img.width * escala); lienzo.height = Math.round(img.height * escala);
+      lienzo.getContext("2d").drawImage(img, 0, 0, lienzo.width, lienzo.height);
+      return new Promise(function (ok) {
+        lienzo.toBlob(function (blob) { ok(new File([blob], "foto.jpg", { type: "image/jpeg" })); }, "image/jpeg", 0.85);
+      });
+    });
+  }
+
+  // Cambia el archivo elegido en el campo (para mandar la foto ya achicada)
+  function ponerArchivo(campo, archivo) {
+    if (archivo === campo.files[0]) return;
+    var caja = new DataTransfer();
+    caja.items.add(archivo);
+    campo.files = caja.files;
+  }
+
+  // Sin clave de Claude: todo el texto de la foto, línea por línea (Tesseract, en tu navegador)
+  function leerTexto(archivo, aviso) {
+    aviso("Cargando el lector de fotos…");
+    return cargarTesseract().then(function (Tess) {
+      return Tess.createWorker("spa", 1, OPCIONES);
+    }).then(function (trabajador) {
+      aviso("Leyendo la foto…");
+      return trabajador.recognize(archivo).then(function (r) {
+        trabajador.terminate();
+        return r.data.text || "";
+      });
+    });
+  }
+
   // ---- En la página: si eliges una imagen, se lee aquí y se enseña la lista ----
-  document.querySelectorAll("form.subir-horario").forEach(function (form) {
+  // Con la clave de Claude en el servidor (data-foto-servidor) la foto la lee el servidor.
+  // Con data-foto-texto, aquí solo sacamos el texto y el servidor busca las fechas.
+  document.querySelectorAll("form[data-foto-servidor], form[data-foto-texto]").forEach(function (form) {
+    var campo = form.querySelector("[data-archivo]");
+    form.addEventListener("submit", function (e) {
+      var archivo = campo.files[0];
+      if (!archivo || !esImagen(archivo) || form.dataset.listo) return;
+      e.preventDefault();
+      var boton = form.querySelector("button");
+      var zona = form.querySelector("[data-foto-resultado]");
+      var aviso = function (t) { if (zona) { zona.hidden = false; zona.textContent = t; } };
+      boton.disabled = true;
+      var lista = form.hasAttribute("data-foto-servidor")
+        ? achicar(archivo).then(function (foto) {
+            aviso("Leyendo la foto… puede tardar unos segundos.");
+            ponerArchivo(campo, foto);
+          })
+        : leerTexto(archivo, aviso).then(function (texto) {
+            var oculto = form.querySelector('input[name="texto_foto"]') || document.createElement("input");
+            oculto.type = "hidden"; oculto.name = "texto_foto"; oculto.value = texto;
+            form.appendChild(oculto);
+            aviso("Buscando fechas en la foto…");
+            return achicar(archivo).then(function (foto) { ponerArchivo(campo, foto); });
+          });
+      lista.then(function () {
+        form.dataset.listo = "1";
+        form.submit();
+      }).catch(function (error) {
+        boton.disabled = false;
+        aviso(error.message || "No pude leer la foto.");
+      });
+    });
+  });
+
+  // Sin clave en el servidor: "Sube tu horario" lee los bloques de la foto aquí mismo
+  document.querySelectorAll("form.subir-horario:not([data-foto-servidor]):not([data-foto-texto])").forEach(function (form) {
     var campo = form.querySelector("[data-archivo]");
     var zona = form.querySelector("[data-foto-resultado]");
     form.addEventListener("submit", function (e) {
       var archivo = campo.files[0];
-      if (!archivo || !/^image\//.test(archivo.type)) return;   // CSV, Excel o página: lo lee el servidor
+      if (!archivo || !esImagen(archivo)) return;   // CSV, Excel o página: lo lee el servidor
       e.preventDefault();
       var boton = form.querySelector("button");
       boton.disabled = true;

@@ -29,6 +29,7 @@ import contenido
 import examenes
 import importar_eventos
 import importar_horario
+import leer_imagen
 
 # Creamos la aplicación web. "__name__" le dice a Flask dónde está este archivo.
 app = Flask(__name__)
@@ -849,6 +850,28 @@ def horario():
             "arriba": (inicio - limite_arriba) * PIXELES_POR_HORA // 60,
             "alto": (fin - inicio) * PIXELES_POR_HORA // 60,
         })
+    # Lo que tiene fecha (eventos del Calendario, por ejemplo leídos de una foto) sale en el horario
+    # la semana que le toca: la semana del día que miras en el panel.
+    lunes = dia_panel - timedelta(days=dia_panel.weekday())
+    con_fecha = consultar("SELECT * FROM eventos WHERE usuario_id = ? AND fecha BETWEEN ? AND ? ORDER BY fecha, hora",
+                          (yo(), lunes.isoformat(), (lunes + timedelta(days=6)).isoformat()))
+    eventos_dia = [e for e in con_fecha if e["fecha"] == texto_panel]
+    for evento in con_fecha:
+        if not evento["hora"]:
+            continue   # sin hora: solo sale en el panel del día
+        inicio = max(a_minutos(evento["hora"]), limite_arriba)
+        fin = min(inicio + 60, limite_abajo)   # los eventos no tienen hora de fin: ocupan una hora
+        if fin <= inicio:
+            continue
+        fecha_evento = date.fromisoformat(evento["fecha"])
+        por_dia[fecha_evento.weekday()].append({
+            "clase": {"nombre": evento["titulo"], "hora_inicio": evento["hora"],
+                      "hora_fin": f"{fin // 60:02d}:{fin % 60:02d}", "categoria": evento["categoria"]},
+            "otro": False, "fecha": fecha_evento.strftime("%d/%m"),
+            "inicio": inicio, "fin": fin,
+            "arriba": (inicio - limite_arriba) * PIXELES_POR_HORA // 60,
+            "alto": (fin - inicio) * PIXELES_POR_HORA // 60,
+        })
     for bloques in por_dia.values():
         repartir_en_carriles(bloques)
 
@@ -878,7 +901,77 @@ def horario():
         dia_anterior=(dia_panel - timedelta(days=1)).isoformat(),
         dia_siguiente=(dia_panel + timedelta(days=1)).isoformat(),
         entrega_sugerida=(dia_panel + timedelta(days=7)).isoformat(),
+        eventos_dia=eventos_dia, semana_de=lunes.strftime("%d/%m"),
+        foto_en_servidor=leer_imagen.disponible(),
     )
+
+
+def guardar_leidos(cosas):
+    """Guarda lo que salió de una foto: lo que tiene fecha va al Calendario (y sale en el Horario
+    ese día); lo que se repite cada semana (solo dice el día) va al Horario.
+    Devuelve (al_horario, al_calendario, repetidas)."""
+    al_horario = al_calendario = repetidas = 0
+    deporte = mi_modo() == "deporte"
+    for cosa in cosas:
+        tipo = cosa["tipo"]
+        # En Deporte, el tipo de entreno si coincide con uno de la lista (Cardio, Fuerza...)
+        categoria = None
+        if deporte:
+            clave = importar_eventos.sin_tildes(tipo)
+            categoria = next((c for c in contenido.NOMBRE_TIPO_DEPORTE if c in clave or clave.startswith(c[:5])), None)
+        if cosa["fecha"]:
+            titulo = cosa["nombre"]
+            if not deporte and importar_eventos.es_examen(tipo) and "examen" not in titulo.lower():
+                titulo = "Examen: " + titulo   # así sale en "Próximos exámenes"
+            if cosa["lugar"]:
+                titulo += " · " + cosa["lugar"]
+            if consultar("SELECT id FROM eventos WHERE usuario_id = ? AND lower(titulo) = lower(?) AND fecha = ?",
+                         (yo(), titulo, cosa["fecha"])):
+                repetidas += 1
+                continue
+            modificar("INSERT INTO eventos (titulo, fecha, hora, usuario_id, categoria) VALUES (?, ?, ?, ?, ?)",
+                      (titulo, cosa["fecha"], cosa["hora_inicio"], yo(), categoria))
+            al_calendario += 1
+            continue
+        # Se repite cada semana: al horario (sin hora no sabemos dónde ponerlo)
+        inicio = cosa["hora_inicio"]
+        if not inicio:
+            continue
+        fin = cosa["hora_fin"]
+        if not fin or a_minutos(fin) <= a_minutos(inicio):
+            fin = importar_horario.de_minutos(a_minutos(inicio) + 60)   # sin hora de fin: una hora
+        if consultar("SELECT id FROM clases WHERE usuario_id = ? AND lower(nombre) = lower(?) AND dia = ? "
+                     "AND hora_inicio = ?", (yo(), cosa["nombre"], cosa["dia"], inicio)):
+            repetidas += 1
+            continue
+        es_clase = deporte or tipo in ("", "clase", "teoria", "teoría", "practica", "práctica", "seminario")
+        modificar("INSERT INTO clases (nombre, dia, hora_inicio, hora_fin, sala, usuario_id, tipo, categoria) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                  (cosa["nombre"], cosa["dia"], inicio, fin, cosa["lugar"], yo(), None if es_clase else "actividad",
+                   categoria))
+        al_horario += 1
+    return al_horario, al_calendario, repetidas
+
+
+def leer_foto_subida(archivo, contenido_archivo):
+    """Lee la foto subida (con Claude) o, si no hay clave, el texto que leyó el navegador.
+    Devuelve la lista de cosas, o lanza ValueError con un mensaje para el usuario."""
+    texto = request.form.get("texto_foto", "")
+    if archivo and archivo.filename and leer_imagen.es_imagen(archivo.filename, archivo.mimetype):
+        if leer_imagen.disponible():
+            return leer_imagen.leer_cosas(archivo.filename, contenido_archivo, mi_modo())
+        if not texto:
+            raise ValueError(contenido.MENSAJES["foto_sin_lector"])
+    return leer_imagen.eventos_de_texto(texto)
+
+
+def mensaje_foto(al_horario, al_calendario, repetidas):
+    if not al_horario and not al_calendario and not repetidas:
+        return contenido.MENSAJES["foto_vacia"]
+    mensaje = contenido.MENSAJES["foto_leida"].format(horario=al_horario, calendario=al_calendario)
+    if repetidas:
+        mensaje += contenido.MENSAJES["eventos_repetidos"].format(repetidos=repetidas)
+    return mensaje
 
 
 @app.route("/universidad/horario/subir", methods=["POST"])
@@ -889,9 +982,20 @@ def subir_horario():
     if not archivo or not archivo.filename:
         flash(contenido.MENSAJES["campo_obligatorio"])
         return redirect(url_for("horario"))
-    contenido_archivo = archivo.read(2 * 1024 * 1024 + 1)
-    if len(contenido_archivo) > 2 * 1024 * 1024:
+    es_foto = leer_imagen.es_imagen(archivo.filename, archivo.mimetype)
+    maximo = leer_imagen.MAXIMO if es_foto else 2 * 1024 * 1024
+    contenido_archivo = archivo.read(maximo + 1)
+    if len(contenido_archivo) > maximo:
         flash(contenido.MENSAJES["eventos_grande"])
+        return redirect(url_for("horario"))
+    if es_foto:
+        # Una foto o captura (PNG, JPG...): lo semanal va al horario y lo que tiene fecha, al calendario
+        try:
+            cosas = leer_foto_subida(archivo, contenido_archivo)
+        except ValueError as error:
+            flash(str(error))
+            return redirect(url_for("horario"))
+        flash(mensaje_foto(*guardar_leidos(cosas)))
         return redirect(url_for("horario"))
     try:
         clases, problemas = importar_horario.leer_horario(archivo.filename, contenido_archivo)
@@ -1238,7 +1342,7 @@ def calendario_vista():
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
         calendarios=opciones_calendarios(), avisos=avisos_calendario(), eleccion=eleccion,
         manuales=manuales, convocatorias=examenes.CONVOCATORIAS,
-        eventos_por_calendario=eventos_por_calendario(),
+        eventos_por_calendario=eventos_por_calendario(), foto_en_servidor=leer_imagen.disponible(),
         mis_calendarios=consultar("SELECT * FROM calendarios_eventos WHERE subido_por = ? ORDER BY id DESC",
                                   (mi_cuenta(),)),
         ocultos=cuantos_ocultos(eleccion), agenda=agenda, texto_meses=MESES,
@@ -1476,12 +1580,30 @@ def subir_eventos():
     if not universidad or not convocatoria or not archivo or not archivo.filename:
         flash(contenido.MENSAJES["campo_obligatorio"])
         return redirect(url_for("calendario_vista"))
-    contenido_archivo = archivo.read(2 * 1024 * 1024 + 1)
-    if len(contenido_archivo) > 2 * 1024 * 1024:
+    es_foto = leer_imagen.es_imagen(archivo.filename, archivo.mimetype)
+    maximo = leer_imagen.MAXIMO if es_foto else 2 * 1024 * 1024
+    contenido_archivo = archivo.read(maximo + 1)
+    if len(contenido_archivo) > maximo:
         flash(contenido.MENSAJES["eventos_grande"])
         return redirect(url_for("calendario_vista"))
+    nombre_archivo = archivo.filename
+    if es_foto:
+        # Una foto del calendario oficial: la pasamos a tabla (CSV) y se lee igual que un Excel
+        try:
+            if leer_imagen.disponible():
+                tabla = leer_imagen.leer_eventos(nombre_archivo, contenido_archivo, convocatoria)
+            elif request.form.get("texto_foto"):
+                tabla = leer_imagen.eventos_a_csv(
+                    [{"fecha": c["fecha"], "hora": c["hora_inicio"], "nombre": c["nombre"]}
+                     for c in leer_imagen.eventos_de_texto(request.form["texto_foto"])])
+            else:
+                raise ValueError(contenido.MENSAJES["foto_sin_lector"])
+        except ValueError as error:
+            flash(str(error))
+            return redirect(url_for("calendario_vista"))
+        nombre_archivo, contenido_archivo = "foto.csv", tabla.encode("utf-8")
     try:
-        eventos, problemas, pendientes = importar_eventos.leer_eventos(archivo.filename, contenido_archivo,
+        eventos, problemas, pendientes = importar_eventos.leer_eventos(nombre_archivo, contenido_archivo,
                                                                        convocatoria)
     except Exception as error:   # documento roto o de otro tipo
         flash(str(error) if isinstance(error, ValueError) else contenido.MENSAJES["eventos_vacio"])
@@ -1518,6 +1640,32 @@ def subir_eventos():
     if problemas:
         mensaje += contenido.MENSAJES["eventos_problemas"].format(cuantos=len(problemas), primera=problemas[0])
     flash(mensaje)
+    return redirect(url_for("calendario_vista"))
+
+
+@app.route("/universidad/calendario/subir-foto", methods=["POST"])
+def subir_foto_calendario():
+    """ "Desde una foto": lee una captura o foto (PNG, JPG...) y pone cada cosa en su sitio:
+    lo que tiene fecha en el calendario (y en el horario ese día), lo semanal en el horario."""
+    archivo = request.files.get("archivo")
+    contenido_archivo = archivo.read(leer_imagen.MAXIMO + 1) if archivo and archivo.filename else b""
+    if len(contenido_archivo) > leer_imagen.MAXIMO:
+        flash(contenido.MENSAJES["eventos_grande"])
+        return redirect(url_for("calendario_vista"))
+    if not contenido_archivo and not request.form.get("texto_foto"):
+        flash(contenido.MENSAJES["campo_obligatorio"])
+        return redirect(url_for("calendario_vista"))
+    try:
+        cosas = leer_foto_subida(archivo, contenido_archivo)
+    except ValueError as error:
+        flash(str(error))
+        return redirect(url_for("calendario_vista"))
+    flash(mensaje_foto(*guardar_leidos(cosas)))
+    # Vamos al mes de la primera fecha que salió en la foto
+    fechas = sorted(c["fecha"] for c in cosas if c["fecha"])
+    if fechas:
+        primera = date.fromisoformat(fechas[0])
+        return redirect(url_for("calendario_vista", anio=primera.year, mes=primera.month))
     return redirect(url_for("calendario_vista"))
 
 
