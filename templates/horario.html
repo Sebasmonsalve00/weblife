@@ -61,15 +61,15 @@
 {% if error %}<p class="aviso-error" role="alert">{{ error }}</p>{% endif %}
 
 <!-- Subir el horario entero desde un documento (pintahorarios guardado, CSV o Excel) -->
-<form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal" data-materias='{{ resumen|map(attribute="nombre")|list|tojson }}'>
+<form method="post" action="{{ url_for('subir_horario') }}" enctype="multipart/form-data" class="formulario subir-horario reveal" {{ "data-foto-servidor" if foto_en_servidor }} data-materias='{{ resumen|map(attribute="nombre")|list|tojson }}'>
   <div class="subir-horario-texto">
     <b>{{ "Sube tus entrenos" if modo == "deporte" else "Sube tu horario" }}</b>
-    <small>Una foto o captura de tu horario, tu pintahorarios guardado (⌘/Ctrl + S → "Página web, un solo archivo") o un CSV/Excel.</small>
+    <small>Una foto o captura (PNG o JPG) de tu horario{{ ", plan de entrenos" if modo == "deporte" }} o calendario, tu pintahorarios guardado (⌘/Ctrl + S → "Página web, un solo archivo") o un CSV/Excel. Lo semanal va al horario; lo que tiene fecha, al calendario y a su día aquí.</small>
   </div>
   <label class="subir-archivo">
     <input type="file" name="archivo" accept="image/*,.mhtml,.mht,.html,.htm,.csv,.xlsx,.txt" required data-archivo>
     <span class="subir-icono" aria-hidden="true">↑</span>
-    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>Foto, página guardada, CSV o Excel</small></span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>PNG, JPG, página guardada, CSV o Excel</small></span>
   </label>
   <div class="subir-horario-botones">
     <button class="boton boton-primario boton-chico">Subir horario</button>
@@ -91,14 +91,14 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
 <!-- Panel del día: clases del día, asistencia y tareas rápidas -->
 <aside class="panel-dia reveal" aria-label="Clases del día" data-zona="horario-panel">
   <div class="panel-titulo">
-    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_anterior) }}" data-actualiza="horario-panel horario-encabezado" aria-label="Día anterior">←</a>
+    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_anterior) }}" data-actualiza="horario-panel horario-encabezado horario-grilla" aria-label="Día anterior">←</a>
     <div>
       <b>{{ "Hoy" if es_hoy else nombre_dia_panel }}</b><br>
       <small>{{ nombre_dia_panel }} {{ dia_panel }}</small>
     </div>
-    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_siguiente) }}" data-actualiza="horario-panel horario-encabezado" aria-label="Día siguiente">→</a>
+    <a class="boton boton-redondo" href="{{ url_for('horario', fecha=dia_siguiente) }}" data-actualiza="horario-panel horario-encabezado horario-grilla" aria-label="Día siguiente">→</a>
   </div>
-  {% if not es_hoy %}<p class="centro"><a href="{{ url_for('horario') }}" data-actualiza="horario-panel horario-encabezado">Volver a hoy</a></p>{% endif %}
+  {% if not es_hoy %}<p class="centro"><a href="{{ url_for('horario') }}" data-actualiza="horario-panel horario-encabezado horario-grilla">Volver a hoy</a></p>{% endif %}
 
   {% for item in panel %}
     {% set clase = item.clase %}
@@ -188,8 +188,19 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
       {% endif %}
     </div>
   {% else %}
-    <p class="vacio centro">{{ "No tienes nada programado este día." if modo == "deporte" else "No tienes clases este día." }}</p>
+    {% if not eventos_dia %}<p class="vacio centro">{{ "No tienes nada programado este día." if modo == "deporte" else "No tienes clases este día." }}</p>{% endif %}
   {% endfor %}
+
+  {% if eventos_dia %}
+  <!-- Lo que tienes en el calendario este día (exámenes, eventos, cosas leídas de una foto...) -->
+  <p class="panel-subtitulo">En tu calendario este día</p>
+  {% for evento in eventos_dia %}
+    <div class="panel-clase panel-evento">
+      <b>{{ evento.titulo }}</b>
+      <small>{{ evento.hora or "Sin hora" }}{% if evento.categoria %} · {{ texto.nombre_tipo_deporte.get(evento.categoria, "") }}{% endif %}</small>
+    </div>
+  {% endfor %}
+  {% endif %}
 </aside>
 </div>
 
@@ -199,6 +210,7 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
 
 <!-- Grilla: una columna por día, una fila por hora de 6:00 a 22:00 -->
 <div class="grilla-contenedor reveal" data-zona="horario-grilla" data-zona-tambien="horario-panel horario-materias">
+  <p class="grilla-semana">Lo que tiene fecha sale en la semana del {{ semana_de }} (cambia de semana con las flechas del día).</p>
   {# Las columnas se reparten en estilo.css (.grilla) según --dias #}
   <div class="grilla" style="--dias: {{ dias_visibles|length }};">
     <div class="grilla-esquina"></div>
@@ -219,7 +231,14 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
           {# Si se pisa con otro bloque, cada uno ocupa su parte del ancho #}
           {% set ancho = 100 / item.carriles %}
           {% set lugar = "left: calc(" ~ (item.carril * ancho) ~ "% + 3px); width: calc(" ~ ancho ~ "% - 6px); right: auto;" if item.carriles > 1 else "" %}
-          {% if item.otro %}
+          {% if item.fecha %}
+          <!-- Con fecha (del calendario): solo sale la semana que le toca; se cambia en el Calendario -->
+          <div class="bloque bloque-fecha" style="top: {{ item.arriba }}px; height: {{ item.alto }}px; {{ lugar }}"
+               title="{{ item.fecha }}: {{ item.clase.nombre }} ({{ item.clase.hora_inicio }})">
+            <b>{{ item.clase.nombre }}</b>
+            <span class="bloque-modo">{{ item.fecha }}</span>
+          </div>
+          {% elif item.otro %}
           <!-- Del otro modo: solo para verlo (se edita cambiando de modo) -->
           <div class="bloque bloque-otro-modo modo-{{ otro_modo|lower }}" style="top: {{ item.arriba }}px; height: {{ item.alto }}px; {{ lugar }}"
                title="{{ otro_modo }}: {{ item.clase.nombre }} ({{ item.clase.hora_inicio }}–{{ item.clase.hora_fin }})">

@@ -31,6 +31,24 @@
   </div>
 </form>
 
+<!-- Desde una foto: una captura de un calendario, lista de exámenes, horario o plan de entrenos -->
+<form method="post" action="{{ url_for('subir_foto_calendario') }}" enctype="multipart/form-data" class="formulario subir-horario subir-foto reveal" {{ "data-foto-servidor" if foto_en_servidor else "data-foto-texto" }}>
+  <div class="subir-horario-texto">
+    <b>Desde una foto</b>
+    <small>Sube una captura o foto (PNG o JPG){{ " de tus entrenos, comidas o competiciones" if modo == "deporte" else " de exámenes, entregas o eventos" }}. Lo que tiene fecha va al calendario y a su día en el horario; lo que se repite cada semana, al horario.</small>
+  </div>
+  <label class="subir-archivo">
+    <input type="file" name="archivo" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg" required data-archivo>
+    <span class="subir-icono" aria-hidden="true">↑</span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir foto</b><small>PNG o JPG · hasta 5 MB</small></span>
+  </label>
+  <div class="subir-horario-botones">
+    <button class="boton boton-primario boton-chico">Leer foto</button>
+  </div>
+  <div class="foto-resultado" data-foto-resultado hidden></div>
+</form>
+<script src="{{ url_for('static', filename='leer_foto.js') }}" defer></script>
+
 
 <section class="reveal">
   <div class="mes-navegacion">
@@ -44,7 +62,7 @@
     <details class="examenes-mini">
       <summary class="boton boton-secundario boton-chico">Añade tus eventos <span class="flecha" aria-hidden="true">▾</span></summary>
       <div class="examenes-panel panel-ancho vidrio">
-        <form method="post" action="{{ url_for('subir_eventos') }}" enctype="multipart/form-data" class="examenes-form">
+        <form method="post" action="{{ url_for('subir_eventos') }}" enctype="multipart/form-data" class="examenes-form" {{ "data-foto-servidor" if foto_en_servidor else "data-foto-texto" }}>
           <div class="panel-cabecera">
             <b>Sube el calendario oficial</b>
             <span class="nota-mini">Una tabla con una fila por evento. Puede traer varias carreras y años: se guardan todos.</span>
@@ -63,10 +81,11 @@
             </div>
           </div>
           <label class="subir-archivo">
-            <input type="file" name="archivo" accept=".csv,.xlsx,.txt" required data-archivo>
+            <input type="file" name="archivo" accept=".csv,.xlsx,.txt,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg" required data-archivo>
             <span class="subir-icono" aria-hidden="true">↑</span>
-            <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>CSV o Excel · hasta 2 MB</small></span>
+            <span class="subir-texto"><b data-archivo-nombre>Elegir documento</b><small>CSV, Excel o foto (PNG/JPG)</small></span>
           </label>
+          <div class="foto-resultado" data-foto-resultado hidden></div>
           <button class="boton boton-primario boton-chico">Subir eventos</button>
           <a class="enlace-mini" href="{{ url_for('plantilla_eventos') }}">Descargar plantilla de ejemplo</a>
         </form>

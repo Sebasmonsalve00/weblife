@@ -51,6 +51,8 @@ os.environ["WEBLIFE_SECRETO"] = "pega-aqui-el-secreto"
 # Correo para "¿Has olvidado tu contraseña?" (opcional, ver "Recuperar contraseña" abajo)
 os.environ["WEBLIFE_CORREO"] = "tu-cuenta@gmail.com"
 os.environ["WEBLIFE_CORREO_CLAVE"] = "pega-aqui-la-contrasena-de-aplicacion"
+# Opcional: para leer fotos con Claude (ver "Leer fotos" más abajo)
+# os.environ["WEBLIFE_CLAUDE_CLAVE"] = "pega-aqui-tu-clave-de-claude"
 
 # Tu zona horaria, para que "hoy" sea tu día y no el del servidor.
 # Ejemplos: America/Santiago, America/Bogota, America/Mexico_City, Europe/Madrid
@@ -82,6 +84,22 @@ La cuenta gratis de PythonAnywhere solo permite enviar correo por Gmail (smtp.gm
 
 Nunca escribas esa contraseña en el código ni en GitHub: solo en el archivo WSGI.
 Las cuentas creadas antes no tienen correo: cada persona lo añade en **Mi perfil → Mis datos**.
+
+## Leer fotos (PNG/JPG) con Claude (opcional)
+
+Las subidas de horario, entrenos y eventos aceptan fotos o capturas. Sin hacer nada, la foto se lee
+en el navegador (gratis, pero solo entiende bien capturas claras). Con una clave de Claude la lee
+el servidor y entiende casi cualquier imagen (horarios, listas de exámenes, planes de entreno...).
+PythonAnywhere gratis sí deja hablar con `api.anthropic.com`.
+
+1. Entra en **console.anthropic.com**, crea una cuenta, añade un poco de saldo (cada foto cuesta
+   menos de 1 céntimo) y en **API Keys** crea una clave. Copia la clave (empieza por `sk-ant-`).
+2. En PythonAnywhere abre una consola **Bash** y escribe: `pip3 install --user anthropic`
+3. En el archivo WSGI, debajo de las otras líneas `os.environ[...]`, añade:
+   `os.environ["WEBLIFE_CLAUDE_CLAVE"] = "pega-aqui-tu-clave"`
+4. **Save** y **Reload**.
+
+Nunca escribas esa clave en el código ni en GitHub: solo en el archivo WSGI.
 
 ## Cosas que debes saber
 

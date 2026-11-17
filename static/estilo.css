@@ -561,6 +561,10 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .bloque .boton-icono { width: 22px; height: 22px; font-size: 0.6875rem; }
 /* Del otro modo (Uni en Deporte o al revés): más claro, con borde de puntos y sin editar */
 .bloque.bloque-otro-modo { padding-right: 10px; }
+/* Con fecha (del Calendario, por ejemplo leído de una foto): borde de rayas, solo esa semana */
+.bloque.bloque-fecha { padding-right: 10px; border-style: dashed; }
+.grilla-semana { position: sticky; left: 0; margin: 0 0 10px; font-size: 0.75rem; color: var(--texto-secundario); }
+.panel-subtitulo { margin: 16px 0 8px; font-size: 0.8125rem; font-weight: 600; color: var(--texto-secundario); }
 .bloque .bloque-modo { align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: 999px; font-size: 0.6875rem; color: var(--color-texto); background: var(--superficie-sin-blur); }
 
 .resumen-materias { list-style: none; padding: 8px 0; margin: 0; border-radius: var(--radio-tarjeta); box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); max-width: 560px; }
