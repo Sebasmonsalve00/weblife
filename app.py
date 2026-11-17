@@ -396,6 +396,26 @@ def pedir_sesion():
     return redirect(url_for("entrar"))
 
 
+# ---------- Carga rápida de CSS, JS e imágenes ----------
+# A cada archivo de /static le añadimos "?v=<fecha del archivo>". Así el móvil puede
+# guardarlo y no volver a pedirlo nunca... hasta que cambie: al hacer git pull cambia
+# la fecha, cambia el enlace y el móvil descarga la versión nueva sola.
+@app.url_defaults
+def version_estaticos(endpoint, valores):
+    if endpoint == "static" and "filename" in valores and "v" not in valores:
+        try:
+            valores["v"] = int(os.stat(os.path.join(app.static_folder, valores["filename"])).st_mtime)
+        except OSError:
+            pass
+
+
+@app.after_request
+def guardar_estaticos(respuesta):
+    if request.endpoint == "static" and request.args.get("v") and respuesta.status_code == 200:
+        respuesta.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return respuesta
+
+
 # ---------- App instalable (PWA) ----------
 # El "manifiesto" le dice al móvil el nombre, el icono y los colores de la app.
 @app.route("/manifest.webmanifest")

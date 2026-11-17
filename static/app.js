@@ -17,13 +17,16 @@
   // Marcamos que hay JavaScript: así los .reveal solo se ocultan si luego se pueden mostrar.
   document.documentElement.classList.add("js");
 
-  // ---------- 1. Menú compacto al bajar más de 50px ----------
+  // La parte de la página que se desliza (el menú de arriba queda fuera y no se mueve)
+  var zona = document.getElementById("zona-scroll") || document.scrollingElement;
+
+  // ---------- 1. Sombra bajo el menú al bajar más de 50px (el menú no cambia de tamaño) ----------
   var nav = document.getElementById("nav");
   if (nav) {
     var revisarScroll = function () {
-      nav.classList.toggle("compacta", window.scrollY > 50);
+      nav.classList.toggle("compacta", zona.scrollTop > 50);
     };
-    window.addEventListener("scroll", revisarScroll, { passive: true });
+    zona.addEventListener("scroll", revisarScroll, { passive: true });
     revisarScroll();
   }
 
@@ -152,14 +155,14 @@
   var CLAVE_SITIO = "weblife-sitio";
   var apuntarSitio = function () {
     try {
-      sessionStorage.setItem(CLAVE_SITIO, JSON.stringify({ ruta: location.pathname, y: window.scrollY, cuando: Date.now() }));
+      sessionStorage.setItem(CLAVE_SITIO, JSON.stringify({ ruta: location.pathname, y: zona.scrollTop, cuando: Date.now() }));
     } catch (error) { /* sin almacenamiento: se recarga como siempre */ }
   };
   try {
     var sitio = JSON.parse(sessionStorage.getItem(CLAVE_SITIO) || "null");
     sessionStorage.removeItem(CLAVE_SITIO);
     if (sitio && sitio.ruta === location.pathname && Date.now() - sitio.cuando < 15000 && !location.hash) {
-      window.scrollTo(0, sitio.y);
+      zona.scrollTop = sitio.y;
       // El mensaje de "guardado" está arriba de la página: lo mostramos abajo, flotando
       var guardado = document.querySelector(".aviso-exito");
       if (guardado && sitio.y > 120) {

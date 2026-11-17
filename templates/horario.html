@@ -212,7 +212,8 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
 <div class="grilla-contenedor reveal" data-zona="horario-grilla" data-zona-tambien="horario-panel horario-materias">
   <p class="grilla-semana">Lo que tiene fecha sale en la semana del {{ semana_de }} (cambia de semana con las flechas del día).</p>
   {# Las columnas se reparten en estilo.css (.grilla) según --dias #}
-  <div class="grilla" style="--dias: {{ dias_visibles|length }};">
+  {# Si en un día hay clases que se pisan, esa columna es más ancha (una parte por cada una) #}
+  <div class="grilla" style="--dias: {{ dias_visibles|length }}; grid-template-columns: var(--col-horas, 56px){% for d in dias_visibles %}{% set n = [(por_dia[d]|map(attribute='carriles')|list + [1])|max, 3]|min %} minmax(calc(var(--col-dia, 110px) * {{ n }}), {{ n }}fr){% endfor %};">
     <div class="grilla-esquina"></div>
     {% for d in dias_visibles %}<div class="grilla-dia {{ 'hoy' if d == dia_hoy }}" data-dia="{{ d }}"><span>{{ dias[d] }}</span></div>{% endfor %}
 

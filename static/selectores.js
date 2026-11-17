@@ -79,7 +79,8 @@
     tarjeta.style.left = izquierda + "px";
   }
   window.addEventListener("resize", colocar);
-  window.addEventListener("scroll", colocar, { passive: true });
+  // capture: así se entera también cuando se desliza la zona de la página (no solo la ventana)
+  document.addEventListener("scroll", colocar, { passive: true, capture: true });
   document.addEventListener("pointerdown", function (e) {
     if (!abiertoPara) return;
     if (tarjeta.contains(e.target) || abiertoPara.envoltorio.contains(e.target)) return;

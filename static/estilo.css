@@ -18,12 +18,24 @@ body {
   color: var(--color-texto);
   background: var(--color-fondo);
   overflow-x: clip;          /* nunca scroll horizontal */
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
+/* Como una app: la pantalla entera no se mueve ni rebota. El menú de arriba se queda
+   quieto y solo se desliza lo de debajo (.zona-scroll), igual que en las apps del iPhone. */
+html { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body { position: fixed; inset: 0; overflow: hidden; }
+.zona-scroll {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+  overflow-x: clip; overflow-y: auto;
+  overscroll-behavior: none;            /* sin rebote al llegar arriba o abajo */
+  -webkit-overflow-scrolling: touch;
+}
+.zona-scroll > .tramo { flex: 1 0 auto; }
+.zona-scroll > .footer { flex-shrink: 0; }
 @media (min-width: 1024px) { body { font-size: 1.0625rem; } }
-body.menu-abierto { overflow: hidden; }   /* bloquea el scroll con el menú móvil abierto */
+body.menu-abierto .zona-scroll { overflow: hidden; }   /* bloquea el scroll con el menú móvil abierto */
 .tramo { flex: 1 0 auto; }
 a { color: var(--color-texto); }
 img { max-width: 100%; border-radius: var(--radio-imagen); }
@@ -177,7 +189,8 @@ h3 { font-size: 1.125rem; font-weight: 600; }
 
 /* ---------- Navegación ---------- */
 .nav {
-  position: sticky;
+  position: relative;        /* está fuera de la zona que se desliza: nunca se mueve */
+  flex-shrink: 0;
   top: 0;
   z-index: 50;
   border-width: 0 0 1px;
@@ -197,7 +210,6 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   transition: height var(--t-menu) ease;
 }
 .nav.compacta { box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
-.nav.compacta .nav-interior { height: 52px; }
 .logo { font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; text-decoration: none; }
 .nav-enlaces, .nav-acciones { display: none; }
 .nav-enlaces a {
@@ -545,6 +557,11 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   display: flex; flex-direction: column; line-height: 1.3;
 }
 .bloque span { color: var(--texto-secundario); }
+/* Textos dentro de las burbujas del horario: nunca se parten letra a letra ("Di-rec-ción").
+   El nombre ocupa las líneas que quepan y acaba en "…"; el aula y la etiqueta, en una línea. */
+.bloque b { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+            overflow-wrap: normal; word-break: normal; hyphens: manual; font-weight: 600; min-height: 0; flex-shrink: 1; }
+.bloque > span { display: block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
 /* Actividad aparte (no es clase): gris cristal en vez del color de la web */
 .bloque[data-editar] { cursor: pointer; transition: transform 150ms var(--easing), box-shadow 150ms var(--easing); }
 .bloque[data-editar]:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(29, 29, 31, 0.10); z-index: 2; }
@@ -828,6 +845,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .item.hecha { text-decoration: line-through; opacity: 0.6; }
 /* Del otro modo (Uni en Deporte o al revés): más claro, con borde de puntos y sin borrar */
 .item.otro-modo, .dia-item.otro-modo, .dia-bloque.otro-modo { color: var(--color-texto); font-weight: 400; }
+.item-hora { font-style: normal; }
 .item-modo { font-style: normal; font-size: 0.625rem; padding: 0 4px; border-radius: 999px; background: var(--superficie-sin-blur); }
 /* Cada modo con su tono de tu color (ver config_diseno.TONOS_MODO): Uni tu color, Deporte más oscuro.
    Lo propio de Deporte, con su tono; lo del otro modo, el mismo tono pero más suave. */
@@ -934,7 +952,7 @@ html:not(.js) [data-anim] { opacity: 1 !important; transform: none !important; f
 /* Cada página va en un "tramo", que lleva su fondo de burbujas */
 .tramo { position: relative; isolation: isolate; background: var(--color-fondo); }
 /* Cada página ocupa al menos toda la pantalla */
-.tramo { min-height: 100vh; min-height: 100svh; }
+.tramo { min-height: 100%; }
 
 /* ---------- Fondo de burbujas ----------
    Burbujas difuminadas juntas sobre el blanco de la paleta. Su color va del celeste
@@ -1008,6 +1026,10 @@ html:not(.js) .carga { display: none; }
   transition: opacity 250ms var(--easing), transform 250ms var(--easing);
 }
 .aviso-flotante.visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* Modo rápido (config_diseno.EFECTOS): todo se ve al momento, sin esperar animaciones */
+.sin-aparecer .reveal, .sin-aparecer .hero-entrada > * { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
+.manchas-quietas .mancha { animation: none; }
 
 /* Sin animaciones si la persona lo pidió en su sistema */
 @media (prefers-reduced-motion: reduce) {
@@ -1147,7 +1169,7 @@ html:not(.js) .carga { display: none; }
 .ventana-campos { align-items: end; }
 #form-objetivo .ventana-campos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 /* Al saltar a #objetivo, #comidas o #imc, el título no queda escondido bajo la barra de arriba */
-#objetivo, #comidas, #imc { scroll-margin-top: 96px; }
+#objetivo, #comidas, #imc { scroll-margin-top: 16px; }
 .tarjeta-macro .numero { white-space: nowrap; }
 @media (max-width: 639px) { .tarjeta-macro .numero { font-size: 1.5rem; } }
 
@@ -1238,6 +1260,7 @@ a, button, summary, label, input, select, .bloque, .calendario td { -webkit-tap-
     scrollbar-width: none;
   }
   .grilla-contenedor::-webkit-scrollbar { display: none; }
+  .grilla-semana { padding-left: 14px; }   /* que la nota no toque el borde de la burbuja */
   .grilla { width: max-content; min-width: 100%; }
   .grilla-dia { scroll-snap-align: start; font-size: 13px; }
   .grilla-esquina, .grilla-horas {
@@ -1248,7 +1271,7 @@ a, button, summary, label, input, select, .bloque, .calendario td { -webkit-tap-
   }
   .grilla-horas span { right: 6px; font-size: 11px; font-variant-numeric: tabular-nums; }
   /* Los bloques: letra más pequeña y todo el ancho para el nombre (se borra desde "Editar") */
-  .bloque { padding: 5px 7px; font-size: 12px; line-height: 1.25; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
+  .bloque { padding: 6px 8px; font-size: 12px; line-height: 1.25; }
   .bloque > form { display: none; }
   .bloque span { font-size: 11px; }
 }
@@ -1297,7 +1320,9 @@ a, button, summary, label, input, select, .bloque, .calendario td { -webkit-tap-
   .calendario td { height: 72px; padding: 3px 2px; border-radius: 10px; font-size: 10px; line-height: 1.3; }
   .calendario .num { display: block; width: 22px; height: 22px; margin: 0 auto 1px; padding: 0; border-radius: 50%; font-size: 12px; line-height: 22px; text-align: center; }
   .calendario td.hoy .num { background: var(--color-texto); color: var(--color-fondo); }
-  .calendario .item { display: block; margin-top: 2px; padding: 1px 3px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: clip; border-width: 0.5px; }
+  .calendario .item { display: block; margin-top: 2px; padding: 1px 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-width: 0.5px; }
+  .calendario .item > span { display: block; overflow: hidden; text-overflow: ellipsis; }
+  .calendario .item-hora { display: none; }   /* en la casilla pequeña, mejor el nombre que la hora */
   .calendario .item form, .calendario .item .item-modo { display: none; }
   .calendario .item:nth-of-type(n+4) { display: none; }
   .mas-cosas { display: block; margin-top: 1px; text-align: center; font-size: 10px; font-weight: 600; color: var(--texto-secundario); }

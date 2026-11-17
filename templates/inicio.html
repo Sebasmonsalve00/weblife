@@ -1,14 +1,16 @@
 {% extends "base.html" %}
 {% from "_componentes.html" import enlace_flecha %}
-{% block clase_body %}con-carga{% endblock %}
+{% block clase_body %}{% if efectos.pantalla_carga %}con-carga{% endif %}{% endblock %}
 {% block contenido %}
 {% set t = texto.inicio %}
 
 <!-- Pantalla de carga al entrar en la bienvenida: el nombre y una barra que se llena -->
+{% if efectos.pantalla_carga %}
 <div class="carga" aria-hidden="true">
   <span class="carga-logo">{{ texto.nombre_sitio }}</span>
   <span class="carga-barra"><i></i></span>
 </div>
+{% endif %}
 
 <!-- ===== Portada (hero) ===== -->
 <section class="hero">

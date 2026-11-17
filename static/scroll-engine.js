@@ -213,6 +213,6 @@
   window.ScrollEngine = { pedirDibujo: pedirDibujo, suavizar: suavizar, avanceEnRango: avanceEnRango, preparar: preparar };
   if (sinMovimiento || !vigilante) return;
   preparar(document);
-  window.addEventListener("scroll", pedirDibujo, { passive: true });
+  document.addEventListener("scroll", pedirDibujo, { passive: true, capture: true });
   window.addEventListener("resize", pedirDibujo);
 })();
