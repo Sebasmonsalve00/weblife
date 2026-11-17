@@ -1,42 +1,86 @@
 """Crea los iconos de la app (PWA) en static/iconos/.
 Uso: python3 herramientas/crear_iconos.py  (necesita Pillow: pip3 install --user pillow)
-Cambia COLOR_FONDO / COLOR_LETRA / LETRA y vuelve a ejecutarlo si quieres otro icono."""
-import os
-from PIL import Image, ImageDraw, ImageFont
 
-COLOR_FONDO = "#A8C5FF"   # el azul pastel de la web
-COLOR_LETRA = "#1D1D1F"
-LETRA = "w"
-FUENTE = "/usr/share/fonts/opentype/inter/Inter-Bold.otf"   # si no existe, usa la de serie
+Hay tres diseños; cambia DISENO y vuelve a ejecutarlo:
+  "A": fondo claro con las manchas de color de la web y una "w" de trazo redondeado.
+  "B": tarjeta de cristal sobre un degradado pastel.
+  "C": fondo oscuro con la "w" en degradado pastel y un punto.
+"""
+import os
+from PIL import Image, ImageDraw, ImageFilter
+
+DISENO = "A"
 CARPETA = os.path.join(os.path.dirname(__file__), "..", "static", "iconos")
 
+S = 1024   # dibujamos grande y luego reducimos, para que los bordes queden suaves
+FONDO = (245, 245, 247)     # #F5F5F7, el fondo de la web
+TEXTO = (29, 29, 31)        # #1D1D1F
+AZUL = (168, 197, 255)      # #A8C5FF, el acento
+LILA = (209, 184, 255)
+CELESTE = (168, 224, 255)
+ROSA = (255, 184, 209)
 
-def icono(tamano, tamano_letra, redondeado):
-    escala = 4   # dibujamos grande y reducimos, para bordes suaves
-    t = tamano * escala
-    img = Image.new("RGBA", (t, t), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    if redondeado:
-        d.rounded_rectangle((0, 0, t - 1, t - 1), radius=int(t * 0.22), fill=COLOR_FONDO)
-    else:
-        d.rectangle((0, 0, t, t), fill=COLOR_FONDO)
-    try:
-        fuente = ImageFont.truetype(FUENTE, int(t * tamano_letra))
-    except OSError:
-        fuente = ImageFont.load_default(int(t * tamano_letra))
-    caja = d.textbbox((0, 0), LETRA, font=fuente)
-    x = (t - (caja[2] - caja[0])) / 2 - caja[0]
-    y = (t - (caja[3] - caja[1])) / 2 - caja[1]
-    d.text((x, y), LETRA, font=fuente, fill=COLOR_LETRA)
-    return img.resize((tamano, tamano), Image.LANCZOS)
+
+def manchas(base, lista):
+    """Fondo con manchas de color difuminadas, como las de detrás de la web."""
+    capa = Image.new("RGB", (S, S), base)
+    for cx, cy, r, color, fuerza in lista:
+        m = Image.new("L", (S, S), 0)
+        ImageDraw.Draw(m).ellipse((cx - r, cy - r, cx + r, cy + r), fill=int(255 * fuerza))
+        m = m.filter(ImageFilter.GaussianBlur(r * 0.45))
+        capa = Image.composite(Image.new("RGB", (S, S), color), capa, m)
+    return capa
+
+
+def w_trazo(d, color, grosor, y0=330, y1=700, x0=250, x1=774, ymedio=430):
+    """La "w" como una sola línea con las puntas redondeadas."""
+    xs = [x0, x0 + (x1 - x0) * 0.25, (x0 + x1) / 2, x0 + (x1 - x0) * 0.75, x1]
+    puntos = [(xs[0], y0), (xs[1], y1), (xs[2], ymedio), (xs[3], y1), (xs[4], y0)]
+    d.line(puntos, fill=color, width=grosor, joint="curve")
+    for x, y in puntos:
+        d.ellipse((x - grosor / 2, y - grosor / 2, x + grosor / 2, y + grosor / 2), fill=color)
+
+
+def diseno_a():
+    img = manchas(FONDO, [(220, 230, 420, AZUL, 1), (860, 820, 380, LILA, 0.8), (900, 150, 260, CELESTE, 0.7)])
+    w_trazo(ImageDraw.Draw(img), TEXTO, 96)
+    return img
+
+
+def diseno_b():
+    img = manchas(AZUL, [(150, 150, 500, CELESTE, 1), (950, 950, 520, LILA, 1), (900, 200, 300, ROSA, 0.5)])
+    cristal = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    ImageDraw.Draw(cristal).rounded_rectangle((170, 170, 854, 854), radius=170, fill=(255, 255, 255, 120),
+                                              outline=(255, 255, 255, 200), width=8)
+    img = Image.alpha_composite(img.convert("RGBA"), cristal).convert("RGB")
+    w_trazo(ImageDraw.Draw(img), TEXTO, 80, y0=380, y1=650, x0=300, x1=724, ymedio=460)
+    return img
+
+
+def diseno_c():
+    img = Image.new("RGB", (S, S), TEXTO)
+    mascara = Image.new("L", (S, S), 0)
+    w_trazo(ImageDraw.Draw(mascara), 255, 104)
+    img.paste(manchas(AZUL, [(250, 300, 380, CELESTE, 1), (800, 750, 380, LILA, 1)]), (0, 0), mascara)
+    ImageDraw.Draw(img).ellipse((S / 2 - 34, 196, S / 2 + 34, 264), fill=AZUL)
+    return img
+
+
+def guardar(img, nombre, tamano, redondeado):
+    if redondeado:   # esquinas redondeadas (Android y pestañas); iPhone las redondea solo
+        m = Image.new("L", (S, S), 0)
+        ImageDraw.Draw(m).rounded_rectangle((0, 0, S - 1, S - 1), radius=int(S * 0.225), fill=255)
+        con_esquinas = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        con_esquinas.paste(img, (0, 0), m)
+        img = con_esquinas
+    img.resize((tamano, tamano), Image.LANCZOS).save(os.path.join(CARPETA, nombre))
 
 
 os.makedirs(CARPETA, exist_ok=True)
-icono(192, 0.62, True).save(os.path.join(CARPETA, "icono-192.png"))
-icono(512, 0.62, True).save(os.path.join(CARPETA, "icono-512.png"))
-# "maskable": Android lo recorta en círculo o gota, así que la letra va más pequeña y el fondo lleno
-icono(512, 0.45, False).save(os.path.join(CARPETA, "icono-maskable-512.png"))
-# iPhone: fondo lleno (iOS redondea las esquinas solo)
-icono(180, 0.62, False).convert("RGB").save(os.path.join(CARPETA, "apple-touch-icon.png"))
-icono(32, 0.7, True).save(os.path.join(CARPETA, "favicon-32.png"))
-print("Iconos creados en", os.path.abspath(CARPETA))
+icono = {"A": diseno_a, "B": diseno_b, "C": diseno_c}[DISENO]()
+guardar(icono, "icono-192.png", 192, True)
+guardar(icono, "icono-512.png", 512, True)
+guardar(icono, "icono-maskable-512.png", 512, False)   # Android lo recorta él (la "w" cabe en la zona segura)
+guardar(icono, "apple-touch-icon.png", 180, False)
+guardar(icono, "favicon-32.png", 32, True)
+print("Iconos (diseño", DISENO + ") creados en", os.path.abspath(CARPETA))

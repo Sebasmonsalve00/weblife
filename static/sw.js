@@ -2,7 +2,7 @@
    A propósito NO guarda páginas ni CSS/JS en caché: así cada cambio que subas
    (git pull + Reload) aparece al momento en la app, sin versiones viejas.
    Solo guarda la página "Sin conexión" para enseñarla si no hay internet. */
-const CACHE = "weblife-v1";
+const CACHE = "weblife-v2";   // súbelo si cambias los iconos
 const SIN_CONEXION = "/static/sin-conexion.html";
 
 self.addEventListener("install", function (e) {
