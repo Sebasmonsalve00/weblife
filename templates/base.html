@@ -18,7 +18,9 @@
   <!-- Fuente Inter desde Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="{{ fuente.google_fonts }}">
+  <!-- Se carga sin frenar la página: mientras llega, se ve la letra del sistema (en iPhone es casi igual) -->
+  <link rel="stylesheet" href="{{ fuente.google_fonts }}" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="{{ fuente.google_fonts }}"></noscript>
 
   <!-- Variables de diseño que vienen de config_diseno.py (colores, radios, tiempos...) -->
   <style>
@@ -46,6 +48,8 @@
   </script>
   {% endif %}
   {% if not efectos.cristal_difuminado %}<script>document.documentElement.classList.add("sin-cristal");</script>{% endif %}
+  {% if not efectos.aparecer_al_bajar %}<script>document.documentElement.classList.add("sin-aparecer");</script>{% endif %}
+  {% if not efectos.manchas_flotan %}<script>document.documentElement.classList.add("manchas-quietas");</script>{% endif %}
   {% if not efectos.microinteracciones %}<script>document.documentElement.classList.add("sin-micro");</script>{% endif %}
 </head>
 <body class="{% block clase_body %}{% endblock %}" data-modo="{{ modo }}">
@@ -124,6 +128,8 @@
   </div>
   {% endblock %}
 
+  <!-- Zona que se desliza: el menú de arriba queda fuera y no se mueve nunca -->
+  <div class="zona-scroll" id="zona-scroll">
   {# Cada página va en un "tramo": lleva su fondo de burbujas. Se cambia de página
      solo desde el menú (los enlaces de arriba en escritorio, las rayitas en el móvil). #}
   <div class="tramo actual {{ self.clase_body() | trim }}" data-url="{{ request.path }}"
@@ -168,6 +174,7 @@
     </div>
   </footer>
   {% endblock %}
+  </div>
 
 
 
@@ -182,8 +189,10 @@
     };
   </script>
   <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+  {% if efectos.motor_scroll or efectos.titulares_por_palabra %}
   <!-- Motor de scroll (titulares por palabra y secciones animadas) -->
   <script src="{{ url_for('static', filename='scroll-engine.js') }}" defer></script>
+  {% endif %}
   <!-- Al marcar o borrar algo, se actualiza solo esa casilla (sin recargar la página) -->
   <script src="{{ url_for('static', filename='zonas.js') }}" defer></script>
   <!-- Calendario y horas con el estilo de la web (en vez de los del navegador) -->

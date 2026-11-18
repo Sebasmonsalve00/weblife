@@ -184,7 +184,7 @@
                 {% set cosas = cosas_por_dia.get(dia, []) %}
                 {% for cosa in cosas %}
                   <div class="item {{ cosa.tipo }} {{ 'hecha' if cosa.hecha }} {{ 'otro-modo modo-' ~ cosa.otro|lower if cosa.otro }}"{% if cosa.otro %} title="{{ cosa.otro }}"{% endif %}>
-                    <span>{% if cosa.otro %}<em class="item-modo">{{ cosa.otro }}</em> {% endif %}{{ cosa.texto }}</span>
+                    <span>{% if cosa.otro %}<em class="item-modo">{{ cosa.otro }}</em> {% endif %}{% if cosa.texto[2:3] == ":" and cosa.texto[5:6] == " " %}<i class="item-hora">{{ cosa.texto[:6] }}</i>{{ cosa.texto[6:] }}{% else %}{{ cosa.texto }}{% endif %}</span>
                     {% if cosa.otro %}{# del otro modo: solo para verlo, sin borrar #}
                     {% elif cosa.manual_id %}
                       {{ boton_borrar(url_for('borrar_examen_manual', id=cosa.manual_id), "Borrar examen: " ~ cosa.texto) }}

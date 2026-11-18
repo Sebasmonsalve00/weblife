@@ -96,10 +96,15 @@ ANIMACION = {
 }
 
 # ---- Efectos de scroll e interacción (cada uno se puede apagar con False) ----
+# Para que la app vaya lo más fluida posible, lo que retrasa o mueve cosas sin
+# necesidad está apagado (False). Ponlo en True si quieres recuperarlo.
 EFECTOS = {
-    "motor_scroll": True,          # scroll-engine.js: secciones .scroll-section y atributos data-anim
-    "titulares_por_palabra": True, # titulares que se encienden palabra por palabra al bajar
-    "transiciones_pagina": True,   # fundido suave al cambiar de página (View Transitions)
+    "motor_scroll": False,         # scroll-engine.js: secciones .scroll-section y atributos data-anim
+    "titulares_por_palabra": False,# titulares que se encienden palabra por palabra al bajar
+    "transiciones_pagina": False,  # fundido al cambiar de página (tardaba casi 1 segundo)
+    "aparecer_al_bajar": False,    # tarjetas que aparecen con un fundido al llegar a ellas
+    "pantalla_carga": False,       # pantalla con la barra que se llena al abrir Inicio (1,5 s)
+    "manchas_flotan": False,       # las manchas de color del fondo se mueven sin parar
     "microinteracciones": True,    # botones que crecen/se encogen, tarjetas que suben
     # Difuminar lo que hay detrás de cada tarjeta (backdrop-filter). Es lo que más
     # frena la web al hacer scroll, y detrás solo hay burbujas ya borrosas, así que
