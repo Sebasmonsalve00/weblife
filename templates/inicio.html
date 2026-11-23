@@ -46,7 +46,7 @@
     <article class="tarjeta tarjeta-interactiva reveal md-6 lg-4">
       <h3>{{ texto.p.proximas }}</h3>
       {% for tarea in pendientes %}
-        <p><b>{{ tarea.fecha_entrega }}</b> {{ tarea.titulo }} <small>{{ tarea.materia }}</small></p>
+        <p><b>{{ tarea.fecha_entrega | fecha_corta }}{% if tarea.hora_entrega %} · {{ tarea.hora_entrega }}{% endif %}</b> {{ tarea.titulo }} <small>{{ tarea.materia }}</small></p>
       {% else %}
         <p class="descripcion">¡Nada pendiente!</p>
       {% endfor %}

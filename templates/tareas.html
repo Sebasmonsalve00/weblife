@@ -4,44 +4,68 @@
 {% block contenido %}
 {{ encabezado(texto.paginas.tareas) }}
 
-<form method="post" class="formulario grid-12 reveal">
-  <div class="campo lg-6">
-    <label for="t-titulo">{{ texto.p.pregunta }}</label>
-    <input id="t-titulo" name="titulo" placeholder="{{ texto.p.ejemplo }}" required>
-  </div>
-  <div class="campo md-6 lg-3">
-    <!-- Las materias vienen del Horario semanal -->
-    <label for="t-materia">{{ texto.p.materia }}</label>
-    {% if modo == "deporte" %}
-      {# En Deporte la actividad es libre: escribes la que quieras (sugiere tus entrenos) #}
-      <input id="t-materia" name="materia" placeholder="ej: Correr, Gimnasio, Natación" list="t-actividades" autocomplete="off">
-      <datalist id="t-actividades">{% for materia in materias %}<option value="{{ materia }}">{% endfor %}</datalist>
-    {% else %}
-    <select id="t-materia" name="materia">
-      <option value="">{{ texto.p.sin_materia }}</option>
-      {% for materia in materias %}
-        <option>{{ materia }}</option>
+{# Primero la lista y debajo el formulario (así sale en el teléfono).
+   En el ordenador el CSS sube el formulario arriba, como antes. #}
+<div class="pagina-tareas">
+  <section class="bloque-lista-tareas">
+    <h2 class="subtitulo-chico titulo-grupo">Pendientes <span class="contador">{{ pendientes|length }}</span></h2>
+    <ul class="lista lista-pendientes reveal">
+      {% for tarea in pendientes %}
+        {% include "_tarea.html" %}
+      {% else %}
+        <li class="vacio">{{ texto.p.vacio if not hechas else "¡Nada pendiente!" }}</li>
       {% endfor %}
-    </select>
-    {% endif %}
-  </div>
-  <div class="campo md-6 lg-3">
-    <label for="t-fecha">{{ texto.p.fecha }}</label>
-    <input id="t-fecha" type="date" name="fecha_entrega" value="{{ hoy }}" required>
-  </div>
-  <div class="campo">
-    <button class="boton-enviar">{{ texto.p.boton }}</button>
-  </div>
-</form>
-{% if not materias and modo != "deporte" %}
-  <p class="nota">{{ texto.p.sin_materias }} <a href="{{ url_for('horario') }}">{{ texto.menu[0][0] }}</a>.</p>
-{% endif %}
+    </ul>
 
-<ul class="lista reveal">
-  {% for tarea in tareas %}
-    {% include "_tarea.html" %}
-  {% else %}
-    <li class="vacio">{{ texto.p.vacio }}</li>
-  {% endfor %}
-</ul>
+    {% if hechas %}
+      <details class="grupo-hechas">
+        <summary>{{ texto.p.hechas }} ({{ hechas|length }})</summary>
+        <ul class="lista reveal">
+          {% for tarea in hechas %}{% include "_tarea.html" %}{% endfor %}
+        </ul>
+      </details>
+    {% endif %}
+  </section>
+
+  <section class="bloque-anadir-tarea">
+    <h2 class="subtitulo-chico solo-movil">{{ texto.p.boton }}</h2>
+    <form method="post" class="formulario grid-12 reveal">
+      <div class="campo lg-6">
+        <label for="t-titulo">{{ texto.p.pregunta }}</label>
+        <input id="t-titulo" name="titulo" placeholder="{{ texto.p.ejemplo }}" required>
+      </div>
+      <div class="campo md-6 lg-6">
+        <!-- Las materias vienen del Horario semanal -->
+        <label for="t-materia">{{ texto.p.materia }}</label>
+        {% if modo == "deporte" %}
+          {# En Deporte la actividad es libre: escribes la que quieras (sugiere tus entrenos) #}
+          <input id="t-materia" name="materia" placeholder="ej: Correr, Gimnasio, Natación" list="t-actividades" autocomplete="off">
+          <datalist id="t-actividades">{% for materia in materias %}<option value="{{ materia }}">{% endfor %}</datalist>
+        {% else %}
+        <select id="t-materia" name="materia">
+          <option value="">{{ texto.p.sin_materia }}</option>
+          {% for materia in materias %}
+            <option>{{ materia }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+      </div>
+      <div class="campo md-6 lg-3">
+        <label for="t-fecha">{{ texto.p.fecha }}</label>
+        <input id="t-fecha" type="date" name="fecha_entrega" value="{{ hoy }}" required>
+      </div>
+      <div class="campo md-6 lg-3">
+        {# Opcional: sin hora, la tarea vale hasta el final del día #}
+        <label for="t-hora">Hora límite</label>
+        <input id="t-hora" type="time" name="hora_entrega">
+      </div>
+      <div class="campo">
+        <button class="boton-enviar">{{ texto.p.boton }}</button>
+      </div>
+    </form>
+    {% if not materias and modo != "deporte" %}
+      <p class="nota">{{ texto.p.sin_materias }} <a href="{{ url_for('horario') }}">{{ texto.menu[0][0] }}</a>.</p>
+    {% endif %}
+  </section>
+</div>
 {% endblock %}

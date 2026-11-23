@@ -148,7 +148,7 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
             <label for="rk-{{ clase.id }}">{{ texto.p.era }}</label>
             <select id="rk-{{ clase.id }}" name="tarea_id">
               <option value="">No, otra cosa</option>
-              {% for tarea in item.pendientes %}<option value="{{ tarea.id }}">{{ tarea.titulo }} · entrega {{ tarea.fecha_entrega }}</option>{% endfor %}
+              {% for tarea in item.pendientes %}<option value="{{ tarea.id }}">{{ tarea.titulo }} · entrega {{ tarea.fecha_entrega | fecha_corta }}{% if tarea.hora_entrega %} {{ tarea.hora_entrega }}{% endif %}</option>{% endfor %}
             </select>
           </div>
           {% endif %}
@@ -170,6 +170,10 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
             <label for="rf-{{ clase.id }}">Entrega</label>
             <input id="rf-{{ clase.id }}" type="date" name="fecha_entrega" value="{{ entrega_sugerida }}" required>
           </div>
+          <div class="campo">
+            <label for="rh-{{ clase.id }}">Hora límite</label>
+            <input id="rh-{{ clase.id }}" type="time" name="hora_entrega">
+          </div>
           <button>{{ texto.p.anadir }}</button>
         </form>
       </details>
@@ -181,7 +185,7 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
               <form method="post" action="{{ url_for('cambiar_tarea', id=tarea.id) }}" class="en-linea">
                 <button class="boton-check" title="Marcar como hecha" aria-label="Marcar como hecha: {{ tarea.titulo }}"></button>
               </form>
-              <span>{{ tarea.titulo }} <small>· {{ texto.p.entrega | lower }} {{ tarea.fecha_entrega }}</small></span>
+              <span>{{ tarea.titulo }} <small>· {{ texto.p.entrega | lower }} {{ tarea.fecha_entrega | fecha_corta }}{% if tarea.hora_entrega %} · {{ tarea.hora_entrega }}{% endif %}</small></span>
             </li>
           {% endfor %}
         </ul>
