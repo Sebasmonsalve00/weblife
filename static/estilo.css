@@ -476,6 +476,35 @@ input:focus, select:focus, textarea:focus {
 .titulo-grupo { display: flex; align-items: center; gap: 10px; }
 .contador { font-size: 0.8125rem; font-weight: 500; background: var(--acento-degradado); border-radius: var(--radio-boton); padding: 2px 10px; }
 
+/* ---------- Tareas: que se note lo que falta ---------- */
+/* Página de Tareas: en el HTML va primero la lista y luego el formulario (así se ve en el teléfono).
+   En pantallas grandes subimos el formulario arriba, como estaba. */
+.pagina-tareas { display: flex; flex-direction: column; }
+.bloque-anadir-tarea .solo-movil { display: none; }
+@media (min-width: 640px) { .bloque-anadir-tarea { order: -1; margin-bottom: 16px; } }
+@media (max-width: 639px) {
+  .bloque-lista-tareas { margin-bottom: 32px; }
+  .bloque-anadir-tarea .solo-movil { display: block; }
+}
+/* Pendiente: una franja del color de acento a la izquierda y el título en negrita */
+.lista li.tarea-pendiente, .lista li.tarea-hoy, .lista li.tarea-atrasada {
+  box-shadow: inset 5px 0 0 var(--color-acento), var(--brillo-cristal, 0 0 transparent), var(--sombra);
+}
+.lista li.tarea-atrasada { box-shadow: inset 5px 0 0 var(--color-texto), var(--brillo-cristal, 0 0 transparent), var(--sombra); }
+.lista li:not(.hecha) .tarea-titulo { font-weight: 600; }
+.lista li:not(.hecha) .boton-check { border-color: var(--color-texto); }
+.estado-tarea {
+  display: inline-block; margin-left: 4px; padding: 2px 10px; border-radius: var(--radio-boton);
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em;
+  background: var(--color-acento); color: var(--color-texto);
+}
+.tarea-atrasada .estado-tarea { background: var(--color-texto); color: var(--color-fondo); }
+.tarea-atrasada .fechas b { text-decoration: underline; text-underline-offset: 3px; }
+/* Las hechas, recogidas debajo (se abren al tocar) */
+.grupo-hechas { margin: 8px 0 24px; }
+.grupo-hechas summary { cursor: pointer; font-weight: 500; color: var(--texto-secundario); padding: 6px 0; }
+.grupo-hechas .lista { margin-top: 10px; }
+
 /* ---------- Inicio: portada (hero) ---------- */
 .hero {
   min-height: max(var(--hero-altura), 640px);

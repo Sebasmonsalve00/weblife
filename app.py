@@ -222,6 +222,9 @@ def crear_tablas():
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(tareas)")]
     if "fecha_creacion" not in columnas:
         conexion.execute("ALTER TABLE tareas ADD COLUMN fecha_creacion TEXT")
+    # Hora límite de la tarea ("14:30"). Las tareas de antes quedan sin hora (= hasta el final del día).
+    if "hora_entrega" not in columnas:
+        conexion.execute("ALTER TABLE tareas ADD COLUMN hora_entrega TEXT")
 
     # Cada clase, tarea y evento tiene dueño ("usuario_id"). Las tablas antiguas
     # no tenían esa columna: la agregamos. Los datos de antes quedan sin dueño
@@ -750,7 +753,7 @@ def inicio():
     clases_hoy = consultar(
         "SELECT * FROM clases WHERE dia = ? AND usuario_id = ? ORDER BY hora_inicio", (hoy.weekday(), yo()))
     pendientes = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega LIMIT 5", (yo(),))
+        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega, COALESCE(hora_entrega, '23:59') LIMIT 5", (yo(),))
     asistencia = resumen_asistencia()
     # Cuentas sin correo (creadas antes de pedirlo): les avisamos para que puedan recuperar la contraseña.
     sin_correo = not consultar("SELECT email FROM usuarios WHERE id = ?", (mi_cuenta(),))[0]["email"]
@@ -870,7 +873,7 @@ def horario():
         # (En Deporte todo sale: ahí se marca si completaste cada entreno, comida...)
         if clase["dia"] == dia_panel.weekday() and (clase["tipo"] != "actividad" or mi_modo() == "deporte"):
             pendientes_materia = consultar(
-                "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega",
+                "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega, COALESCE(hora_entrega, '23:59')",
                 (clase["nombre"], yo()))
             panel.append({"clase": clase, "asistio": marcas.get(clase["id"]),
                           "actividad": actividades.get(clase["id"]),
@@ -1162,7 +1165,8 @@ def tarea_rapida(id):
     """Agrega una tarea desde el panel del horario, con la materia de esa clase."""
     clase = consultar("SELECT nombre FROM clases WHERE id = ? AND usuario_id = ?", (id, yo()))
     if clase:
-        guardar_tarea(request.form["titulo"], clase[0]["nombre"], request.form["fecha_entrega"])
+        guardar_tarea(request.form["titulo"], clase[0]["nombre"], request.form["fecha_entrega"],
+                      request.form.get("hora_entrega", ""))
         flash(contenido.MENSAJES["tarea"])
     return redirect(url_for("horario", fecha=request.form["fecha"]))
 
@@ -1171,22 +1175,58 @@ def tarea_rapida(id):
 #  UNIVERSIDAD: Tareas
 # ------------------------------------------------------------
 
-def guardar_tarea(titulo, materia, fecha_entrega):
-    """Guarda una tarea nueva con la fecha de hoy como fecha de creación."""
+def guardar_tarea(titulo, materia, fecha_entrega, hora_entrega=""):
+    """Guarda una tarea nueva con la fecha de hoy como fecha de creación.
+    La hora límite es opcional: sin hora, la tarea vale hasta el final del día."""
     modificar(
-        "INSERT INTO tareas (titulo, materia, fecha_entrega, fecha_creacion, usuario_id) VALUES (?, ?, ?, ?, ?)",
-        (titulo, materia, fecha_entrega, date.today().isoformat(), yo()),
+        "INSERT INTO tareas (titulo, materia, fecha_entrega, hora_entrega, fecha_creacion, usuario_id) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (titulo, materia, fecha_entrega, hora_entrega or None, date.today().isoformat(), yo()),
     )
+
+
+def con_hora(tarea):
+    """Texto corto de una tarea para el calendario: "14:30 Ensayo" (o solo el título si no tiene hora)."""
+    return f"{tarea['hora_entrega']} {tarea['titulo']}" if tarea["hora_entrega"] else tarea["titulo"]
+
+
+def momento_limite(tarea):
+    """El momento exacto en que vence una tarea: su fecha y su hora (o las 23:59 si no tiene hora)."""
+    return datetime.fromisoformat(f"{tarea['fecha_entrega']}T{tarea['hora_entrega'] or '23:59'}")
+
+
+@app.template_filter("fecha_corta")
+def fecha_corta(texto):
+    """ "2026-11-25" -> "mié 25 nov" (más fácil de leer en la lista de tareas)."""
+    try:
+        dia = date.fromisoformat(texto)
+    except (TypeError, ValueError):
+        return texto
+    semana = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"][dia.weekday()]
+    return f"{semana} {dia.day} {MESES[dia.month][:3].lower()}"
+
+
+@app.template_global()
+def estado_tarea(tarea):
+    """Para pintar cada tarea: "hecha", "atrasada" (ya venció), "hoy" (vence hoy) o "pendiente"."""
+    if tarea["hecha"]:
+        return "hecha"
+    if momento_limite(tarea) < datetime.now():
+        return "atrasada"
+    if tarea["fecha_entrega"] == date.today().isoformat():
+        return "hoy"
+    return "pendiente"
 
 
 @app.route("/universidad/tareas", methods=["GET", "POST"])
 def tareas():
     if request.method == "POST":
-        guardar_tarea(request.form["titulo"], request.form["materia"], request.form["fecha_entrega"])
+        guardar_tarea(request.form["titulo"], request.form["materia"], request.form["fecha_entrega"],
+                      request.form.get("hora_entrega", ""))
         flash(contenido.MENSAJES["meta" if mi_modo() == "deporte" else "tarea"])
         return redirect(url_for("tareas"))
 
-    todas = consultar("SELECT * FROM tareas WHERE usuario_id = ? ORDER BY hecha, fecha_entrega", (yo(),))
+    todas = consultar("SELECT * FROM tareas WHERE usuario_id = ? ORDER BY hecha, fecha_entrega, COALESCE(hora_entrega, '23:59')", (yo(),))
     # Las materias salen de las clases del horario (sin repetir y en orden alfabético).
     materias = [fila["nombre"] for fila in
                 consultar("SELECT DISTINCT nombre FROM clases WHERE usuario_id = ? "
@@ -1195,7 +1235,10 @@ def tareas():
     hoy = date.today()
     if mi_modo() == "deporte":
         hoy = hoy + timedelta(days=6 - hoy.weekday())
-    return render_template("tareas.html", tareas=todas, materias=materias,
+    # Las pendientes arriba (para que se vean) y las hechas aparte, debajo.
+    pendientes = [tarea for tarea in todas if not tarea["hecha"]]
+    hechas = [tarea for tarea in todas if tarea["hecha"]]
+    return render_template("tareas.html", pendientes=pendientes, hechas=hechas, materias=materias,
                            hoy=hoy.isoformat())
 
 
@@ -1219,19 +1262,20 @@ def borrar_tarea(id):
 
 @app.route("/universidad/pendientes")
 def pendientes():
-    hoy = date.today().isoformat()
+    ahora = datetime.now()
     en_7_dias = (date.today() + timedelta(days=7)).isoformat()
 
-    # Las fechas "AAAA-MM-DD" se pueden comparar como texto. ¡Truco útil!
-    atrasadas = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? AND fecha_entrega < ? ORDER BY fecha_entrega",
-        (yo(), hoy))
-    esta_semana = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? AND fecha_entrega BETWEEN ? AND ? ORDER BY fecha_entrega",
-        (yo(), hoy, en_7_dias))
-    despues = consultar(
-        "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? AND fecha_entrega > ? ORDER BY fecha_entrega",
-        (yo(), en_7_dias))
+    # Repartimos las tareas sin hacer en tres grupos. Una tarea está atrasada cuando
+    # ya pasó su fecha y su hora límite (sin hora, vale hasta el final del día).
+    atrasadas, esta_semana, despues = [], [], []
+    for tarea in consultar("SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? "
+                           "ORDER BY fecha_entrega, COALESCE(hora_entrega, '23:59')", (yo(),)):
+        if momento_limite(tarea) < ahora:
+            atrasadas.append(tarea)
+        elif tarea["fecha_entrega"] <= en_7_dias:   # las fechas "AAAA-MM-DD" se comparan como texto
+            esta_semana.append(tarea)
+        else:
+            despues.append(tarea)
 
     return render_template("pendientes.html", atrasadas=atrasadas,
                            esta_semana=esta_semana, despues=despues)
@@ -1268,9 +1312,9 @@ def avisos_calendario():
     for tarea in consultar("SELECT * FROM tareas WHERE usuario_id = ? AND hecha = 0 "
                            "AND fecha_entrega BETWEEN ? AND ?", (yo(), hoy, en_7_dias)):
         # Una tarea se entrega como tarde al final de su día.
-        objetivo = datetime.fromisoformat(f"{tarea['fecha_entrega']}T23:59")
+        objetivo = momento_limite(tarea)
         if ahora <= objetivo and objetivo - ahora <= timedelta(days=7):
-            urgentes.append({"titulo": tarea["titulo"], "fecha": tarea["fecha_entrega"], "hora": None,
+            urgentes.append({"titulo": tarea["titulo"], "fecha": tarea["fecha_entrega"], "hora": tarea["hora_entrega"],
                              "objetivo": objetivo.isoformat(timespec="minutes")})
 
     # Eventos del calendario elegido en "Seleccionar evento" (sin repetir los manuales):
@@ -1332,7 +1376,7 @@ def calendario_vista():
     for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (patron, yo())):
         dia = int(tarea["fecha_entrega"][8:10])
         cosas_por_dia.setdefault(dia, []).append(
-            {"texto": tarea["titulo"], "tipo": "tarea", "hecha": tarea["hecha"]})
+            {"texto": con_hora(tarea), "tipo": "tarea", "hecha": tarea["hecha"]})
     for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ? ORDER BY hora",
                             (patron, yo())):
         dia = int(evento["fecha"][8:10])
@@ -1370,7 +1414,7 @@ def calendario_vista():
     otros_ya_manuales = {(examen["asignatura"], examen["fecha"]) for examen in otros_manuales}
     for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (patron, otro_dueno)):
         cosas_por_dia.setdefault(int(tarea["fecha_entrega"][8:10]), []).append(
-            {"texto": tarea["titulo"], "tipo": "tarea", "hecha": tarea["hecha"], "otro": otro})
+            {"texto": con_hora(tarea), "tipo": "tarea", "hecha": tarea["hecha"], "otro": otro})
     for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ? ORDER BY hora",
                             (patron, otro_dueno)):
         texto = f"{evento['hora']} {evento['titulo']}" if evento["hora"] else evento["titulo"]
@@ -1436,7 +1480,7 @@ def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales, du
                        clase["hora_inicio"], clase["hora_fin"], con_categoria(clase["sala"] or "", clase["categoria"]))
     for tarea in consultar("SELECT * FROM tareas WHERE fecha_entrega LIKE ? AND usuario_id = ?", (prefijo + "%", dueno)):
         anotar(int(tarea["fecha_entrega"][8:10]), tarea["titulo"], "tarea-hecha" if tarea["hecha"] else "tarea",
-               detalle=tarea["materia"] or "")
+               tarea["hora_entrega"], detalle=tarea["materia"] or "")
     for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ?", (prefijo + "%", dueno)):
         anotar(int(evento["fecha"][8:10]), evento["titulo"], "evento", evento["hora"],
                detalle=contenido.NOMBRE_TIPO_DEPORTE.get(evento["categoria"] or "", ""))
@@ -2022,7 +2066,7 @@ def asistencia():
         ORDER BY asistencias.fecha DESC, clases.hora_inicio DESC LIMIT 30
     """, (yo(),))
     # Tareas que ya completaste (las más recientes por fecha de entrega primero)
-    hechas = consultar("SELECT * FROM tareas WHERE hecha = 1 AND usuario_id = ? ORDER BY fecha_entrega DESC",
+    hechas = consultar("SELECT * FROM tareas WHERE hecha = 1 AND usuario_id = ? ORDER BY fecha_entrega DESC, COALESCE(hora_entrega, '23:59') DESC",
                        (yo(),))
     hechas_por_materia = {}
     for tarea in hechas:
