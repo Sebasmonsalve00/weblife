@@ -358,7 +358,12 @@
 <script>
 (function () {
   var datos = {{ calendarios | tojson }};                 // universidad -> año -> carrera -> convocatoria -> número
-  var eventos = {{ eventos_por_calendario | tojson }};    // número -> [eventos]
+  // número -> [eventos]. Se piden al servidor la primera vez que se ven (y se guardan aquí),
+  // así la página del Calendario no carga los eventos de todas las carreras cada vez.
+  var eventos = {};
+  var URL_EVENTOS = "{{ url_for('eventos_por_calendario', numero=0) }}".replace(/0$/, "");
+  var panelSeleccionar = document.getElementById("form-examenes");
+  panelSeleccionar = panelSeleccionar && panelSeleccionar.closest("details");
   var universidad = document.getElementById("ex-universidad");
   if (!universidad) return;
   var convocatoria = document.getElementById("ex-convocatoria");
@@ -402,6 +407,16 @@
   function fechaCorta(f) { return f.slice(8, 10) + "/" + f.slice(5, 7); }
   function pintarEventos() {
     var numero = ((anios()[curso.value] || {})[carrera.value] || {})[convocatoria.value];
+    if (numero && !eventos[numero]) {
+      // Solo los pedimos si el panel está abierto (al abrirlo se vuelve a llamar)
+      if (panelSeleccionar && !panelSeleccionar.open) return;
+      lista.innerHTML = '<p class="nota-mini">Cargando eventos…</p>';
+      fetch(URL_EVENTOS + numero, { credentials: "same-origin" })
+        .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (datos) { eventos[numero] = datos; pintarEventos(); })
+        .catch(function () { lista.innerHTML = '<p class="nota-mini">No se pudieron cargar los eventos. Inténtalo otra vez.</p>'; });
+      return;
+    }
     var deEste = eventos[numero] || [];
     lista.innerHTML = "";
     deEste.forEach(function (e) {
@@ -433,6 +448,9 @@
     var marcar = Array.prototype.some.call(cajas, function (c) { return !c.checked; });
     cajas.forEach(function (c) { c.checked = marcar; });
     marcarTodos.textContent = marcar ? "Desmarcar todos" : "Marcar todos";
+  });
+  if (panelSeleccionar) panelSeleccionar.addEventListener("toggle", function () {
+    if (panelSeleccionar.open) pintarEventos();
   });
   cambiarUniversidad();
 })();
@@ -545,6 +563,7 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
 (function () {
   var cuentas = document.querySelectorAll(".cuenta[data-objetivo]");
   function actualizar() {
+    if (document.hidden) return;   // con la app en segundo plano no gastamos batería
     var ahora = Date.now();
     cuentas.forEach(function (el) {
       var falta = Math.max(0, new Date(el.dataset.objetivo) - ahora);
@@ -556,7 +575,8 @@ document.querySelectorAll("[data-archivo]").forEach(function (campo) {
     });
   }
   actualizar();
-  setInterval(actualizar, 1000);
+  if (cuentas.length) setInterval(actualizar, 1000);
+  document.addEventListener("visibilitychange", actualizar);
 })();
 </script>
 </div>

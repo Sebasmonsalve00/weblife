@@ -8,6 +8,7 @@
 # ============================================================
 
 import calendar
+import gzip
 import hmac
 import os
 import re
@@ -17,7 +18,7 @@ import time
 from email.message import EmailMessage
 from datetime import date, datetime, timedelta
 
-from flask import Flask, Response, flash, jsonify, send_from_directory, redirect, render_template, request, session, url_for
+from flask import Flask, Response, flash, g, jsonify, send_from_directory, redirect, render_template, request, session, url_for
 # Para crear enlaces "firmados" que caducan (los de recuperar la contraseña). Viene con Flask.
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 # Herramientas de Flask para guardar contraseñas cifradas (nunca guardamos la contraseña tal cual).
@@ -284,24 +285,51 @@ def crear_tablas():
                 conexion.executemany(
                     "INSERT INTO eventos_calendario (calendario_id, nombre, fecha, hora, tipo) VALUES (?, ?, ?, ?, ?)",
                     [(nuevo.lastrowid, asignatura, fecha, hora, "Examen") for asignatura, fecha, hora, _ in lista])
+
+    # Índices: como el índice de un libro, dejan a la base de datos ir directo a las filas
+    # de una cuenta (o de un día) sin leer la tabla entera. Con muchas cuentas se nota mucho.
+    conexion.executescript("""
+        CREATE INDEX IF NOT EXISTS idx_clases_usuario ON clases (usuario_id, dia, hora_inicio);
+        CREATE INDEX IF NOT EXISTS idx_tareas_usuario ON tareas (usuario_id, hecha, fecha_entrega);
+        CREATE INDEX IF NOT EXISTS idx_eventos_usuario ON eventos (usuario_id, fecha);
+        CREATE INDEX IF NOT EXISTS idx_examenes_manuales_usuario ON examenes_manuales (usuario_id, fecha);
+        CREATE INDEX IF NOT EXISTS idx_comidas_usuario ON comidas_deporte (usuario_id, fecha);
+        CREATE INDEX IF NOT EXISTS idx_eventos_calendario ON eventos_calendario (calendario_id, fecha);
+        CREATE INDEX IF NOT EXISTS idx_eventos_pendientes ON eventos_pendientes (calendario_id);
+        CREATE INDEX IF NOT EXISTS idx_asistencias_fecha ON asistencias (fecha);
+        CREATE INDEX IF NOT EXISTS idx_actividades_fecha ON actividades (fecha);
+    """)
     conexion.commit()
     conexion.close()
+
+
+def conexion_de_la_peticion():
+    """Una sola conexión por página: se abre la primera vez que se necesita y se
+    reutiliza en todas las consultas de esa misma página (antes se abría una nueva en
+    cada consulta, hasta 30 por página, y en PythonAnywhere abrir el archivo es lento)."""
+    if "bd" not in g:
+        g.bd = conectar()
+    return g.bd
+
+
+@app.teardown_appcontext
+def cerrar_conexion(error=None):
+    """Al terminar la página, cerramos su conexión."""
+    conexion = g.pop("bd", None)
+    if conexion is not None:
+        conexion.close()
 
 
 def consultar(sql, parametros=()):
     """Ejecuta un SELECT y devuelve la lista de filas."""
-    conexion = conectar()
-    filas = conexion.execute(sql, parametros).fetchall()
-    conexion.close()
-    return filas
+    return conexion_de_la_peticion().execute(sql, parametros).fetchall()
 
 
 def modificar(sql, parametros=()):
     """Ejecuta un INSERT, UPDATE o DELETE y guarda los cambios."""
-    conexion = conectar()
+    conexion = conexion_de_la_peticion()
     conexion.execute(sql, parametros)
     conexion.commit()
-    conexion.close()
 
 
 # ------------------------------------------------------------
@@ -310,18 +338,29 @@ def modificar(sql, parametros=()):
 #  devuelve queda disponible en el HTML (por ejemplo {{ texto.paginas }}).
 # ------------------------------------------------------------
 
-def mi_acento():
-    """El color que el usuario eligió en Ajustes (o None si usa el azul de siempre)."""
+def mi_fila():
+    """La fila de la cuenta que inició sesión (o None). Se lee UNA vez por página y se
+    guarda en "g" (una cajita que Flask vacía al terminar cada página): así el color,
+    el modo y el correo no hacen cada uno su propia consulta."""
     if not session.get("usuario_id"):
         return None
-    fila = consultar("SELECT color_acento FROM usuarios WHERE id = ?", (session["usuario_id"],))
-    color = fila[0]["color_acento"] if fila else None
+    if "usuario" not in g:
+        filas = consultar("SELECT * FROM usuarios WHERE id = ?", (session["usuario_id"],))
+        g.usuario = filas[0] if filas else None
+    return g.usuario
+
+
+def mi_acento():
+    """El color que el usuario eligió en Ajustes (o None si usa el azul de siempre)."""
+    fila = mi_fila()
+    color = fila["color_acento"] if fila else None
     return color if config_diseno.color_valido(color) else None
 
 
 @app.context_processor
 def datos_para_plantillas():
     acento = mi_acento()
+    modo = mi_modo()
     return {
         "variables_css": config_diseno.variables_css(acento),
         "acento": acento or config_diseno.COLORES["acento"],
@@ -329,8 +368,8 @@ def datos_para_plantillas():
         "valores_js": config_diseno.valores_js(),
         "efectos": config_diseno.EFECTOS,
         "fondo": config_diseno.colores_fondo(request.endpoint, acento),
-        "texto": contenido.todo(mi_modo()),
-        "modo": mi_modo(),
+        "texto": contenido.todo(modo),
+        "modo": modo,
         # Horas que se ven en el horario y en la vista de un día del calendario ("06:00" a "22:00")
         "hora_desde": f"{HORA_INICIO_DIA:02d}:00", "hora_hasta": f"{HORA_FIN_DIA:02d}:00",
         "horas_dia": (HORA_INICIO_DIA, HORA_FIN_DIA),
@@ -354,8 +393,8 @@ def mi_modo():
     if not session.get("usuario_id"):
         return "universidad"
     if session.get("modo") not in MODOS:
-        fila = consultar("SELECT modo FROM usuarios WHERE id = ?", (mi_cuenta(),))
-        session["modo"] = fila[0]["modo"] if fila and fila[0]["modo"] in MODOS else "universidad"
+        fila = mi_fila()
+        session["modo"] = fila["modo"] if fila and fila["modo"] in MODOS else "universidad"
     return session["modo"]
 
 
@@ -393,7 +432,8 @@ def pedir_sesion():
         return None
     if session.get("usuario_id"):
         # Comprobamos que la cuenta sigue existiendo (por si se borró).
-        if consultar("SELECT id FROM usuarios WHERE id = ?", (session["usuario_id"],)):
+        # (mi_fila() guarda la fila para el resto de la página: no se vuelve a leer)
+        if mi_fila():
             return None
         session.clear()
     return redirect(url_for("entrar"))
@@ -416,6 +456,40 @@ def version_estaticos(endpoint, valores):
 def guardar_estaticos(respuesta):
     if request.endpoint == "static" and request.args.get("v") and respuesta.status_code == 200:
         respuesta.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return respuesta
+
+
+# ---------- Páginas comprimidas (gzip) ----------
+# El HTML, el CSS y el JavaScript son texto que se repite mucho: comprimido ocupa
+# 5 a 10 veces menos. El navegador lo descomprime solo (lo dice "Accept-Encoding").
+# En el móvil con datos es lo que más se nota: el Calendario pasa de cientos de KB a unas decenas.
+TIPOS_COMPRIMIBLES = ("text/", "application/json", "application/javascript", "application/manifest+json",
+                      "image/svg+xml")
+_comprimidos = {}   # archivos de /static ya comprimidos: no se comprimen dos veces
+
+
+@app.after_request
+def comprimir(respuesta):
+    if (respuesta.status_code != 200 or "gzip" not in request.headers.get("Accept-Encoding", "")
+            or "Content-Encoding" in respuesta.headers
+            or not respuesta.mimetype.startswith(TIPOS_COMPRIMIBLES)):
+        return respuesta
+    es_estatico = request.endpoint == "static"
+    clave = (request.path, request.args.get("v"))
+    if es_estatico and clave in _comprimidos:
+        datos = _comprimidos[clave]
+    else:
+        respuesta.direct_passthrough = False   # los archivos de /static vienen "sin leer": los leemos
+        original = respuesta.get_data()
+        if len(original) < 1000:
+            return respuesta                    # tan pequeño que no merece la pena
+        datos = gzip.compress(original, compresslevel=6)
+        if es_estatico and len(_comprimidos) < 200:
+            _comprimidos[clave] = datos
+    respuesta.set_data(datos)
+    respuesta.headers["Content-Encoding"] = "gzip"
+    respuesta.headers["Content-Length"] = str(len(datos))
+    respuesta.vary.add("Accept-Encoding")
     return respuesta
 
 
@@ -658,7 +732,7 @@ def cuenta():
         apellido = request.form["apellido"].strip()[:40]
         if nombre_real and apellido:
             modificar("UPDATE usuarios SET nombre_real = ?, apellido = ? WHERE id = ?",
-                      (nombre_real, apellido, yo()))
+                      (nombre_real, apellido, mi_cuenta()))
             session["nombre_real"] = nombre_real
             flash(contenido.MENSAJES["cuenta"])
             return redirect(url_for("perfil"))
@@ -715,7 +789,11 @@ def avances():
     contar = lambda sql, *extra: consultar(sql, (yo(),) + extra)[0][0]
     total = contar("SELECT COUNT(*) FROM tareas WHERE usuario_id = ?")
     hechas = contar("SELECT COUNT(*) FROM tareas WHERE usuario_id = ? AND hecha = 1")
-    atrasadas = contar("SELECT COUNT(*) FROM tareas WHERE usuario_id = ? AND hecha = 0 AND fecha_entrega < ?", hoy)
+    # Atrasada = ya pasó su fecha Y su hora límite (igual que en Tareas y Pendientes)
+    ahora = datetime.now()
+    atrasadas = sum(1 for tarea in consultar("SELECT fecha_entrega, hora_entrega FROM tareas WHERE usuario_id = ? "
+                                              "AND hecha = 0 AND fecha_entrega <= ?", (yo(), hoy))
+                    if momento_limite(tarea) < ahora)
     # Tareas cumplidas por materia
     por_materia = consultar("""
         SELECT COALESCE(NULLIF(materia, ''), 'Sin materia') AS materia,
@@ -756,7 +834,7 @@ def inicio():
         "SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega, COALESCE(hora_entrega, '23:59') LIMIT 5", (yo(),))
     asistencia = resumen_asistencia()
     # Cuentas sin correo (creadas antes de pedirlo): les avisamos para que puedan recuperar la contraseña.
-    sin_correo = not consultar("SELECT email FROM usuarios WHERE id = ?", (mi_cuenta(),))[0]["email"]
+    sin_correo = not mi_fila()["email"]
 
     return render_template(
         "inicio.html",
@@ -867,17 +945,19 @@ def horario():
     actividades = {fila["clase_id"]: fila for fila in
                    consultar("SELECT actividades.* FROM actividades JOIN clases ON clases.id = actividades.clase_id "
                              "WHERE actividades.fecha = ? AND clases.usuario_id = ?", (texto_panel, yo()))}
+    # Las tareas sin hacer, de una vez, agrupadas por materia (antes era una consulta por clase)
+    pendientes_por_materia = {}
+    for tarea in consultar("SELECT * FROM tareas WHERE hecha = 0 AND usuario_id = ? "
+                           "ORDER BY fecha_entrega, COALESCE(hora_entrega, '23:59')", (yo(),)):
+        pendientes_por_materia.setdefault(tarea["materia"], []).append(tarea)
     panel = []
     for clase in clases:
         # Las actividades aparte no llevan asistencia ni tareas: no salen en el panel
         # (En Deporte todo sale: ahí se marca si completaste cada entreno, comida...)
         if clase["dia"] == dia_panel.weekday() and (clase["tipo"] != "actividad" or mi_modo() == "deporte"):
-            pendientes_materia = consultar(
-                "SELECT * FROM tareas WHERE materia = ? AND hecha = 0 AND usuario_id = ? ORDER BY fecha_entrega, COALESCE(hora_entrega, '23:59')",
-                (clase["nombre"], yo()))
             panel.append({"clase": clase, "asistio": marcas.get(clase["id"]),
                           "actividad": actividades.get(clase["id"]),
-                          "pendientes": pendientes_materia})
+                          "pendientes": pendientes_por_materia.get(clase["nombre"], [])})
 
     # ---- Texto de arriba: de qué hora a qué hora tienes clase ese día y tus horas huecas ----
     subtitulo_dia = resumen_del_dia(
@@ -1116,9 +1196,11 @@ def editar_clase(id):
 def borrar_clase(id):
     if not es_mi_clase(id):
         return redirect(url_for("horario"))
-    modificar("DELETE FROM clases WHERE id = ?", (id,))
-    modificar("DELETE FROM asistencias WHERE clase_id = ?", (id,))
-    modificar("DELETE FROM actividades WHERE clase_id = ?", (id,))
+    conexion = conexion_de_la_peticion()
+    conexion.execute("DELETE FROM clases WHERE id = ?", (id,))
+    conexion.execute("DELETE FROM asistencias WHERE clase_id = ?", (id,))
+    conexion.execute("DELETE FROM actividades WHERE clase_id = ?", (id,))
+    conexion.commit()   # se guardan las tres a la vez
     return redirect(url_for("horario"))
 
 
@@ -1441,7 +1523,7 @@ def calendario_vista():
         hoy=hoy, mes_anterior=mes_anterior, mes_siguiente=mes_siguiente,
         calendarios=opciones_calendarios(), avisos=avisos_calendario(), eleccion=eleccion,
         manuales=manuales, convocatorias=examenes.CONVOCATORIAS,
-        eventos_por_calendario=eventos_por_calendario(), foto_en_servidor=leer_imagen.disponible(),
+        foto_en_servidor=leer_imagen.disponible(),
         mis_calendarios=consultar("SELECT * FROM calendarios_eventos WHERE subido_por = ? ORDER BY id DESC",
                                   (mi_cuenta(),)),
         ocultos=cuantos_ocultos(eleccion), agenda=agenda, texto_meses=MESES,
@@ -1551,15 +1633,18 @@ def opciones_calendarios():
     return opciones
 
 
-def eventos_por_calendario():
-    """Para "Seleccionar evento": {número de calendario: [eventos]} para elegirlos uno a uno."""
-    if mi_modo() == "deporte":
-        return {}
-    todos = {}
-    for e in consultar("SELECT * FROM eventos_calendario ORDER BY fecha, hora, nombre"):
-        todos.setdefault(e["calendario_id"], []).append(
-            {"id": e["id"], "nombre": e["nombre"], "fecha": e["fecha"], "hora": e["hora"] or "", "tipo": e["tipo"] or ""})
-    return todos
+@app.route("/universidad/calendario/eventos/<int:numero>")
+def eventos_por_calendario(numero):
+    """Para "Seleccionar evento": los eventos de UN calendario, para elegirlos uno a uno.
+    Antes iban TODOS los de todas las carreras dentro de la página del Calendario (cientos
+    de KB cada vez que se abría); ahora la página los pide solo cuando eliges una carrera."""
+    eventos = [{"id": e["id"], "nombre": e["nombre"], "fecha": e["fecha"], "hora": e["hora"] or "",
+                "tipo": e["tipo"] or ""}
+               for e in consultar("SELECT * FROM eventos_calendario WHERE calendario_id = ? "
+                                  "ORDER BY fecha, hora, nombre", (numero,))]
+    respuesta = jsonify(eventos)
+    respuesta.headers["Cache-Control"] = "private, no-cache"
+    return respuesta
 
 
 def cuantos_ocultos(eleccion):

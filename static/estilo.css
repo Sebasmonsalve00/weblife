@@ -160,7 +160,8 @@ h3 { font-size: 1.125rem; font-weight: 600; }
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+  /* (Antes llevaba además filter: drop-shadow. Un filtro en cada tarjeta y en cada fila
+     de las listas obliga al móvil a pintarlas aparte y frenaba el scroll; casi no se veía.) */
 }
 /* Brillo interior suave en el borde de arriba */
 .vidrio, .tarjeta, .formulario, .tabla-contenedor, .lista li, .panel-dia, .resumen-materias,
@@ -739,7 +740,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
   border: 1px solid var(--borde); border-radius: var(--radio-tarjeta, 24px);
   background: var(--color-fondo); color: var(--color-texto); box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra);
 }
-.dia-vista::backdrop { background: rgba(29, 29, 31, 0.3); backdrop-filter: blur(6px); }
+.dia-vista::backdrop { background: rgba(29, 29, 31, 0.36); }   /* sin blur: difuminar toda la pantalla al abrir el día era lento en el móvil */
 .dia-vista[open] { animation: dia-entra 250ms var(--easing); }
 @keyframes dia-entra { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
 .dia-vista-cabecera { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }

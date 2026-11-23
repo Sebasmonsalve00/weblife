@@ -197,6 +197,14 @@
   <script src="{{ url_for('static', filename='zonas.js') }}" defer></script>
   <!-- Calendario y horas con el estilo de la web (en vez de los del navegador) -->
   <script src="{{ url_for('static', filename='selectores.js') }}" defer></script>
+  <!-- Páginas listas antes de tocarlas: al poner el dedo (o el ratón) sobre un enlace del menú,
+       el navegador ya va pidiendo esa página, y al soltar se abre casi al instante.
+       Solo enlaces normales de esta web (nada de formularios). Los navegadores que no lo
+       entienden (Safari) lo ignoran y todo funciona igual. -->
+  <script type="speculationrules">
+  {"prefetch": [{"where": {"and": [{"href_matches": "/*"}, {"selector_matches": ".nav a, .menu-movil a, .footer a, .tarjeta a"}]},
+                 "eagerness": "moderate"}]}
+  </script>
   <!-- App instalable: registra el service worker (ver static/sw.js) -->
   <script>
     if ("serviceWorker" in navigator) {
