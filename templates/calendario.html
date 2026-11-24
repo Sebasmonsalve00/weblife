@@ -5,51 +5,7 @@
 {% block contenido %}
 {{ encabezado(texto.paginas.calendario) }}
 
-<form method="post" class="formulario grid-12 reveal">
-  <div class="campo lg-6">
-    <label for="c-titulo">Evento</label>
-    <input id="c-titulo" name="titulo" placeholder="ej: Examen de Física" required>
-  </div>
-  <div class="campo md-6 lg-3">
-    <label for="c-fecha">Fecha</label>
-    <input id="c-fecha" type="date" name="fecha" value="{{ hoy.isoformat() }}" required>
-  </div>
-  <div class="campo md-6 lg-3">
-    <label for="c-hora">Hora (opcional)</label>
-    <input id="c-hora" type="time" name="hora">
-  </div>
-  {% if modo == "deporte" %}
-  <div class="campo md-6 lg-6">
-    <label for="c-categoria">Tipo</label>
-    <select id="c-categoria" name="categoria">
-      {% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
-    </select>
-  </div>
-  {% endif %}
-  <div class="campo">
-    <button class="boton-enviar">Agregar evento</button>
-  </div>
-</form>
-
-<!-- Desde una foto: una captura de un calendario, lista de exámenes, horario o plan de entrenos -->
-<form method="post" action="{{ url_for('subir_foto_calendario') }}" enctype="multipart/form-data" class="formulario subir-horario subir-foto reveal" {{ "data-foto-servidor" if foto_en_servidor else "data-foto-texto" }}>
-  <div class="subir-horario-texto">
-    <b>Desde una foto</b>
-    <small>Sube una captura o foto (PNG o JPG){{ " de tus entrenos, comidas o competiciones" if modo == "deporte" else " de exámenes, entregas o eventos" }}. Lo que tiene fecha va al calendario y a su día en el horario; lo que se repite cada semana, al horario.</small>
-  </div>
-  <label class="subir-archivo">
-    <input type="file" name="archivo" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg" required data-archivo>
-    <span class="subir-icono" aria-hidden="true">↑</span>
-    <span class="subir-texto"><b data-archivo-nombre>Elegir foto</b><small>PNG o JPG · hasta 5 MB</small></span>
-  </label>
-  <div class="subir-horario-botones">
-    <button class="boton boton-primario boton-chico">Leer foto</button>
-  </div>
-  <div class="foto-resultado" data-foto-resultado hidden></div>
-</form>
-<script src="{{ url_for('static', filename='leer_foto.js') }}" defer></script>
-
-
+{# Primero el calendario (seb lo quiere arriba); debajo, añadir evento y leer una foto #}
 <section class="reveal">
   <div class="mes-navegacion">
     <a class="boton boton-redondo" href="{{ url_for('calendario_vista', anio=mes_anterior[0], mes=mes_anterior[1]) }}" aria-label="Mes anterior" id="mes-anterior" data-cambiar-mes>←</a>
@@ -210,6 +166,51 @@
     </table>
   </div>
 </section>
+
+<form method="post" class="formulario grid-12 reveal despues-calendario">
+  <div class="campo lg-6">
+    <label for="c-titulo">Evento</label>
+    <input id="c-titulo" name="titulo" placeholder="ej: Examen de Física" required>
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="c-fecha">Fecha</label>
+    <input id="c-fecha" type="date" name="fecha" value="{{ hoy.isoformat() }}" required>
+  </div>
+  <div class="campo md-6 lg-3">
+    <label for="c-hora">Hora (opcional)</label>
+    <input id="c-hora" type="time" name="hora">
+  </div>
+  {% if modo == "deporte" %}
+  <div class="campo md-6 lg-6">
+    <label for="c-categoria">Tipo</label>
+    <select id="c-categoria" name="categoria">
+      {% for clave, nombre in texto.tipos_deporte %}<option value="{{ clave }}">{{ nombre }}</option>{% endfor %}
+    </select>
+  </div>
+  {% endif %}
+  <div class="campo">
+    <button class="boton-enviar">Agregar evento</button>
+  </div>
+</form>
+
+<!-- Desde una foto: una captura de un calendario, lista de exámenes, horario o plan de entrenos -->
+<form method="post" action="{{ url_for('subir_foto_calendario') }}" enctype="multipart/form-data" class="formulario subir-horario subir-foto reveal" {{ "data-foto-servidor" if foto_en_servidor else "data-foto-texto" }}>
+  <div class="subir-horario-texto">
+    <b>Desde una foto</b>
+    <small>Sube una captura o foto (PNG o JPG){{ " de tus entrenos, comidas o competiciones" if modo == "deporte" else " de exámenes, entregas o eventos" }}. Lo que tiene fecha va al calendario y a su día en el horario; lo que se repite cada semana, al horario.</small>
+  </div>
+  <label class="subir-archivo">
+    <input type="file" name="archivo" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg" required data-archivo>
+    <span class="subir-icono" aria-hidden="true">↑</span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir foto</b><small>PNG o JPG · hasta 5 MB</small></span>
+  </label>
+  <div class="subir-horario-botones">
+    <button class="boton boton-primario boton-chico">Leer foto</button>
+  </div>
+  <div class="foto-resultado" data-foto-resultado hidden></div>
+</form>
+<script src="{{ url_for('static', filename='leer_foto.js') }}" defer></script>
+
 
 <!-- Vista de un día: todo lo que tienes de 6:00 a 22:00 -->
 <dialog class="dia-vista" id="dia-vista" aria-labelledby="dia-vista-titulo">
