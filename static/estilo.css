@@ -848,6 +848,7 @@ details summary { cursor: pointer; font-weight: 500; font-size: 14px; padding: 4
 .punto.evento { background: transparent; border: 1px solid var(--borde-boton); }
 /* Al cambiar de mes, el calendario se funde suavemente */
 .calendario-contenedor { transition: opacity 250ms var(--easing); }
+.despues-calendario { margin-top: 32px; }   /* añadir evento va debajo del calendario */
 .calendario-contenedor.cambiando { opacity: 0.35; }
 .calendario-contenedor { border-radius: var(--radio-tarjeta); padding: 12px; overflow-x: auto; box-shadow: var(--brillo-cristal, 0 0 transparent), var(--sombra); }
 .calendario { width: 100%; min-width: 640px; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
