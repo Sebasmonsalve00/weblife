@@ -30,6 +30,7 @@ import contenido
 import examenes
 import importar_eventos
 import importar_horario
+import importar_plan
 import leer_imagen
 
 # Creamos la aplicación web. "__name__" le dice a Flask dónde está este archivo.
@@ -223,6 +224,11 @@ def crear_tablas():
     columnas = [fila["name"] for fila in conexion.execute("PRAGMA table_info(tareas)")]
     if "fecha_creacion" not in columnas:
         conexion.execute("ALTER TABLE tareas ADD COLUMN fecha_creacion TEXT")
+    # Hora de fin de un evento ("11:00"): los que vienen de tu Excel o de una foto con "de 9 a 11".
+    # Los de antes no la tienen: ocupan una hora.
+    columnas_eventos = [fila["name"] for fila in conexion.execute("PRAGMA table_info(eventos)")]
+    if "hora_fin" not in columnas_eventos:
+        conexion.execute("ALTER TABLE eventos ADD COLUMN hora_fin TEXT")
     # Hora límite de la tarea ("14:30"). Las tareas de antes quedan sin hora (= hasta el final del día).
     if "hora_entrega" not in columnas:
         conexion.execute("ALTER TABLE tareas ADD COLUMN hora_entrega TEXT")
@@ -998,7 +1004,8 @@ def horario():
         if not evento["hora"]:
             continue   # sin hora: solo sale en el panel del día
         inicio = max(a_minutos(evento["hora"]), limite_arriba)
-        fin = min(inicio + 60, limite_abajo)   # los eventos no tienen hora de fin: ocupan una hora
+        # Con hora de fin (de tu Excel o de una foto), hasta esa hora; sin ella, ocupan una hora
+        fin = min(a_minutos(evento["hora_fin"]) if evento["hora_fin"] else inicio + 60, limite_abajo)
         if fin <= inicio:
             continue
         fecha_evento = date.fromisoformat(evento["fecha"])
@@ -1059,16 +1066,21 @@ def guardar_leidos(cosas):
             categoria = next((c for c in contenido.NOMBRE_TIPO_DEPORTE if c in clave or clave.startswith(c[:5])), None)
         if cosa["fecha"]:
             titulo = cosa["nombre"]
-            if not deporte and importar_eventos.es_examen(tipo) and "examen" not in titulo.lower():
+            # Solo si dice que es un examen (sin tipo, como en tu plan de estudio, es un evento normal)
+            if not deporte and tipo and importar_eventos.es_examen(tipo) and "examen" not in titulo.lower():
                 titulo = "Examen: " + titulo   # así sale en "Próximos exámenes"
             if cosa["lugar"]:
                 titulo += " · " + cosa["lugar"]
-            if consultar("SELECT id FROM eventos WHERE usuario_id = ? AND lower(titulo) = lower(?) AND fecha = ?",
-                         (yo(), titulo, cosa["fecha"])):
+            # Repetido = mismo nombre, mismo día y misma hora (puedes estudiar lo mismo dos veces un día)
+            if consultar("SELECT id FROM eventos WHERE usuario_id = ? AND lower(titulo) = lower(?) AND fecha = ? "
+                         "AND COALESCE(hora, '') = ?", (yo(), titulo, cosa["fecha"], cosa["hora_inicio"] or "")):
                 repetidas += 1
                 continue
-            modificar("INSERT INTO eventos (titulo, fecha, hora, usuario_id, categoria) VALUES (?, ?, ?, ?, ?)",
-                      (titulo, cosa["fecha"], cosa["hora_inicio"], yo(), categoria))
+            fin = cosa.get("hora_fin") or None
+            if fin and (not cosa["hora_inicio"] or a_minutos(fin) <= a_minutos(cosa["hora_inicio"])):
+                fin = None
+            modificar("INSERT INTO eventos (titulo, fecha, hora, hora_fin, usuario_id, categoria) VALUES (?, ?, ?, ?, ?, ?)",
+                      (titulo, cosa["fecha"], cosa["hora_inicio"], fin, yo(), categoria))
             al_calendario += 1
             continue
         # Se repite cada semana: al horario (sin hora no sabemos dónde ponerlo)
@@ -1091,10 +1103,26 @@ def guardar_leidos(cosas):
     return al_horario, al_calendario, repetidas
 
 
+def es_tabla(nombre_archivo):
+    """¿Es un Excel o un CSV (y no una foto)?"""
+    return nombre_archivo.lower().endswith((".xlsx", ".xls", ".csv", ".txt"))
+
+
 def leer_foto_subida(archivo, contenido_archivo):
     """Lee la foto subida (con Claude) o, si no hay clave, el texto que leyó el navegador.
     Devuelve la lista de cosas, o lanza ValueError con un mensaje para el usuario."""
     texto = request.form.get("texto_foto", "")
+    if archivo and archivo.filename and es_tabla(archivo.filename):
+        # Tu Excel o CSV con fechas y horas (plan de estudio, entregas...)
+        try:
+            cosas, problemas = importar_plan.leer_plan(archivo.filename, contenido_archivo)
+        except ValueError:
+            raise
+        except Exception:   # documento roto o de otro tipo
+            raise ValueError(contenido.MENSAJES["plan_vacio"])
+        if not cosas:
+            raise ValueError(contenido.MENSAJES["plan_vacio"])
+        return cosas
     if archivo and archivo.filename and leer_imagen.es_imagen(archivo.filename, archivo.mimetype):
         if leer_imagen.disponible():
             return leer_imagen.leer_cosas(archivo.filename, contenido_archivo, mi_modo())
@@ -1140,6 +1168,16 @@ def subir_horario():
     except Exception as error:   # documento roto o de otro tipo
         flash(str(error) if isinstance(error, ValueError) else contenido.MENSAJES["horario_vacio"])
         return redirect(url_for("horario"))
+    if not clases and es_tabla(archivo.filename):
+        # No dice días de la semana, pero quizá sí fechas (un plan de estudio): al calendario y al horario
+        try:
+            cosas = importar_plan.leer_plan(archivo.filename, contenido_archivo)[0]
+        except Exception:
+            cosas = []
+        if cosas:
+            flash(mensaje_foto(*guardar_leidos(cosas)))
+            primera = min(c["fecha"] for c in cosas)
+            return redirect(url_for("horario", fecha=max(primera, date.today().isoformat())))
     if not clases:
         flash(contenido.MENSAJES["horario_vacio"] + (" " + problemas[0] if problemas else ""))
         return redirect(url_for("horario"))
@@ -1564,7 +1602,7 @@ def agenda_del_mes(anio, mes, semanas, lista_examenes, manuales, ya_manuales, du
         anotar(int(tarea["fecha_entrega"][8:10]), tarea["titulo"], "tarea-hecha" if tarea["hecha"] else "tarea",
                tarea["hora_entrega"], detalle=tarea["materia"] or "")
     for evento in consultar("SELECT * FROM eventos WHERE fecha LIKE ? AND usuario_id = ?", (prefijo + "%", dueno)):
-        anotar(int(evento["fecha"][8:10]), evento["titulo"], "evento", evento["hora"],
+        anotar(int(evento["fecha"][8:10]), evento["titulo"], "evento", evento["hora"], evento["hora_fin"],
                detalle=contenido.NOMBRE_TIPO_DEPORTE.get(evento["categoria"] or "", ""))
     for asignatura, fecha, hora, tipo in lista_examenes:
         if fecha.startswith(prefijo) and (asignatura, fecha) not in ya_manuales:
@@ -1851,6 +1889,13 @@ def subir_foto_calendario():
         primera = date.fromisoformat(fechas[0])
         return redirect(url_for("calendario_vista", anio=primera.year, mes=primera.month))
     return redirect(url_for("calendario_vista"))
+
+
+@app.route("/universidad/calendario/plantilla-mis-eventos.csv")
+def plantilla_plan():
+    """Un CSV de ejemplo para "Desde una foto o Excel": fecha, desde, hasta, qué y lugar."""
+    return Response("\ufeff" + importar_plan.PLANTILLA, mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=plantilla-mis-eventos.csv"})
 
 
 @app.route("/universidad/calendario/plantilla-eventos.csv")
