@@ -193,19 +193,21 @@
   </div>
 </form>
 
-<!-- Desde una foto: una captura de un calendario, lista de exámenes, horario o plan de entrenos -->
+<!-- Desde una foto o un Excel: una captura de un calendario, o tu propio documento con fechas y horas
+     (plan de estudio, entregas, entrenos...). No pide universidad ni carrera: todo va a TU calendario. -->
 <form method="post" action="{{ url_for('subir_foto_calendario') }}" enctype="multipart/form-data" class="formulario subir-horario subir-foto reveal" {{ "data-foto-servidor" if foto_en_servidor else "data-foto-texto" }}>
   <div class="subir-horario-texto">
-    <b>Desde una foto</b>
-    <small>Sube una captura o foto (PNG o JPG){{ " de tus entrenos, comidas o competiciones" if modo == "deporte" else " de exámenes, entregas o eventos" }}. Lo que tiene fecha va al calendario y a su día en el horario; lo que se repite cada semana, al horario.</small>
+    <b>Desde una foto o un Excel</b>
+    <small>Sube una captura{{ " de tus entrenos, comidas o competiciones" if modo == "deporte" else " de exámenes, entregas o eventos" }}, o tu propio Excel o CSV con fechas y horas (por ejemplo, tu horario de estudio). Cada cosa va a su día en el calendario y, si tiene hora, también al horario esa semana.</small>
   </div>
   <label class="subir-archivo">
-    <input type="file" name="archivo" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg" required data-archivo>
+    <input type="file" name="archivo" accept="image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.xlsx,.csv,.txt" required data-archivo>
     <span class="subir-icono" aria-hidden="true">↑</span>
-    <span class="subir-texto"><b data-archivo-nombre>Elegir foto</b><small>PNG o JPG · hasta 5 MB</small></span>
+    <span class="subir-texto"><b data-archivo-nombre>Elegir foto o Excel</b><small>PNG, JPG, Excel o CSV · hasta 5 MB</small></span>
   </label>
   <div class="subir-horario-botones">
-    <button class="boton boton-primario boton-chico">Leer foto</button>
+    <button class="boton boton-primario boton-chico">Subir</button>
+    <a class="enlace-mini" href="{{ url_for('plantilla_plan') }}">Plantilla de ejemplo</a>
   </div>
   <div class="foto-resultado" data-foto-resultado hidden></div>
 </form>
